@@ -2,8 +2,21 @@ from django.db import models
 
 class ExpenseCategory(models.Model):
     """Статья расхода"""
+    TYPE_FIXED = 'fixed'
+    TYPE_VARIABLE = 'variable'
+    TYPE_CHOICES = [
+        (TYPE_FIXED, 'Постоянный'),
+        (TYPE_VARIABLE, 'Переменный'),
+    ]
+
     organization = models.ForeignKey('organization.Organization', on_delete=models.CASCADE, related_name='expense_categories', null=True, blank=True)
     name = models.CharField(max_length=255, verbose_name="Название")
+    category_type = models.CharField(
+        max_length=10, 
+        choices=TYPE_CHOICES, 
+        default=TYPE_VARIABLE, 
+        verbose_name="Тип расхода"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

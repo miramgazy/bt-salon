@@ -49,6 +49,18 @@ const routes = [
       }
     ]
   },
+  {
+    path: '/owner',
+    component: () => import('../views/owner/OwnerTmaLayout.vue'),
+    meta: { role: 'owner' },
+    children: [
+      {
+        path: '',
+        name: 'owner-dashboard',
+        component: () => import('../views/owner/OwnerDashboardView.vue')
+      }
+    ]
+  },
 
   {
     path: '/master',
@@ -123,13 +135,16 @@ router.beforeEach(async (to, from, next) => {
     
     // Only redirect if a definite role mismatch is detected
     if (roleRequired === 'master' && currentRole !== 'master') {
-      return next(currentRole === 'admin' ? '/admin' : '/')
+      return next(currentRole === 'admin' ? '/admin' : currentRole === 'owner' ? '/owner' : '/')
     }
     if (roleRequired === 'client' && currentRole !== 'client') {
-      return next(currentRole === 'admin' ? '/admin' : '/master')
+      return next(currentRole === 'admin' ? '/admin' : currentRole === 'owner' ? '/owner' : '/master')
     }
     if (roleRequired === 'admin' && currentRole !== 'admin') {
-      return next(currentRole === 'master' ? '/master' : '/')
+      return next(currentRole === 'master' ? '/master' : currentRole === 'owner' ? '/owner' : '/')
+    }
+    if (roleRequired === 'owner' && currentRole !== 'owner') {
+      return next(currentRole === 'admin' ? '/admin' : currentRole === 'master' ? '/master' : '/')
     }
   }
 

@@ -4,11 +4,13 @@ from django.db import models
 class User(AbstractUser):
     ROLE_SUPERADMIN = 'superadmin'
     ROLE_ADMIN = 'admin'
+    ROLE_OWNER = 'owner'
     ROLE_MASTER = 'master'
     ROLE_CLIENT = 'client'
     ROLES = [
         (ROLE_SUPERADMIN, 'Суперадмин'), 
         (ROLE_ADMIN, 'Администратор'),
+        (ROLE_OWNER, 'Владелец'),
         (ROLE_MASTER, 'Мастер'),
         (ROLE_CLIENT, 'Клиент')
     ]

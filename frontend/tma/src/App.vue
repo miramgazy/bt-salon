@@ -18,6 +18,10 @@ function navigateAfterAuth() {
     router.replace('/admin')
     return
   }
+  if (role === 'owner') {
+    router.replace('/owner')
+    return
+  }
   if (role === 'master') {
     router.replace('/master')
     return

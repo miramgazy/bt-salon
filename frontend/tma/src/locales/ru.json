@@ -74,5 +74,25 @@
     "title": "Мои записи",
     "empty": "У вас пока нет записей",
     "book": "Записаться"
+  },
+  "owner": {
+    "dashboard_eyebrow": "Владелец",
+    "dashboard_title": "Финансовый<br/>дэшборд",
+    "revenue": "Выручка",
+    "expenses": "Расходы",
+    "profit": "Чистая прибыль",
+    "margin": "Маржа",
+    "avg_check": "Средний чек",
+    "clients": "Клиенты",
+    "margin_structure": "Структура маржи",
+    "rev_exp_timeline": "Выручка и расходы по дням",
+    "profit_timeline": "Прибыль по дням",
+    "master_rating": "Рейтинг мастеров",
+    "rev_by_masters": "Выручка по мастерам",
+    "top_services": "Топ услуг",
+    "records": "записей",
+    "date_start": "Начало периода",
+    "date_end": "Конец периода",
+    "total_exp": "Итого расходов"
   }
 }

@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import owner_views
 
 urlpatterns = [
     path('summary/', views.SummaryView.as_view(), name='dashboard-summary'),
@@ -9,4 +10,5 @@ urlpatterns = [
     path('appointments/', views.DashboardAppointmentsView.as_view(), name='dashboard-appointments'),
     path('appointments/export/', views.DashboardAppointmentsExportView.as_view(), name='dashboard-appointments-export'),
     path('filters/', views.DashboardFiltersView.as_view(), name='dashboard-filters'),
+    path('owner/', owner_views.OwnerDashboardAPIView.as_view(), name='dashboard-owner'),
 ]
