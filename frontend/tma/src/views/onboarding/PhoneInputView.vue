@@ -369,7 +369,9 @@ async function handleContinue() {
     if (auth.needsConsent) {
       router.push('/onboarding/consent')
     } else {
-      router.push('/')
+      if (auth.currentRole === 'admin') router.push('/admin')
+      else if (auth.currentRole === 'master') router.push('/master')
+      else router.push('/')
     }
   } catch (err) {
     error.value = err.response?.data?.phone?.[0] || 'Не удалось сохранить номер. Попробуйте ещё раз.'

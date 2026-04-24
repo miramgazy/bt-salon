@@ -44,7 +44,7 @@ const routes = [
       {
         path: 'superadmin/masters',
         name: 'masters',
-        component: () => import('../views/superadmin/MastersView.vue')
+        component: () => import('../views/superadmin/EmployeesView.vue')
       },
       {
         path: 'superadmin/organization',

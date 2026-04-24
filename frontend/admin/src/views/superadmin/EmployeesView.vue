@@ -3,14 +3,14 @@
     <!-- Breadcrumb Start -->
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h2 class="text-title-md2 font-bold text-black dark:text-white">
-        Специалисты
+        Сотрудники
       </h2>
       <nav>
         <ol class="flex items-center gap-2">
           <li>
             <router-link class="font-medium" to="/admin/calendar">Dashboard /</router-link>
           </li>
-          <li class="font-medium text-primary">Мастера</li>
+          <li class="font-medium text-primary">Сотрудники</li>
         </ol>
       </nav>
     </div>
@@ -18,12 +18,12 @@
 
     <div class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-bg-dark-2">
       <div class="flex flex-wrap items-center justify-between border-b border-stroke py-4 px-4 dark:border-strokedark sm:px-6 xl:px-7.5">
-        <h3 class="font-medium text-black dark:text-white">Список мастеров</h3>
+        <h3 class="font-medium text-black dark:text-white">Список сотрудников</h3>
         <button 
           @click="openAddModal"
           class="inline-flex items-center justify-center rounded-md bg-primary py-2 px-6 text-center font-medium text-white hover:bg-opacity-90 transition-all active:scale-95"
         >
-          Добавить мастера
+          Добавить сотрудника
         </button>
       </div>
 
@@ -36,15 +36,16 @@
             <div class="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <Icon icon="mdi:account-group-outline" width="40" />
             </div>
-            <h4 class="mb-2 text-xl font-bold text-black dark:text-white">Мастера не найдены</h4>
-            <p class="text-body">Добавьте первого специалиста в вашу организацию.</p>
+            <h4 class="mb-2 text-xl font-bold text-black dark:text-white">Сотрудники не найдены</h4>
+            <p class="text-body">Добавьте первого сотрудника в вашу организацию.</p>
         </div>
 
         <div v-else class="max-w-full overflow-x-auto">
           <table class="w-full table-auto">
             <thead>
               <tr class="bg-gray-2 text-left dark:bg-meta-4">
-                <th class="py-4 px-4 font-medium text-black dark:text-white xl:pl-11">Мастер</th>
+                <th class="py-4 px-4 font-medium text-black dark:text-white xl:pl-11">Сотрудник</th>
+                <th class="py-4 px-4 font-medium text-black dark:text-white">Роль</th>
                 <th class="py-4 px-4 font-medium text-black dark:text-white">Контакты</th>
                 <th class="py-4 px-4 font-medium text-black dark:text-white">Цвет</th>
                 <th class="py-4 px-4 font-medium text-black dark:text-white">Статус</th>
@@ -61,9 +62,14 @@
                     </div>
                     <div>
                         <h5 class="font-medium text-black dark:text-white">{{ master.first_name }} {{ master.last_name }}</h5>
-                        <p class="text-xs text-body">{{ master.services_detail?.length || 0 }} услуг</p>
+                        <p v-if="master.role === 'master'" class="text-xs text-body">{{ master.services_detail?.length || 0 }} услуг</p>
                     </div>
                   </div>
+                </td>
+                <td class="py-5 px-4">
+                  <span class="inline-flex rounded-full py-1 px-3 text-sm font-medium bg-gray opacity-80 text-black dark:bg-meta-4 dark:text-white">
+                    {{ master.role === 'admin' ? 'Администратор' : 'Мастер' }}
+                  </span>
                 </td>
                 <td class="py-5 px-4">
                   <p class="text-black dark:text-white">{{ master.phone || '—' }}</p>
@@ -109,7 +115,7 @@
       <div class="w-full max-w-180 rounded-lg bg-white py-8 px-8 dark:bg-bg-dark-2 sm:px-12.5 overflow-y-auto max-h-[95vh]">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-2xl font-bold text-black dark:text-white">
-              {{ isEditing ? 'Редактировать мастера' : 'Добавить мастера' }}
+              {{ isEditing ? 'Редактировать сотрудника' : 'Добавить сотрудника' }}
             </h3>
             <button @click="showModal = false" class="text-body hover:text-danger">
               <Icon icon="mdi:close" width="24" />
@@ -149,12 +155,32 @@
               </div>
           </div>
 
-          <div class="mb-5">
-            <label class="mb-2.5 block font-medium text-black dark:text-white">Номер телефона</label>
-            <input v-model="form.phone" type="text" placeholder="+7 (___) ___-__-__"
-              class="w-full rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+          <div class="mb-5 grid grid-cols-3 gap-4">
+            <div>
+              <label class="mb-2.5 block font-medium text-black dark:text-white">Номер телефона</label>
+              <input v-model="form.phone" type="text" placeholder="+7 (___) ___-__-__"
+                class="w-full rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+            </div>
+            <div>
+              <label class="mb-2.5 block font-medium text-black dark:text-white">Телеграм ID</label>
+              <input v-model="form.telegram_id" type="number" placeholder="ID"
+                class="w-full rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+            </div>
+            <div>
+              <label class="mb-2.5 block font-medium text-black dark:text-white">Роль</label>
+              <div class="relative z-20 bg-transparent dark:bg-form-input">
+                <select v-model="form.role" :disabled="isEditing" class="relative z-20 w-full appearance-none rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white disabled:opacity-50 disabled:cursor-not-allowed">
+                  <option value="master">Мастер</option>
+                  <option value="admin">Администратор</option>
+                </select>
+                <span class="absolute top-1/2 right-4 z-30 -translate-y-1/2">
+                  <Icon icon="mdi:chevron-down" width="20" />
+                </span>
+              </div>
+            </div>
           </div>
 
+          <template v-if="form.role === 'master'">
           <!-- Bio / Markdown Editor -->
           <div class="mb-5">
             <label class="mb-2.5 block font-medium text-black dark:text-white">О мастере (Bio)</label>
@@ -195,20 +221,13 @@
             <p class="mt-1 text-xs text-body">Используйте Markdown для форматирования текста</p>
           </div>
 
-          <div class="mb-5 grid grid-cols-2 gap-4">
-              <div>
-                  <label class="mb-2.5 block font-medium text-black dark:text-white">Цвет в календаре</label>
-                  <div class="flex items-center gap-3">
-                      <input v-model="form.color" type="color"
-                        class="h-10 w-10 cursor-pointer rounded border-none bg-transparent" />
-                      <input v-model="form.color" type="text"
-                        class="flex-1 rounded border border-stroke bg-transparent py-2.5 px-4 font-mono text-sm uppercase outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
-                  </div>
-              </div>
-              <div>
-                  <label class="mb-2.5 block font-medium text-black dark:text-white">Телеграм ID</label>
-                  <input v-model="form.telegram_id" type="number" placeholder="ID"
-                    class="w-full rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+          <div class="mb-5">
+              <label class="mb-2.5 block font-medium text-black dark:text-white">Цвет в календаре</label>
+              <div class="flex items-center gap-3">
+                  <input v-model="form.color" type="color"
+                    class="h-10 w-10 cursor-pointer rounded border-none bg-transparent" />
+                  <input v-model="form.color" type="text"
+                    class="max-w-xs rounded border border-stroke bg-transparent py-2.5 px-4 font-mono text-sm uppercase outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
               </div>
           </div>
 
@@ -225,6 +244,7 @@
             </div>
             <p v-if="services.length === 0" class="text-xs text-warning mt-1">Сначала добавьте услуги в разделе «Услуги»</p>
           </div>
+          </template>
 
           <div class="flex gap-4">
             <button type="button" @click="showModal = false"
@@ -265,6 +285,7 @@ const form = reactive({
     first_name: '',
     last_name: '',
     phone: '',
+    role: 'master',
     color: '#3C50E0',
     telegram_id: '',
     bio: '',
@@ -294,7 +315,7 @@ const renderedBio = computed(() => {
 const fetchMasters = async () => {
     try {
         loading.value = true
-        const response = await api.get('/api/masters/')
+        const response = await api.get('/api/organization/employees/')
         masters.value = response.data.results || response.data || []
     } catch (err) {
         console.error('Error fetching masters:', err)
@@ -317,7 +338,7 @@ const openAddModal = () => {
     currentMasterId.value = null
     bioTab.value = 'write'
     Object.assign(form, {
-        first_name: '', last_name: '', phone: '',
+        first_name: '', last_name: '', phone: '', role: 'master',
         color: '#3C50E0', telegram_id: '', bio: '',
         services: [], existing_photo_url: null
     })
@@ -334,6 +355,7 @@ const editMaster = (master) => {
         first_name: master.first_name,
         last_name: master.last_name,
         phone: master.phone || '',
+        role: master.role || 'master',
         color: master.color || '#3C50E0',
         telegram_id: master.telegram_id || '',
         bio: master.bio || '',
@@ -363,6 +385,7 @@ const saveMaster = async () => {
             first_name: form.first_name,
             last_name: form.last_name,
             phone: form.phone,
+            role: form.role,
             color: form.color,
             telegram_id: form.telegram_id || null,
             bio: form.bio,
@@ -371,10 +394,10 @@ const saveMaster = async () => {
 
         let savedMaster
         if (isEditing.value) {
-            const resp = await api.patch(`/api/masters/${currentMasterId.value}/`, payload)
+            const resp = await api.patch(`/api/organization/employees/${currentMasterId.value}/`, payload)
             savedMaster = resp.data
         } else {
-            const resp = await api.post('/api/masters/', payload)
+            const resp = await api.post('/api/organization/employees/', payload)
             savedMaster = resp.data
         }
 
@@ -382,7 +405,7 @@ const saveMaster = async () => {
         if (selectedPhotoFile.value && savedMaster?.id) {
             const formData = new FormData()
             formData.append('photo', selectedPhotoFile.value)
-            await api.post(`/api/masters/${savedMaster.id}/upload-photo/`, formData, {
+            await api.post(`/api/organization/employees/${savedMaster.id}/upload-photo/`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             })
         }
@@ -399,7 +422,7 @@ const saveMaster = async () => {
 
 const toggleActive = async (master) => {
     try {
-        await api.patch(`/api/masters/${master.id}/`, { is_active: !master.is_active })
+        await api.patch(`/api/organization/employees/${master.id}/`, { is_active: !master.is_active })
         fetchMasters()
     } catch (err) {
         console.error('Error toggling status:', err)

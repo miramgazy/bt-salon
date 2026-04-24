@@ -14,6 +14,10 @@ const { locale } = useI18n()
  */
 function navigateAfterAuth() {
   const role = auth.currentRole
+  if (role === 'admin') {
+    router.replace('/admin')
+    return
+  }
   if (role === 'master') {
     router.replace('/master')
     return

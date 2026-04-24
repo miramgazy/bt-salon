@@ -58,7 +58,9 @@ const loading = ref(false)
 const error = ref('')
 
 function goNext() {
-  router.push('/')
+  if (auth.currentRole === 'admin') router.push('/admin')
+  else if (auth.currentRole === 'master') router.push('/master')
+  else router.push('/')
 }
 
 async function handleAllow() {

@@ -20,6 +20,7 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isAuthenticated: (state) => !!state.token,
     isMaster: (state) => state.role === 'master',
+    isAdmin: (state) => state.role === 'admin',
     currentRole: (state) => state.activeRole || state.role,
     isOnboarded: (state) => !!(state.user?.phone || state.user?.is_onboarded),
     needsConsent: (state) => state.user?.is_bot_subscribed == null
@@ -91,8 +92,22 @@ export const useAuthStore = defineStore('auth', {
     async updateProfile(data) {
       this.error = null
       try {
-        const updatedUser = await usersService.updateProfile(this.token, data)
+        const responseData = await usersService.updateProfile(this.token, data)
+        const updatedUser = responseData.user || responseData
+        
+        // If a merge happened, backend returns new tokens
+        if (responseData.access && responseData.refresh) {
+            this.token = responseData.access
+            this.refreshToken = responseData.refresh
+            localStorage.setItem('access_token', responseData.access)
+            localStorage.setItem('refresh_token', responseData.refresh)
+            axios.defaults.headers.common['Authorization'] = `Bearer ${responseData.access}`
+        }
+
         this.user = updatedUser
+        this.role = updatedUser.role || this.role
+        if (this.role) localStorage.setItem('tma_role', this.role)
+        
         return updatedUser
       } catch (err) {
         this.error = err.response?.data?.error || 'Failed to update profile'

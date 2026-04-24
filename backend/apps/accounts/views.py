@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class TmaAuthView(APIView):
+    authentication_classes = []
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
@@ -77,12 +78,12 @@ class TmaAuthView(APIView):
                         break
             
             if not org:
-                return Response({'error': 'Organization not identified or signature invalid'}, status=status.HTTP_401_UNAUTHORIZED)
+                print('Not org:', data_dict, hash_param, flush=True); return Response({'error': 'Organization not identified or signature invalid'}, status=status.HTTP_401_UNAUTHORIZED)
             
             # 3. Check Auth Date (Must be within 24 hours)
             auth_date = int(data_dict.get('auth_date', 0))
             if time.time() - auth_date > 86400:
-                return Response({'error': 'Data is outdated'}, status=status.HTTP_401_UNAUTHORIZED)
+                print('Outdated:', auth_date, time.time(), flush=True); return Response({'error': 'Data is outdated'}, status=status.HTTP_401_UNAUTHORIZED)
 
             # 4. Handle User
             tg_id = user_json.get('id')
@@ -174,6 +175,8 @@ class TmaMeView(APIView):
 
     def patch(self, request, *args, **kwargs):
         user = request.user
+        merge_happened = False
+        new_tokens = {}
         
         # 1. Process phone with normalization
         if 'phone' in request.data:
@@ -183,37 +186,71 @@ class TmaMeView(APIView):
             if not normalized:
                 return Response({'error': 'Invalid phone format'}, status=400)
                 
-            # Conflict Check / Merging
-            existing_client = Client.objects.filter(
+            # Conflict Check / Merging with existing Admin/Master or Client
+            # Check if there is an existing USER (Admin/Master) with this phone
+            existing_user = User.objects.filter(
                 organization_id=user.organization_id, 
                 phone=normalized
-            ).exclude(user=user).first()
-            
-            if existing_client:
-                # Merge logic
-                current_client = Client.objects.filter(user=user).first()
-                if current_client:
-                    current_client.delete()
+            ).exclude(id=user.id).first()
+
+            if existing_user:
+                # Merge into existing user!
+                existing_user.telegram_id = user.telegram_id
+                existing_user.save(update_fields=['telegram_id'])
                 
-                existing_client.user = user
-                existing_client.full_name = f"{user.first_name} {user.last_name}".strip()
-                existing_client.save()
-                user.phone = normalized
+                # Cleanup temporary user and its client
+                Client.objects.filter(user=user).delete()
+                user.delete()
+                
+                # Generate new tokens
+                from rest_framework_simplejwt.tokens import RefreshToken
+                refresh = RefreshToken.for_user(existing_user)
+                new_tokens = {
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh)
+                }
+                user = existing_user # continue with existing_user
+                merge_happened = True
+                
             else:
-                user.phone = normalized
-                client = Client.objects.filter(user=user).first()
-                if client:
-                    client.phone = normalized
-                    client.save()
+                existing_client = Client.objects.filter(
+                    organization_id=user.organization_id, 
+                    phone=normalized
+                ).exclude(user=user).first()
+                
+                if existing_client:
+                    # Merge client logic
+                    current_client = Client.objects.filter(user=user).first()
+                    if current_client:
+                        current_client.delete()
+                    
+                    existing_client.user = user
+                    existing_client.full_name = f"{user.first_name} {user.last_name}".strip()
+                    existing_client.save()
+                    user.phone = normalized
+                else:
+                    user.phone = normalized
+                    client = Client.objects.filter(user=user).first()
+                    if client:
+                        client.phone = normalized
+                        client.save()
         
         # 2. Other fields
-        if 'first_name' in request.data: user.first_name = request.data['first_name']
-        if 'last_name' in request.data: user.last_name = request.data['last_name']
-        if 'language' in request.data: user.language = request.data['language']
-        if 'is_bot_subscribed' in request.data: user.is_bot_subscribed = request.data['is_bot_subscribed']
+        if not merge_happened:
+            if 'first_name' in request.data: user.first_name = request.data['first_name']
+            if 'last_name' in request.data: user.last_name = request.data['last_name']
+            if 'language' in request.data: user.language = request.data['language']
+            if 'is_bot_subscribed' in request.data: user.is_bot_subscribed = request.data['is_bot_subscribed']
+            user.save()
+            
+        request.user = user # Ensure the get method uses the correct (possibly swapped) user
         
-        user.save()
-        return self.get(request)
+        response_data = self.get(request).data
+        if merge_happened:
+            response_data['access'] = new_tokens['access']
+            response_data['refresh'] = new_tokens['refresh']
+            
+        return Response(response_data)
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -247,6 +284,15 @@ class TmaWebhookView(APIView):
         message = update.get('message', {})
         contact = message.get('contact', {})
         callback_query = update.get('callback_query', {})
+
+        # Handle text commands
+        text = message.get('text', '')
+        if text.startswith('/getmyid'):
+            tg_id = message.get('from', {}).get('id') or message.get('chat', {}).get('id')
+            if tg_id:
+                response_text = f"Ваш Telegram ID:\n<code>{tg_id}</code>\n<i>(Нажмите на цифры, чтобы скопировать)</i>"
+                send_telegram_message(token, tg_id, response_text)
+            return Response({'status': 'ok'})
 
         # Handle Contact sharing
         if contact:

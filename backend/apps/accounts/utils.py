@@ -48,7 +48,7 @@ def send_telegram_message(bot_token, chat_id, text, reply_markup=None):
         
     try:
         data = json.dumps(payload).encode('utf-8')
-        req = urllib.request.Request(url, data=data, content_type='application/json')
+        req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
         with urllib.request.urlopen(req) as response:
             return json.loads(response.read().decode())
     except Exception as e:

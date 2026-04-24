@@ -19,6 +19,38 @@ const routes = [
   },
 
   {
+    path: '/admin',
+    component: () => import('../views/admin/AdminTmaLayout.vue'),
+    meta: { role: 'admin' },
+    children: [
+      {
+        path: '',
+        redirect: '/admin/bookings'
+      },
+      {
+        path: 'bookings',
+        name: 'admin-bookings',
+        component: () => import('../views/admin/AdminTmaBookingsView.vue')
+      },
+      {
+        path: 'services',
+        name: 'admin-services',
+        component: () => import('../views/admin/AdminTmaServicesView.vue')
+      },
+      {
+        path: 'masters',
+        name: 'admin-masters',
+        component: () => import('../views/admin/AdminTmaMastersView.vue')
+      },
+      {
+        path: 'report',
+        name: 'admin-report',
+        component: () => import('../views/admin/AdminTmaReportView.vue')
+      }
+    ]
+  },
+
+  {
     path: '/master',
     component: () => import('../components/layout/MasterLayout.vue'),
     meta: { role: 'master' },
@@ -90,11 +122,14 @@ router.beforeEach(async (to, from, next) => {
     const currentRole = auth.currentRole
     
     // Only redirect if a definite role mismatch is detected
-    if (roleRequired === 'master' && currentRole === 'client') {
-      return next('/')
+    if (roleRequired === 'master' && currentRole !== 'master') {
+      return next(currentRole === 'admin' ? '/admin' : '/')
     }
-    if (roleRequired === 'client' && currentRole === 'master') {
-      return next('/master')
+    if (roleRequired === 'client' && currentRole !== 'client') {
+      return next(currentRole === 'admin' ? '/admin' : '/master')
+    }
+    if (roleRequired === 'admin' && currentRole !== 'admin') {
+      return next(currentRole === 'master' ? '/master' : '/')
     }
   }
 

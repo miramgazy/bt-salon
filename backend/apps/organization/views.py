@@ -76,3 +76,77 @@ class SetWebhookView(views.APIView):
                 return Response(data)
         except Exception as e:
             return Response({'error': str(e)}, status=500)
+
+from rest_framework import viewsets
+from apps.accounts.models import User
+from .serializers import EmployeeSerializer
+from apps.masters.models import Master
+
+class EmployeeViewSet(viewsets.ModelViewSet):
+    serializer_class = EmployeeSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        org = self.request.user.organization
+        if not org:
+            return User.objects.none()
+        return User.objects.filter(organization=org, role__in=[User.ROLE_ADMIN, User.ROLE_MASTER])
+
+    def perform_create(self, serializer):
+        org = self.request.user.organization
+        role = self.request.data.get('role', User.ROLE_MASTER)
+        phone = self.request.data.get('phone')
+        
+        if not phone:
+            raise serializers.ValidationError({"phone": "Phone number is required."})
+
+        clean_phone = ''.join(filter(str.isdigit, phone))
+        username = f"emp_{clean_phone}_{org.id}_{User.objects.count()}"
+
+        user = serializer.save(
+            organization=org, 
+            role=role,
+            username=username
+        )
+
+        if role == User.ROLE_MASTER:
+            master = Master.objects.create(user=user, organization=org)
+            services = self.request.data.get('services', [])
+            if services:
+                master.services.set(services)
+            color = self.request.data.get('color')
+            if color:
+                master.color = color
+                master.save()
+
+    def perform_update(self, serializer):
+        user = serializer.save()
+        if user.role == User.ROLE_MASTER and hasattr(user, 'master_profile'):
+            master = user.master_profile
+            services = self.request.data.get('services')
+            if services is not None:
+                master.services.set(services)
+            color = self.request.data.get('color')
+            if color is not None:
+                master.color = color
+                master.save()
+
+    from rest_framework.decorators import action
+    from rest_framework.response import Response
+    from rest_framework import status
+
+    @action(detail=True, methods=['post'], url_path='upload-photo')
+    def upload_photo(self, request, pk=None):
+        user = self.get_object()
+        if user.role != User.ROLE_MASTER or not hasattr(user, 'master_profile'):
+            return Response({'error': 'User is not a master'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        photo = request.FILES.get('photo')
+        if not photo:
+            return Response({'error': 'No photo provided'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        master = user.master_profile
+        master.photo = photo
+        master.save()
+        serializer = self.get_serializer(user, context={'request': request})
+        return Response({'photo_url': serializer.data.get('photo_url')})

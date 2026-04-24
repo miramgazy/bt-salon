@@ -52,16 +52,38 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         org = user.organization
         
-        # 1. Get or create Client profile for the user
-        client, _ = Client.objects.get_or_create(
-            user=user,
-            organization=org,
-            defaults={
-                'phone': user.phone or '',
-                'full_name': f"{user.first_name} {user.last_name}".strip(),
-                'telegram_id': getattr(user, 'telegram_id', None)
-            }
-        )
+        client = None
+        # Handle Admin creating appointment
+        if hasattr(user, 'role') and user.role == User.ROLE_ADMIN:
+            # Check if there's an offline client data provided via context or frontend
+            client_id = self.request.data.get('client_id')
+            client_name = self.request.data.get('client_name')
+            client_phone = self.request.data.get('client_phone')
+            
+            if client_id:
+                client = Client.objects.filter(id=client_id, organization=org).first()
+            elif client_phone:
+                client = Client.objects.filter(phone=client_phone, organization=org).first()
+                if not client:
+                    client = Client.objects.create(
+                        organization=org,
+                        full_name=client_name or client_phone,
+                        phone=client_phone
+                    )
+            else:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({'client_phone': 'Phone number is required for offline clients.'})
+        else:
+            # 1. Get or create Client profile for the regular user
+            client, _ = Client.objects.get_or_create(
+                user=user,
+                organization=org,
+                defaults={
+                    'phone': user.phone or '',
+                    'full_name': f"{user.first_name} {user.last_name}".strip(),
+                    'telegram_id': getattr(user, 'telegram_id', None)
+                }
+            )
         
         # 2. Find the appropriate Shift for the master and date
         master = serializer.validated_data.get('master')
@@ -70,20 +92,26 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         shift = MasterShift.objects.filter(
             organization=org,
             master=master,
-            date=start_time.date(),
-            is_open=True
+            date=start_time.date()
+            # removed is_open=True check so admins or clients can book future closed shifts
         ).first()
-        
-        # Note: If shift is missing, the DB will raise an error because shift is NOT NULL.
-        # We could raise a ValidationError here for better UX.
+
         if not shift:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError({'shift': 'Мастер еще не открыл смену на этот день.'})
+            # Try to auto-create a shift if it's an admin or if we allow open booking
+            shift, _ = MasterShift.objects.get_or_create(
+                organization=org,
+                master=master,
+                date=start_time.date(),
+                defaults={
+                    'is_open': False
+                }
+            )
             
         serializer.save(
             organization=org,
             client=client,
-            shift=shift
+            shift=shift,
+            created_by_admin=(user.role == User.ROLE_ADMIN)
         )
 
     @action(detail=True, methods=['post'])
@@ -94,9 +122,18 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         return Response({'status': 'confirmed'})
 
     @action(detail=True, methods=['post'])
+    def done(self, request, pk=None):
+        appt = self.get_object()
+        appt.status = Appointment.STATUS_DONE
+        appt.save()
+        return Response({'status': 'done'})
+
+    @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         appt = self.get_object()
+        reason = request.data.get('cancellation_reason', '')
         appt.status = Appointment.STATUS_CANCELLED
+        appt.cancellation_reason = reason
         appt.save()
         return Response({'status': 'cancelled'})
 

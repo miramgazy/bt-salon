@@ -124,7 +124,7 @@
                 active-class="bg-bg-dark dark:bg-meta-4"
               >
                 <Icon icon="mdi:account-tie" width="22" />
-                Мастера
+                Сотрудники
               </router-link>
             </li>
 
