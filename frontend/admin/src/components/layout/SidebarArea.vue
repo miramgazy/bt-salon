@@ -22,10 +22,11 @@
     <div class="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear">
       <!-- Sidebar Menu -->
       <nav class="mt-5 py-4 px-4 lg:mt-9 lg:px-6">
-        <div>
-          <h3 class="mb-4 ml-4 text-sm font-medium text-bodydark2 uppercase">MENU</h3>
+        <!-- ОСНОВНОЕ -->
+        <div class="mb-6">
+          <h3 class="mb-4 ml-4 text-sm font-medium text-bodydark2 text-opacity-70 uppercase tracking-widest">Основное</h3>
 
-          <ul class="mb-6 flex flex-col gap-1.5">
+          <ul class="flex flex-col gap-1.5">
             <li>
               <router-link
                 to="/admin"
@@ -58,17 +59,25 @@
                 Все записи
               </router-link>
             </li>
+            
             <li>
               <router-link
                 to="/admin/clients"
                 class="group relative flex items-center gap-2.5 rounded-sm py-2 px-4 font-medium text-bodydark1 duration-300 ease-in-out hover:bg-bg-dark dark:hover:bg-meta-4"
                 active-class="bg-bg-dark dark:bg-meta-4"
               >
-                <Icon icon="mdi:account-group" width="22" />
+                <Icon icon="mdi:account-group-outline" width="22" />
                 Клиенты
               </router-link>
             </li>
+          </ul>
+        </div>
 
+        <!-- САЛОН -->
+        <div class="mb-6">
+          <h3 class="mb-4 ml-4 text-sm font-medium text-bodydark2 text-opacity-70 uppercase tracking-widest">Салон</h3>
+
+          <ul class="flex flex-col gap-1.5">
             <li>
               <router-link
                 to="/admin/shifts"
@@ -89,6 +98,24 @@
                 Расходы
               </router-link>
             </li>
+          </ul>
+        </div>
+
+        <!-- НАСТРОЙКИ -->
+        <div>
+          <h3 class="mb-4 ml-4 text-sm font-medium text-bodydark2 text-opacity-70 uppercase tracking-widest">Настройки</h3>
+
+          <ul class="flex flex-col gap-1.5">
+            <li>
+              <router-link
+                to="/superadmin/services"
+                class="group relative flex items-center gap-2.5 rounded-sm py-2 px-4 font-medium text-bodydark1 duration-300 ease-in-out hover:bg-bg-dark dark:hover:bg-meta-4"
+                active-class="bg-bg-dark dark:bg-meta-4"
+              >
+                <Icon icon="mdi:face-woman" width="22" />
+                Услуги
+              </router-link>
+            </li>
 
             <li>
               <router-link
@@ -96,7 +123,7 @@
                 class="group relative flex items-center gap-2.5 rounded-sm py-2 px-4 font-medium text-bodydark1 duration-300 ease-in-out hover:bg-bg-dark dark:hover:bg-meta-4"
                 active-class="bg-bg-dark dark:bg-meta-4"
               >
-                <Icon icon="mdi:account-group" width="22" />
+                <Icon icon="mdi:account-tie" width="22" />
                 Мастера
               </router-link>
             </li>
@@ -109,17 +136,6 @@
               >
                 <Icon icon="mdi:domain" width="22" />
                 Организация
-              </router-link>
-            </li>
-
-            <li>
-              <router-link
-                to="/superadmin/services"
-                class="group relative flex items-center gap-2.5 rounded-sm py-2 px-4 font-medium text-bodydark1 duration-300 ease-in-out hover:bg-bg-dark dark:hover:bg-meta-4"
-                active-class="bg-bg-dark dark:bg-meta-4"
-              >
-                <Icon icon="mdi:content-cut" width="22" />
-                Услуги
               </router-link>
             </li>
           </ul>
