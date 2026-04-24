@@ -43,6 +43,7 @@ services:
       POSTGRES_PORT: 5432
       REDIS_URL: redis://redis:6379/0
       DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:3059,http://127.0.0.1:3059,http://localhost:30596,https://bt.mevent.kz}
     restart: always
     deploy:
       resources:
