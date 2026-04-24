@@ -164,4 +164,6 @@ SIMPLE_JWT = {
 
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True  # For dev, restrict in production
-CSRF_TRUSTED_ORIGINS = ['http://localhost:3059', 'http://127.0.0.1:3059']
+
+csrf_trusted_env = os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', 'http://localhost:3059,http://127.0.0.1:3059,http://localhost:30596,https://bt.mevent.kz')
+CSRF_TRUSTED_ORIGINS = [url.strip() for url in csrf_trusted_env.split(',') if url.strip()]
