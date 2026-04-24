@@ -1,0 +1,482 @@
+<template>
+  <div class="home-view">
+    <!-- ══ SUCCESS ══ -->
+    <div v-if="state.showSuccess" class="success fade-up">
+      <div class="success-icon">✨</div>
+      <div class="success-title header-font">{{ $t('tma.confirmTitle', 'Запись подтверждена!') }}</div>
+      <div class="success-sub">{{ $t('tma.confirmSub', 'Ждём вас в нашем салоне!') }}</div>
+      <button class="btn-secondary" style="margin-top: 40px; width: 100%" @click="goHome">На главную</button>
+    </div>
+
+    <!-- ══ HOME PAGE ══ -->
+    <div v-else-if="state.page === 'home'" class="fade-up">
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <label class="tab" :class="{ active: state.activeTab === 'services' }" @click="state.activeTab = 'services'">
+          <span class="tab-icon">✨</span>
+          {{ $t('tma.services', 'Услуги') }}
+        </label>
+        <label class="tab" :class="{ active: state.activeTab === 'masters' }" @click="state.activeTab = 'masters'">
+          <span class="tab-icon">👤</span>
+          {{ $t('tma.masters', 'Мастера') }}
+        </label>
+      </div>
+
+      <!-- Date bar -->
+      <div class="date-bar">
+        <div class="date-chip" :class="{ active: state.selectedDate === todayStr }" @click="state.selectedDate = todayStr">
+          {{ $t('tma.today', 'Сегодня') }}
+        </div>
+        <div class="date-chip" :class="{ active: state.selectedDate === tomorrowStr }" @click="state.selectedDate = tomorrowStr">
+          {{ $t('tma.tomorrow', 'Завтра') }}
+        </div>
+        <input type="date" class="date-input" v-model="state.selectedDate" :min="todayStr" />
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="loading" style="text-align:center; padding: 60px;">
+        <div class="spinner"></div>
+      </div>
+
+      <!-- Services tab -->
+      <template v-else-if="state.activeTab === 'services'">
+        <div class="section-title header-font" style="margin-bottom: 12px; font-size: 20px;">
+          {{ $t('tma.serviceCategories', 'Категории') }}
+        </div>
+        <div class="cat-grid">
+          <div v-for="cat in categories" :key="cat.id" class="cat-tile" @click="handleCatClick(cat)">
+            <div class="cat-tile-icon">🏷️</div>
+            <div class="cat-tile-name">{{ cat.name }}</div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Masters tab -->
+      <template v-else-if="state.activeTab === 'masters'">
+        <div class="filter-pills" style="margin-bottom: 16px;">
+          <div class="pill" :class="{ active: !state.masterFilter }" @click="state.masterFilter = null">
+            {{ $t('tma.all', 'Все') }}
+          </div>
+          <div v-for="cat in categories" :key="cat.id" class="pill" :class="{ active: state.masterFilter === cat.id }" @click="state.masterFilter = cat.id">
+            {{ cat.name }}
+          </div>
+        </div>
+        <div class="master-grid">
+          <div v-for="m in filteredMasters" :key="m.id" 
+               :class="['master-card', { 'is-self': isSelf(m) }]" 
+               @click="!isSelf(m) && handleMasterFirstSelect(m)">
+            <div class="master-photo">
+               <img v-if="m.photo_url" :src="m.photo_url" />
+               <span v-else>👤</span>
+            </div>
+            <div class="master-info">
+              <div class="master-name">{{ m.first_name }} {{ m.last_name }} <span v-if="isSelf(m)" class="self-badge">(Это вы)</span></div>
+              <div class="master-rating">★ 5.0</div>
+            </div>
+            <Icon v-if="!isSelf(m)" icon="mdi:chevron-right" width="24" :style="{ color: 'var(--muted)' }" />
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- ══ SERVICE LIST ══ -->
+    <div v-else-if="state.page === 'service-list'" class="fade-up">
+      <div class="page-header">
+        <button class="back-btn" @click="goHome">
+            <Icon icon="mdi:arrow-left" width="20" />
+        </button>
+        <div class="page-title header-font">{{ state.selectedCat?.name }}</div>
+      </div>
+      <div class="service-list">
+        <div v-for="svc in catServices" :key="svc.id" class="service-card" @click="handleServiceSelect(svc)">
+          <div class="service-info">
+            <div class="service-name">{{ svc.name }}</div>
+            <div class="service-meta">⏱ {{ svc.duration_minutes }} мин</div>
+          </div>
+          <div class="service-price">{{ svc.total_price }} ₸</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MASTER SELECT ══ -->
+    <div v-else-if="state.page === 'master-select'" class="fade-up">
+      <div class="page-header">
+        <button class="back-btn" @click="state.page = 'service-list'">
+            <Icon icon="mdi:arrow-left" width="20" />
+        </button>
+        <div class="page-title header-font">{{ $t('tma.chooseMaster', 'Выберите мастера') }}</div>
+      </div>
+      
+      <div v-if="state.selectedService" class="card glass" style="margin-bottom: 20px; border-left: 4px solid var(--gold);">
+        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); font-weight: 800; margin-bottom: 4px;">Выбрана услуга</div>
+        <div style="font-weight: 600;">{{ state.selectedService.name }}</div>
+        <div style="font-size: 13px; color: var(--muted); margin-top: 2px;">{{ state.selectedService.total_price }} ₸ • {{ state.selectedService.duration_minutes }} мин</div>
+      </div>
+
+      <div class="master-grid">
+        <div v-for="m in masters" :key="m.id" 
+             :class="['master-card', { 'is-self': isSelf(m) }]" 
+             @click="!isSelf(m) && handleMasterSelect(m)">
+            <div class="master-photo">
+               <img v-if="m.photo_url" :src="m.photo_url" />
+               <span v-else>👤</span>
+            </div>
+          <div class="master-info">
+            <div class="master-name">{{ m.first_name }} {{ m.last_name }} <span v-if="isSelf(m)" class="self-badge">(Это вы)</span></div>
+            <div class="master-rating">★ 5.0 • Доступен сегодня</div>
+          </div>
+          <button v-if="!isSelf(m)" class="status-badge confirmed" style="border: none; cursor: pointer;">Выбрать</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SLOTS ══ -->
+    <div v-else-if="state.page === 'slots'" class="fade-up">
+      <div class="page-header">
+        <button class="back-btn" @click="state.page = 'master-select'">
+            <Icon icon="mdi:arrow-left" width="20" />
+        </button>
+        <div class="page-title header-font">{{ $t('tma.chooseTime', 'Время записи') }}</div>
+      </div>
+
+      <div class="page-header" style="margin-bottom: 24px;">
+        <div class="date-chip" :class="{ active: state.selectedDate === todayStr }" @click="state.selectedDate = todayStr">Сегодня</div>
+        <div class="date-chip" :class="{ active: state.selectedDate === tomorrowStr }" @click="state.selectedDate = tomorrowStr">Завтра</div>
+        <input type="date" class="date-input" v-model="state.selectedDate" :min="todayStr" />
+      </div>
+
+      <div v-if="slotsLoading" style="text-align:center; padding: 40px;">
+         <div class="spinner"></div>
+      </div>
+      
+      <div v-else-if="shiftClosed" class="card glass fade-up" style="text-align: center; border-color: #ef4444; padding: 32px 20px;">
+         <div style="font-size: 40px; margin-bottom: 16px">🚫</div>
+         <div style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">Смена еще не открыта</div>
+         <div style="color: var(--muted); font-size: 14px;">Мастер еще не начал работу. Пожалуйста, загляните позже или выберите другого мастера.</div>
+      </div>
+
+      <div v-else-if="slots.length === 0" style="text-align:center; padding: 40px; color: var(--muted)">
+         <Icon icon="mdi:calendar-blank" width="48" style="opacity: 0.2; margin-bottom: 12px" />
+         <div>Нет свободного времени на эту дату.</div>
+      </div>
+
+      <div v-else class="slot-grid">
+        <div v-for="s in slots" :key="s.time" 
+             class="slot" 
+             :class="{ selected: state.selectedSlot === s.time, busy: !s.is_available }" 
+             @click="s.is_available ? handleSlotSelect(s.time) : null">
+          {{ s.time }}
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ CONFIRMATION MODAL ══ -->
+    <div v-if="state.showModal && state.selectedService && state.selectedMaster && state.selectedSlot" 
+         class="modal-overlay" @click.self="state.showModal = false">
+      <div class="modal">
+        <div class="modal-title header-font">{{ $t('tma.confirmBooking', 'Детали записи') }}</div>
+        
+        <div class="card glass" style="margin-bottom: 24px; text-align: left;">
+            <div class="modal-row">
+              <span class="modal-label">Услуга</span>
+              <span class="modal-value">{{ state.selectedService.name }}</span>
+            </div>
+            <div class="modal-row">
+              <span class="modal-label">Мастер</span>
+              <span class="modal-value">{{ state.selectedMaster.first_name }} {{ state.selectedMaster.last_name }}</span>
+            </div>
+            <div class="modal-row">
+              <span class="modal-label">Когда</span>
+              <span class="modal-value">{{ state.selectedDate }}, {{ state.selectedSlot }}</span>
+            </div>
+            <div class="modal-row" style="border-bottom: none; margin-top: 12px;">
+              <span class="modal-label" style="font-size: 16px; color: var(--text); font-weight: 700;">К оплате</span>
+              <span class="modal-value gold header-font" style="font-size: 22px;">{{ state.selectedService.total_price }} ₸</span>
+            </div>
+        </div>
+        
+        <button class="btn-confirm" @click="handleConfirm">
+          Подтвердить запись
+        </button>
+        <button class="btn-secondary" style="margin-top: 12px; width: 100%" @click="state.showModal = false">
+          Отмена
+        </button>
+      </div>
+    </div>
+
+  </div>
+</template>
+
+<script setup>
+import { reactive, ref, onMounted, computed, watch } from 'vue'
+import api from '@/api'
+import { Icon } from '@iconify/vue'
+import { useAuthStore } from '../stores/auth'
+
+const auth = useAuthStore()
+
+const getTodayStr = () => new Date().toISOString().slice(0,10)
+const getTomorrowStr = () => {
+  const d = new Date(); d.setDate(d.getDate()+1);
+  return d.toISOString().slice(0,10)
+}
+
+const todayStr = getTodayStr()
+const tomorrowStr = getTomorrowStr()
+
+const state = reactive({
+  page: 'home',
+  activeTab: 'services',
+  selectedDate: todayStr,
+  selectedCat: null,
+  selectedService: null,
+  selectedMaster: null,
+  selectedSlot: null,
+  masterFilter: null,
+  showModal: false,
+  showSuccess: false
+})
+
+const categories = ref([])
+const services = ref([])
+const masters = ref([])
+const loading = ref(true)
+
+const slots = ref([])
+const slotsLoading = ref(false)
+const shiftClosed = ref(false)
+
+const fetchData = async () => {
+  try {
+    loading.value = true
+    const [catsRes, servsRes, mastersRes] = await Promise.all([
+      api.get('/categories/'),
+      api.get('/services/'),
+      api.get('/masters/')
+    ])
+    categories.value = catsRes.data.results || catsRes.data
+    services.value = servsRes.data.results || servsRes.data
+    masters.value = mastersRes.data.results || mastersRes.data
+  } catch (err) {
+    console.error('Fetch error:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchData()
+})
+
+const catServices = computed(() => {
+  if (!state.selectedCat) return []
+  return services.value.filter(s => s.category === state.selectedCat.id)
+})
+
+const filteredMasters = computed(() => {
+  if (!state.masterFilter) return masters.value
+  return masters.value.filter(m => m.services?.some(s => {
+    const svc = services.value.find(sx => sx.id === s)
+    return svc && svc.category === state.masterFilter
+  }))
+})
+
+const isSelf = (master) => {
+  if (!auth.user || !master.user) return false
+  return auth.user.id === master.user
+}
+
+const goHome = () => {
+  state.page = 'home'
+  state.selectedCat = null
+  state.selectedService = null
+  state.selectedMaster = null
+  state.selectedSlot = null
+  state.showSuccess = false
+}
+
+const handleCatClick = (cat) => {
+  state.selectedCat = cat
+  state.page = 'service-list'
+}
+
+const handleServiceSelect = (svc) => {
+  state.selectedService = svc
+  state.page = 'master-select'
+}
+
+const handleMasterSelect = (master) => {
+  state.selectedMaster = master
+  state.page = 'slots'
+}
+
+const handleSlotSelect = (slot) => {
+  state.selectedSlot = slot
+  state.showModal = true
+}
+
+const handleMasterFirstSelect = (master) => {
+  state.selectedMaster = master
+  // Jump to slot selection directly if master is selected from list
+  state.page = 'slots'
+}
+
+const fetchSlots = async () => {
+  if (!state.selectedMaster || !state.selectedService || !state.selectedDate) return
+  try {
+    slotsLoading.value = true
+    shiftClosed.value = false
+    slots.value = []
+    
+    const res = await api.get(`/masters/${state.selectedMaster.id}/available-slots/`, {
+      params: {
+        date: state.selectedDate,
+        service_id: state.selectedService.id
+      }
+    })
+    slots.value = res.data
+  } catch (err) {
+    if (err.response?.status === 400 && err.response?.data?.error === 'shift_closed') {
+       shiftClosed.value = true
+    } else {
+       console.error('Fetch slots error:', err)
+    }
+  } finally {
+    slotsLoading.value = false
+  }
+}
+
+watch([() => state.selectedMaster, () => state.selectedService, () => state.selectedDate, () => state.page], () => {
+    if (state.selectedMaster && ['slots'].includes(state.page)) {
+        fetchSlots()
+    }
+})
+
+const handleConfirm = async () => {
+  try {
+    const start = new Date(`${state.selectedDate}T${state.selectedSlot}:00`)
+    const end = new Date(start.getTime() + state.selectedService.duration_minutes * 60000)
+    
+    await api.post('/appointments/', {
+      master: state.selectedMaster.id,
+      service: state.selectedService.id,
+      start_time: start.toISOString(),
+      end_time: end.toISOString()
+    })
+    
+    state.showModal = false
+    state.showSuccess = true
+  } catch (error) {
+    alert("Ошибка при создании записи")
+    console.error(error)
+  }
+}
+</script>
+
+<style scoped>
+.home-view { padding: 20px 16px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.tab {
+  flex: 1; padding: 14px 8px; border-radius: var(--radius-sm);
+  background: var(--card-bg); border: 1px solid var(--border);
+  cursor: pointer; text-align: center; transition: all .2s;
+  font-size: 13px; font-weight: 600; color: var(--muted);
+}
+.tab.active { background: var(--gold-gradient); color: #000; border-color: var(--gold); box-shadow: 0 4px 12px var(--gold-glow); }
+.tab-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+
+/* Date selector */
+.date-bar { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }
+.date-bar::-webkit-scrollbar { display: none; }
+.date-chip {
+  padding: 8px 16px; border-radius: 20px; background: var(--card-bg);
+  border: 1px solid var(--border); cursor: pointer; font-size: 12px;
+  color: var(--muted); transition: all .2s; white-space: nowrap; font-weight: 600;
+}
+.date-chip.active { background: var(--gold); color: #000; border-color: var(--gold); }
+.date-input {
+  flex: 1; padding: 8px 12px; border-radius: 20px;
+  background: var(--card-bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 12px; font-family: inherit;
+  cursor: pointer; min-width: 0;
+}
+
+/* Category grid */
+.cat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 24px; }
+.cat-tile {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 16px 8px; text-align: center; cursor: pointer; transition: all .2s;
+}
+.cat-tile:active { transform: scale(0.96); border-color: var(--gold); }
+.cat-tile-icon { font-size: 26px; margin-bottom: 8px; }
+.cat-tile-name { font-size: 11px; color: var(--text); font-weight: 600; line-height: 1.3; }
+
+/* Services list */
+.service-list { display: flex; flex-direction: column; gap: 10px; }
+.service-card {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 18px; cursor: pointer; transition: all .2s; display: flex; justify-content: space-between; align-items: center;
+}
+.service-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.service-meta { font-size: 12px; color: var(--muted); font-weight: 500; }
+.service-price { font-size: 18px; font-weight: 700; color: var(--gold); font-family: var(--font-header); }
+
+/* Master grid */
+.master-grid { display: flex; flex-direction: column; gap: 10px; }
+.master-card {
+  background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; display: flex; align-items: center; gap: 16px; cursor: pointer; transition: all .2s;
+}
+.master-photo { width: 60px; height: 60px; border-radius: 50%; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; font-size: 32px; flex-shrink: 0; border: 2px solid var(--border); overflow: hidden; }
+.master-photo img { width: 100%; height: 100%; object-fit: cover; }
+.master-name { font-size: 16px; font-weight: 600; color: var(--text); }
+.master-rating { font-size: 12px; color: var(--gold); font-weight: 700; }
+
+.master-card.is-self { 
+  opacity: 0.7; cursor: default; background: var(--bg-secondary); border-style: dashed;
+}
+.self-badge { font-size: 11px; color: var(--gold); margin-left: 4px; font-weight: 700; text-transform: uppercase; }
+
+/* Slot grid */
+.slot-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 24px; }
+.slot {
+  padding: 12px 0; border-radius: var(--radius-sm); text-align: center;
+  font-size: 14px; cursor: pointer; border: 1px solid var(--border);
+  background: var(--card-bg); transition: all 0.2s; font-weight: 600;
+}
+.slot.busy { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
+.slot.selected { background: var(--gold); color: #000; border-color: var(--gold); box-shadow: 0 4px 10px var(--gold-glow); }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 500;
+  display: flex; align-items: flex-end; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.modal {
+  background: var(--bg); border-radius: 28px 28px 0 0; width: 100%; max-width: 450px;
+  padding: 32px 20px 40px; border-top: 1px solid var(--border);
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.3);
+}
+.modal-title { font-size: 24px; font-weight: 700; margin-bottom: 24px; text-align: center; font-family: var(--font-header); }
+.modal-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.modal-label { color: var(--muted); font-weight: 500; }
+.modal-value { font-weight: 600; color: var(--text); }
+.modal-value.gold { color: var(--gold); font-size: 19px; font-family: var(--font-header); }
+
+/* Buttons */
+.btn-confirm {
+  width: 100%; margin-top: 24px; padding: 16px; border-radius: var(--radius-sm);
+  background: var(--gold-gradient); color: #000; border: none; font-size: 16px;
+  font-weight: 700; cursor: pointer; box-shadow: 0 6px 20px var(--gold-glow);
+}
+
+.success { text-align: center; padding: 60px 20px; }
+.success-icon { font-size: 64px; margin-bottom: 20px; filter: drop-shadow(0 4px 10px var(--gold-glow)); }
+.success-title { font-size: 28px; font-weight: 700; margin-bottom: 12px; color: var(--gold); font-family: var(--font-header); }
+.success-sub { font-size: 15px; color: var(--muted); line-height: 1.6; }
+
+</style>

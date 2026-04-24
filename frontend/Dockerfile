@@ -1,0 +1,17 @@
+FROM node:20-alpine AS build-admin
+WORKDIR /app/admin
+COPY admin/package*.json ./
+RUN npm install
+COPY admin/ ./
+RUN npm run build
+
+FROM node:20-alpine AS build-tma
+WORKDIR /app/tma
+COPY tma/package*.json ./
+RUN npm install
+COPY tma/ ./
+RUN npm run build
+
+FROM nginx:alpine AS final
+COPY --from=build-admin /app/admin/dist /usr/share/nginx/html
+COPY --from=build-tma  /app/tma/dist  /usr/share/nginx/html/tma

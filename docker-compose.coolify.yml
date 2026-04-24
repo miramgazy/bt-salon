@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:15
+    volumes: 
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-salon}
+      POSTGRES_USER: ${POSTGRES_USER:-salon_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+
+  django:
+    build: ./backend
+    command: /app/entrypoint.sh
+    volumes: 
+      - media_data:/app/media
+      - static_data:/app/static
+    depends_on: 
+      - postgres
+      - redis
+    # Coolify will natively inject all variables from the UI automatically
+    # into the container, so we only list them if we want default fallbacks 
+    # or specific mappings.
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-salon}
+      POSTGRES_USER: ${POSTGRES_USER:-salon_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+    restart: always
+
+  nginx:
+    build: ./frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.coolify.conf:/etc/nginx/conf.d/default.conf
+      - media_data:/app/media
+      - static_data:/app/static
+    depends_on: 
+      - django
+    restart: always
+
+volumes:
+  postgres_data:
+  media_data:
+  static_data:

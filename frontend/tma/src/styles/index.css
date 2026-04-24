@@ -1,0 +1,245 @@
+:root {
+  /* Core Telegram Theme Mapping */
+  --tg-bg: var(--tg-theme-bg-color, #ffffff);
+  --tg-text: var(--tg-theme-text-color, #111827);
+  --tg-hint: var(--tg-theme-hint-color, #6b7280);
+  --tg-link: var(--tg-theme-link-color, #3b82f6);
+  --tg-button: var(--tg-theme-button-color, #3b82f6);
+  --tg-button-text: var(--tg-theme-button-text-color, #ffffff);
+  --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #f3f4f6);
+  --tg-header-bg: var(--tg-theme-header-bg-color, #ffffff);
+  --tg-accent-text: var(--tg-theme-accent-text-color, #3b82f6);
+  
+  /* Brand Luxury Pallete */
+  --gold: #c9a84c;
+  --gold-dark: #a68a3c;
+  --gold-light: #e0c87d;
+  --gold-gradient: linear-gradient(135deg, #c9a84c 0%, #a68a3c 100%);
+  --gold-glow: rgba(201, 168, 76, 0.4);
+  
+  /* Semantic Tokens for Light/Dark dynamic contrast */
+  --bg: var(--tg-bg);
+  --bg-secondary: var(--tg-secondary-bg);
+  --text: var(--tg-text);
+  --muted: var(--tg-hint);
+  --border: rgba(0, 0, 0, 0.08);
+  --card-bg: var(--tg-secondary-bg);
+  --glass: rgba(255, 255, 255, 0.7);
+  
+  /* Shapes & Effects */
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+
+/* Dark mode semantic overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --border: rgba(255, 255, 255, 0.1);
+    --glass: rgba(15, 15, 15, 0.7);
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Typography Hierarchy */
+.header-font {
+  font-family: var(--font-header);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-header);
+  color: var(--text);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+h1 { font-size: 26px; font-weight: 800; }
+h2 { font-size: 22px; font-weight: 700; }
+.text-gold { color: var(--gold); }
+.text-muted { color: var(--muted); font-size: 13px; }
+
+/* Global UI Elements */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.back-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.back-btn:active {
+  transform: scale(0.9);
+  background: var(--border);
+}
+
+.back-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* Containers */
+.tma-container {
+  max-width: 500px;
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+}
+
+.page-p {
+  padding: 20px 16px 100px;
+}
+
+/* Glassmorphism & Cards */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card:active {
+  transform: scale(0.98);
+}
+
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+}
+
+/* Luxury Elements */
+.gold-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 24px 0;
+  opacity: 0.3;
+}
+
+/* Premium Buttons */
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px;
+  background: var(--gold-gradient);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 15px var(--gold-glow);
+  transition: all 0.2s;
+}
+
+.btn-primary:active {
+  transform: scale(0.96);
+  opacity: 0.9;
+}
+
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-secondary:active {
+  background: var(--border);
+}
+
+/* Indicators */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.pending { background: rgba(201, 168, 76, 0.15); color: var(--gold); }
+.status-badge.confirmed { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+
+/* Loading State */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Animations */
+.fade-up {
+  animation: fadeUp 0.4s ease-out;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
