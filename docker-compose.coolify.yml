@@ -51,11 +51,12 @@ services:
           memory: 512M
 
   nginx:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile.production
     ports:
       - "30596:80"
     volumes:
-      - ./nginx/nginx.coolify.conf:/etc/nginx/conf.d/default.conf
       - media_data:/app/media
       - static_data:/app/static
     depends_on: 
