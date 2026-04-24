@@ -8,10 +8,20 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-salon_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secret}
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   redis:
     image: redis:7-alpine
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
 
   django:
     build: ./backend
@@ -34,6 +44,11 @@ services:
       REDIS_URL: redis://redis:6379/0
       DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.6'
+          memory: 512M
 
   nginx:
     build: ./frontend
@@ -46,6 +61,11 @@ services:
     depends_on: 
       - django
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 128M
 
 volumes:
   postgres_data:
