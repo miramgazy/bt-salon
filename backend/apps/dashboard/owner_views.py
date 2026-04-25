@@ -14,18 +14,29 @@ class OwnerDashboardAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_date_range(self, request):
-        date_from_str = request.query_params.get('date_from')
-        date_to_str = request.query_params.get('date_to')
+        period = request.query_params.get('period', 'this_month')
+        tz_now = timezone.now()
+        today = tz_now.date()
         
-        if date_to_str:
-            date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
-        else:
-            date_to = timezone.now().date()
-            
-        if date_from_str:
-            date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
-        else:
-            date_from = date_to - timedelta(days=30)
+        if period == 'custom':
+            date_from_str = request.query_params.get('date_from')
+            date_to_str = request.query_params.get('date_to')
+            if date_from_str and date_to_str:
+                date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+                date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+            else:
+                date_from = today - timedelta(days=30)
+                date_to = today
+        elif period == 'this_week':
+            date_from = today - timedelta(days=today.weekday())
+            date_to = today
+        elif period == 'last_month':
+            first_day_this_month = today.replace(day=1)
+            date_to = first_day_this_month - timedelta(days=1)
+            date_from = date_to.replace(day=1)
+        else:  # Default: this_month
+            date_from = today.replace(day=1)
+            date_to = today
             
         return date_from, date_to
 

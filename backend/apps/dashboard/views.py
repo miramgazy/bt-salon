@@ -54,9 +54,30 @@ class SummaryView(DashboardBaseView):
     def get(self, request):
         date_from, date_to = self.get_date_range(request)
         org = request.user.organization
+        # Filtered queryset for non-cancelled (as used for revenue)
         qs = self.get_filtered_appointments(request, date_from, date_to)
         
-        # Current Period Stats
+        # Detailed stats including statuses
+        full_qs = Appointment.objects.filter(
+            organization=org,
+            start_time__date__range=[date_from, date_to]
+        )
+        # Apply master and service filters to full_qs as well
+        master_ids = request.query_params.getlist('master_ids[]') or request.query_params.getlist('master_ids')
+        if master_ids:
+            full_qs = full_qs.filter(master_id__in=master_ids)
+        service_ids = request.query_params.getlist('service_ids[]') or request.query_params.getlist('service_ids')
+        if service_ids:
+            full_qs = full_qs.filter(service_id__in=service_ids)
+
+        status_counts = full_qs.aggregate(
+            total=Count('id'),
+            completed=Count('id', filter=Q(status=Appointment.STATUS_COMPLETED)),
+            pending=Count('id', filter=Q(status=Appointment.STATUS_PENDING)),
+            cancelled=Count('id', filter=Q(status=Appointment.STATUS_CANCELLED))
+        )
+
+        # Current Period Stats (Revenue uses non-cancelled)
         stats = qs.aggregate(
             revenue=Sum('service__total_price'),
             master_share=Sum('service__base_price'),
@@ -76,7 +97,7 @@ class SummaryView(DashboardBaseView):
         
         net_profit = revenue - master_share - expenses
         
-        # Previous Period Stats
+        # Previous Period Stats (for historical context)
         duration = (date_to - date_from).days + 1
         prev_date_to = date_from - timedelta(days=1)
         prev_date_from = prev_date_to - timedelta(days=duration - 1)
@@ -91,30 +112,28 @@ class SummaryView(DashboardBaseView):
         
         prev_revenue = prev_stats['revenue'] or 0
         prev_master_share = prev_stats['master_share'] or 0
-        prev_owner_margin = prev_revenue - prev_master_share
-        
-        prev_expenses = Expense.objects.filter(
-            organization=org,
-            date__range=[prev_date_from, prev_date_to]
-        ).aggregate(total=Sum('amount'))['total'] or 0
-        
-        prev_net_profit = prev_revenue - prev_master_share - prev_expenses
-
+        prev_net_profit = prev_revenue - prev_master_share
+ 
         return Response({
             "revenue": float(revenue),
+            "total_revenue": float(revenue), # Alias for TMA
             "owner_margin": float(owner_margin),
             "master_share": float(master_share),
             "total_expenses": float(expenses),
             "net_profit": float(net_profit),
             "appointments_count": stats['appointments_count'],
             "unique_clients_count": stats['unique_clients_count'],
+            
+            # TMA Specific Status Fields
+            "total_appointments": status_counts['total'],
+            "completed_appointments": status_counts['completed'],
+            "pending_appointments": status_counts['pending'],
+            "cancelled_appointments": status_counts['cancelled'],
+            
             "prev_period": {
                 "revenue": float(prev_revenue),
-                "owner_margin": float(prev_owner_margin),
-                "total_expenses": float(prev_expenses),
                 "net_profit": float(prev_net_profit),
                 "appointments_count": prev_stats['appointments_count'],
-                "unique_clients_count": prev_stats['unique_clients_count']
             }
         })
 
