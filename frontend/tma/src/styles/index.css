@@ -121,8 +121,7 @@ h2 { font-size: 22px; font-weight: 700; }
 }
 
 .page-p {
-  padding: calc(var(--tg-safe-top, 0px) + 20px) 16px 100px;
-  transition: padding-top 0.3s ease;
+  padding: 20px 16px 100px;
 }
 
 /* Glassmorphism & Cards */

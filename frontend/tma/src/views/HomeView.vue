@@ -395,7 +395,7 @@ const handleConfirm = async () => {
 </script>
 
 <style scoped>
-.home-view { padding: calc(var(--tg-safe-top, 0px) + 20px) 16px 20px; transition: padding-top 0.3s ease; }
+.home-view { padding: 20px 16px; }
 
 /* Tabs */
 .tabs { display: flex; gap: 8px; margin-bottom: 20px; }

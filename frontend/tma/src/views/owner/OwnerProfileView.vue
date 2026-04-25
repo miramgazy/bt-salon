@@ -138,8 +138,7 @@ const switchToClient = () => {
 
 <style scoped>
 .profile-view {
-  padding: calc(var(--tg-safe-top, 0px) + 20px) 16px 100px;
-  transition: padding-top 0.3s ease;
+  padding: 20px 16px 100px;
 }
 .user-info-card {
   text-align: center;

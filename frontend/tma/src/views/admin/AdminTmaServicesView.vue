@@ -475,8 +475,7 @@ onMounted(() => {
 
 <style scoped>
 .admin-services {
-  padding: calc(var(--tg-safe-top, 0px) + 20px) 16px 100px;
-  transition: padding-top 0.3s ease;
+  padding: 20px 16px 100px;
 }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .page-title { font-size: 24px; font-weight: 800; color: var(--text); }

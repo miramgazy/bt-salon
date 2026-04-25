@@ -89,31 +89,6 @@ const initTma = async () => {
     webApp.ready()
     webApp.expand()
 
-    // Listen for viewport changes to handle expanded state
-    const updateSafeAreas = () => {
-      const root = document.documentElement
-      const isExpanded = webApp.isExpanded
-      root.classList.toggle('tma-expanded', isExpanded)
-      
-      // contentSafeAreaInsets (API 8.0+) - best for avoiding overlap with close buttons/status bar
-      const contentInsets = webApp.contentSafeAreaInsets || webApp.safeAreaInsets
-      
-      if (contentInsets) {
-        root.style.setProperty('--tg-safe-top', `${contentInsets.top}px`)
-        root.style.setProperty('--tg-safe-bottom', `${contentInsets.bottom}px`)
-      } else {
-        // Fallback for older versions: if expanded, we usually need more space for status bar + Close Button row
-        // 90px is a safer average for Status Bar (~44px) + Telegram UI Header (~44px)
-        root.style.setProperty('--tg-safe-top', isExpanded ? '90px' : '0px')
-        root.style.setProperty('--tg-safe-bottom', '0px')
-      }
-    }
-
-    webApp.onEvent('viewportChanged', updateSafeAreas)
-    webApp.onEvent('safeAreaChanged', updateSafeAreas)
-    webApp.onEvent('contentSafeAreaChanged', updateSafeAreas)
-    updateSafeAreas() // Initial call
-
     const initData = webApp.initData
     const organizationId = webApp.initDataUnsafe?.start_param || null
 

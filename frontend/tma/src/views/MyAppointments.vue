@@ -109,9 +109,8 @@ const cancelApt = async (id) => {
 </script>
 
 <style scoped>
-.appointments-page {
-  padding: calc(var(--tg-safe-top, 0px) + 20px) 16px 100px;
-  transition: padding-top 0.3s ease;
+.appointments-view {
+  padding: 20px 16px 100px;
 }
 
 .apt-card {
