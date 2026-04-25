@@ -102,8 +102,9 @@ const initTma = async () => {
         root.style.setProperty('--tg-safe-top', `${contentInsets.top}px`)
         root.style.setProperty('--tg-safe-bottom', `${contentInsets.bottom}px`)
       } else {
-        // Fallback for older versions: if expanded, we usually need more space for status bar + UI
-        root.style.setProperty('--tg-safe-top', isExpanded ? '60px' : '0px')
+        // Fallback for older versions: if expanded, we usually need more space for status bar + Close Button row
+        // 90px is a safer average for Status Bar (~44px) + Telegram UI Header (~44px)
+        root.style.setProperty('--tg-safe-top', isExpanded ? '90px' : '0px')
         root.style.setProperty('--tg-safe-bottom', '0px')
       }
     }

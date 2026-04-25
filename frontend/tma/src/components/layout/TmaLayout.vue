@@ -100,11 +100,12 @@ const exitApp = () => {
 
 .header {
   background: var(--tg-bg);
-  padding: 12px 16px;
+  padding: calc(var(--tg-safe-top, 0px) + 12px) 16px;
   border-bottom: 1px solid var(--border);
   position: sticky; 
   top: 0; 
   z-index: 100;
+  transition: padding-top 0.3s ease;
 }
 
 .header-top { display: flex; justify-content: space-between; align-items: center; }
