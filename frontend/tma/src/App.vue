@@ -101,12 +101,12 @@ const initTma = async () => {
       if (ok) {
         applyThemeFromBot()
         
-        // Wait for both auth and the 5s timer
         const elapsed = Date.now() - startTime
-        const remaining = Math.max(0, 5200 - elapsed) // Slightly more than 5s for smoothness
+        const remaining = Math.max(0, 5200 - elapsed)
         await new Promise(r => setTimeout(r, remaining))
         
         await navigateAfterAuth()
+        await router.isReady()
       }
       auth.loading = false
     } else {
@@ -123,10 +123,11 @@ const initTma = async () => {
       await new Promise(r => setTimeout(r, remaining))
       
       await navigateAfterAuth()
+      await router.isReady()
     } else {
-      // For local dev without TG, we can still show the loader for context
       await new Promise(r => setTimeout(r, 5200))
       router.replace('/onboarding/welcome')
+      await router.isReady()
     }
     auth.loading = false
   }

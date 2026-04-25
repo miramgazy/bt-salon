@@ -8,10 +8,10 @@ urlpatterns = [
     path('api/accounts/', include('apps.accounts.urls')),
     path('api/organization/', include('apps.organization.urls')),
     path('api/masters/', include('apps.masters.urls')),
-    path('api/', include('apps.services.urls')), # categories inside this
     path('api/clients/', include('apps.clients.urls')),
     path('api/appointments/', include('apps.appointments.urls')),
     path('api/dashboard/', include('apps.dashboard.urls')),
     path('api/expenses/', include('apps.expenses.urls')),
+    path('api/', include('apps.services.urls')),
     path('api/', include('apps.appointments.calendar_urls')), # for /api/calendar/
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

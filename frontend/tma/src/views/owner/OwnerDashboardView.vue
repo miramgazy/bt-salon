@@ -372,9 +372,11 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
 const auth = useAuthStore()
+const { t } = useI18n()
 const route = useRoute()
 const loading = ref(true)
 const activeTab = ref('overview')
