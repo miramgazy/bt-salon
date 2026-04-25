@@ -13,6 +13,9 @@
             <th class="py-3 px-4 text-xs font-bold text-black dark:text-white uppercase tracking-wider cursor-pointer hover:text-primary transition-colors" @click="handleSort('category')">
               Статья <Icon v-if="sortBy === 'category'" :icon="sortOrder === 'asc' ? 'mdi:chevron-up' : 'mdi:chevron-down'" class="inline" />
             </th>
+            <th class="py-3 px-4 text-xs font-bold text-black dark:text-white uppercase tracking-wider">
+              Тип
+            </th>
             <th class="py-3 px-4 text-xs font-bold text-black dark:text-white uppercase tracking-wider text-right cursor-pointer hover:text-primary transition-colors" @click="handleSort('amount')">
               Сумма <Icon v-if="sortBy === 'amount'" :icon="sortOrder === 'asc' ? 'mdi:chevron-up' : 'mdi:chevron-down'" class="inline" />
             </th>
@@ -40,6 +43,16 @@
                 <td class="border-b border-[#eee] py-2.5 px-4 dark:border-strokedark">
                   <span class="inline-flex rounded-full bg-primary/10 py-0.5 px-2.5 text-[11px] font-bold text-primary">
                     {{ exp.category_name }}
+                  </span>
+                </td>
+                <td class="border-b border-[#eee] py-2.5 px-4 dark:border-strokedark">
+                  <span 
+                    :class="[
+                      'inline-flex rounded-full py-0.5 px-2.5 text-[10px] font-bold uppercase tracking-wider',
+                      exp.category_type === 'fixed' ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
+                    ]"
+                  >
+                    {{ exp.category_type === 'fixed' ? 'Постоянный' : 'Переменный' }}
                   </span>
                 </td>
                 <td class="border-b border-[#eee] py-2.5 px-4 dark:border-strokedark text-right">
@@ -101,6 +114,7 @@ interface Expense {
   date: string
   name: string
   category_name: string
+  category_type: string
   amount: number | string
   comment?: string
 }

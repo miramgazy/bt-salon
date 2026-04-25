@@ -90,10 +90,18 @@ class SummaryView(DashboardBaseView):
         owner_margin = revenue - master_share
         
         # Expenses and Net Profit
-        expenses = Expense.objects.filter(
+        expenses_qs = Expense.objects.filter(
             organization=org,
             date__range=[date_from, date_to]
-        ).aggregate(total=Sum('amount'))['total'] or 0
+        )
+        expenses_stats = expenses_qs.aggregate(
+            total=Sum('amount'),
+            fixed=Sum('amount', filter=Q(category_type='fixed')),
+            variable=Sum('amount', filter=Q(category_type='variable'))
+        )
+        expenses = expenses_stats['total'] or 0
+        fixed_expenses = expenses_stats['fixed'] or 0
+        variable_expenses = expenses_stats['variable'] or 0
         
         net_profit = revenue - master_share - expenses
         
@@ -120,6 +128,8 @@ class SummaryView(DashboardBaseView):
             "owner_margin": float(owner_margin),
             "master_share": float(master_share),
             "total_expenses": float(expenses),
+            "fixed_expenses": float(fixed_expenses),
+            "variable_expenses": float(variable_expenses),
             "net_profit": float(net_profit),
             "appointments_count": stats['appointments_count'],
             "unique_clients_count": stats['unique_clients_count'],

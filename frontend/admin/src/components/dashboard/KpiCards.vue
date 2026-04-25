@@ -23,6 +23,18 @@
       color="danger"
     >
        <template #icon><Icon icon="mdi:cash-remove" width="18" class="text-danger" /></template>
+       <template #footer>
+          <div class="flex flex-col gap-1.5">
+             <div class="flex justify-between items-center text-[10px]">
+                <span class="text-body font-medium">Постоянные:</span>
+                <span class="text-danger font-bold">{{ formatCurrency(data?.fixed_expenses || 0) }}</span>
+             </div>
+             <div class="flex justify-between items-center text-[10px]">
+                <span class="text-body font-medium">Переменные:</span>
+                <span class="text-warning font-bold">{{ formatCurrency(data?.variable_expenses || 0) }}</span>
+             </div>
+          </div>
+       </template>
     </KpiCard>
 
     <KpiCard 

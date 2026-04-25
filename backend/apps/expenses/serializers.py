@@ -12,7 +12,7 @@ class ExpenseCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ExpenseCategory
-        fields = ['id', 'name', 'expenses_count', 'organization']
+        fields = ['id', 'name', 'category_type', 'expenses_count', 'organization']
         validators = [
             serializers.UniqueTogetherValidator(
                 queryset=ExpenseCategory.objects.all(),
@@ -27,7 +27,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expense
         fields = [
-            'id', 'date', 'name', 'category', 'category_name', 
+            'id', 'date', 'name', 'category', 'category_name', 'category_type',
             'amount', 'comment', 'created_at', 'updated_at'
         ]
 
@@ -36,4 +36,4 @@ class ExpenseWriteSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Expense
-        fields = ['id', 'date', 'name', 'category', 'amount', 'comment', 'organization']
+        fields = ['id', 'date', 'name', 'category', 'category_type', 'amount', 'comment', 'organization']

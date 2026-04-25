@@ -24,6 +24,11 @@
         />
       </span>
     </div>
+
+    <!-- Footer Slot -->
+    <div v-if="$slots.footer" class="mt-4 pt-3 border-t border-stroke dark:border-strokedark">
+       <slot name="footer"></slot>
+    </div>
   </div>
 </template>
 

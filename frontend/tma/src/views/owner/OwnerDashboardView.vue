@@ -195,22 +195,24 @@
         </div>
 
         <div class="kpi-grid">
-          <div class="kpi crimson">
-            <div class="kpi-label">Постоянные</div>
-            <div class="kpi-val crimson">{{ formatM(totalFixedExp) }} ₸</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-label">Переменные</div>
-            <div class="kpi-val" style="color:#e08030">{{ formatM(totalVarExp) }} ₸</div>
-          </div>
-          <div class="kpi" style="grid-column: 1 / -1">
-             <div class="kpi-label">Итого расходов</div>
-             <div class="kpi-val crimson">{{ formatM(data.summary.expenses) }} ₸</div>
-             <div class="kpi-sub neutral">{{ expPercent }}% от выручки</div>
-          </div>
+           <div class="chart-card" style="margin-bottom:0">
+              <div class="chart-label">Типы расходов</div>
+              <apexchart type="donut" height="200" :options="expenseTypeDonutOptions" :series="expenseTypeDonutSeries"></apexchart>
+           </div>
+           <div class="flex flex-col gap-3">
+              <div class="kpi crimson">
+                <div class="kpi-label">Постоянные</div>
+                <div class="kpi-val crimson">{{ formatM(totalFixedExp) }} ₸</div>
+              </div>
+              <div class="kpi">
+                <div class="kpi-label">Переменные</div>
+                <div class="kpi-val" style="color:#e08030">{{ formatM(totalVarExp) }} ₸</div>
+              </div>
+           </div>
         </div>
+
         <div class="chart-card">
-           <div class="chart-label">Структура расходов</div>
+           <div class="chart-label">Детальная структура</div>
            <apexchart type="bar" height="200" :options="expenseBarOptions" :series="expenseBarSeries"></apexchart>
         </div>
         <div class="section">
@@ -540,6 +542,29 @@ const serviceDonutOptions = computed(() => ({
   legend: { position: 'bottom', labels: { colors: 'var(--tg-theme-text-color)' } },
   stroke: { show: false },
   dataLabels: { enabled: false }
+}))
+
+// Expense Type Donut
+const expenseTypeDonutSeries = computed(() => [totalFixedExp.value, totalVarExp.value])
+const expenseTypeDonutOptions = computed(() => ({
+   chart: { type: 'donut', fontFamily: 'inherit' },
+   theme: { mode: window.Telegram?.WebApp?.colorScheme || 'light' },
+   labels: ['Постоянные', 'Переменные'],
+   colors: ['#c0392b', '#e08030'],
+   legend: { show: false },
+   stroke: { show: false },
+   dataLabels: { enabled: true, formatter: (val) => Math.round(val) + '%' },
+   plotOptions: { 
+      pie: { 
+         donut: { 
+            size: '70%', 
+            labels: { 
+               show: true, 
+               total: { show: true, label: 'Расходы', color: 'var(--tg-theme-hint-color)', formatter: () => formatM(data.value.summary.expenses) } 
+            } 
+         } 
+      } 
+   }
 }))
 
 // Expense Vertical Bars

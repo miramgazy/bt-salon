@@ -1,6 +1,7 @@
 export interface ExpenseCategory {
   id: number
   name: string
+  category_type: 'fixed' | 'variable'
   expenses_count: number
 }
 
@@ -10,6 +11,7 @@ export interface Expense {
   name: string
   category: number
   category_name: string
+  category_type: 'fixed' | 'variable'
   amount: string | number
   comment: string
   created_at: string

@@ -40,12 +40,23 @@ class Expense(models.Model):
         related_name="expenses",
         verbose_name="Статья расхода"
     )
+    category_type = models.CharField(
+        max_length=10, 
+        choices=ExpenseCategory.TYPE_CHOICES, 
+        default=ExpenseCategory.TYPE_VARIABLE, 
+        verbose_name="Тип расхода"
+    )
     amount = models.DecimalField(
         max_digits=12, decimal_places=2, verbose_name="Сумма"
     )
     comment = models.TextField(blank=True, default="", verbose_name="Комментарий")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if self.category and not self.category_type:
+             self.category_type = self.category.category_type
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = "Расход"

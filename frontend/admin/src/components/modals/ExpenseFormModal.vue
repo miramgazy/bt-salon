@@ -41,6 +41,7 @@
             <select
               v-model="form.category"
               required
+              @change="syncType"
               class="flex-1 rounded border border-stroke bg-gray-50 py-3 px-5 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white transition-all"
             >
               <option value="">Выберите статью</option>
@@ -56,6 +57,15 @@
             >
               <Icon icon="mdi:cog" width="20" />
             </button>
+          </div>
+          <!-- Type Preview -->
+          <div v-if="selectedCategoryType" class="mt-2">
+             <span 
+                :class="['text-[10px] font-bold uppercase py-0.5 px-2 rounded-full', 
+                    selectedCategoryType === 'fixed' ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success']"
+             >
+                Тип: {{ selectedCategoryType === 'fixed' ? 'Постоянный' : 'Переменный' }}
+             </span>
           </div>
         </div>
 
@@ -151,9 +161,22 @@ const form = reactive({
   date: new Date().toISOString().split('T')[0],
   name: '',
   category: '' as string | number,
+  category_type: 'variable',
   amount: '' as string | number,
   comment: ''
 })
+
+const selectedCategoryType = computed(() => {
+    if (!form.category) return null
+    const cat = props.categories.find(c => c.id === Number(form.category))
+    return cat?.category_type || null
+})
+
+const syncType = () => {
+    if (selectedCategoryType.value) {
+        form.category_type = selectedCategoryType.value
+    }
+}
 
 watch(() => props.show, (newVal) => {
   if (newVal) {
@@ -161,12 +184,14 @@ watch(() => props.show, (newVal) => {
       form.date = props.expense.date
       form.name = props.expense.name
       form.category = props.expense.category
+      form.category_type = props.expense.category_type || 'variable'
       form.amount = props.expense.amount
       form.comment = props.expense.comment
     } else {
       form.date = new Date().toISOString().split('T')[0]
       form.name = ''
       form.category = ''
+      form.category_type = 'variable'
       form.amount = ''
       form.comment = ''
     }
