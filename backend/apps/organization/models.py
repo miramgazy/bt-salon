@@ -40,4 +40,10 @@ class Organization(models.Model):
         help_text="Шаблон на казахском. Плейсхолдеры: {Organization_name}, {User_name}, {Service_name}, {Master_name}, {Start_time}"
     )
 
+    # Scheduling Settings
+    slot_duration = models.PositiveIntegerField(
+        default=30,
+        help_text="Базовая длительность слота в минутах (шаг записи)"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)

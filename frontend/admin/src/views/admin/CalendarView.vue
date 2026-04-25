@@ -267,6 +267,7 @@ import QuickShiftModal from '../../components/modals/QuickShiftModal.vue'
 const bookings = ref([])
 const masters = ref([])
 const shifts = ref([])
+const organization = ref(null)
 const loading = ref(true)
 
 const currentDate = ref(new Date())
@@ -313,14 +314,16 @@ const currentMonthStr = computed(() => {
 const fetchAll = async () => {
   try {
     loading.value = true
-    const [apptRes, mastersRes, shiftsRes] = await Promise.all([
+    const [apptRes, mastersRes, shiftsRes, orgRes] = await Promise.all([
       api.get('/api/appointments/'),
       api.get('/api/masters/'),
-      api.get('/api/masters/shifts/', { params: { month: currentMonthStr.value } })
+      api.get('/api/masters/shifts/', { params: { month: currentMonthStr.value } }),
+      api.get('/api/organization/')
     ])
     bookings.value = apptRes.data.results || apptRes.data || []
     masters.value = mastersRes.data.results || mastersRes.data || []
     shifts.value = shiftsRes.data.results || shiftsRes.data || []
+    organization.value = orgRes.data
 
     // If day modal is open, refresh selected day
     if (showDayModal.value && selectedDay.value) {
@@ -520,9 +523,10 @@ const calendarDays = computed(() => {
       if (shift && shift.work_start && shift.work_end) {
          let start = timeToMinutes(shift.work_start)
          let end = timeToMinutes(shift.work_end)
-         start = Math.floor(start / 30) * 30
-         end = Math.ceil(end / 30) * 30
-         for(let m = start; m < end; m += 30) {
+         const step = organization.value?.slot_duration || 30
+         start = Math.floor(start / step) * step
+         end = Math.ceil(end / step) * step
+         for(let m = start; m < end; m += step) {
            const hh = String(Math.floor(m / 60)).padStart(2, '0')
            const mm = String(m % 60).padStart(2, '0')
            const timeStr = `${hh}:${mm}`

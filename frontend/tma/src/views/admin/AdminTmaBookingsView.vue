@@ -375,7 +375,7 @@ const createAppointment = async () => {
     creating.value = true
     try {
         const start_time = new Date(`${selectedDate.value}T${form.value.time}:00`).toISOString()
-        const duration = currentServiceDuration.value || 30
+        const duration = currentServiceDuration.value || auth.organizationSettings?.slot_duration || 30
         const end_time = new Date(new Date(start_time).getTime() + duration * 60000).toISOString()
         
         await api.post('/appointments/', {

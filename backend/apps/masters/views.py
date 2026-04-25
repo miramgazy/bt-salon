@@ -86,7 +86,8 @@ class MasterViewSet(viewsets.ModelViewSet):
         except ValueError:
             return Response({'error': 'Invalid date format'}, status=status.HTTP_400_BAD_REQUEST)
 
-        duration_minutes = 30
+        org = master.organization
+        duration_minutes = org.slot_duration
         if service_id:
             try:
                 service = Service.objects.get(id=service_id)
@@ -105,12 +106,12 @@ class MasterViewSet(viewsets.ModelViewSet):
 
         slots = []
         
-        # We step 30 minutes
+        # We step by organization slot duration
         current_dt = datetime.combine(target_date, shift.work_start)
         end_dt = datetime.combine(target_date, shift.work_end)
         
         service_duration = timedelta(minutes=duration_minutes)
-        step = timedelta(minutes=30)
+        step = timedelta(minutes=org.slot_duration)
         
         while current_dt + service_duration <= end_dt:
             slot_end_dt = current_dt + service_duration

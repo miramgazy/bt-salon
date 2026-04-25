@@ -286,6 +286,19 @@
                 </div>
               </div>
 
+              <div class="mb-5.5">
+                <h4 class="mb-4 text-sm font-medium text-black dark:text-white">Настройки записи</h4>
+                <div class="flex flex-col gap-5.5 sm:flex-row">
+                  <div class="w-full sm:w-1/2">
+                    <label class="mb-3 block text-sm font-medium text-black dark:text-white">Базовый шаг записи (минут)</label>
+                    <input v-model="org.slot_duration" type="number" min="5" step="5" class="w-full rounded border border-stroke bg-gray-50 py-2.5 px-4.5 text-black focus:border-primary focus-visible:outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white dark:focus:border-primary" required />
+                    <p class="mt-2 text-xs text-body italic">
+                      * Определяет интервал времени между доступными слотами для записи.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <!-- Notification Settings -->
               <h3 class="mb-5 mt-10 font-medium text-black dark:text-white border-b border-stroke pb-2 dark:border-strokedark text-lg">
                 Уведомления и напоминания (Бот)
@@ -422,7 +435,8 @@ const org = ref({
   is_reminders_enabled: false,
   reminder_hours_before: 1,
   reminder_template_ru: '',
-  reminder_template_kz: ''
+  reminder_template_kz: '',
+  slot_duration: 30
 })
 
 const logoFile = ref(null)

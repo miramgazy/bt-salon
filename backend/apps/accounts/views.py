@@ -144,6 +144,7 @@ class TmaAuthView(APIView):
                     'logo_url': request.build_absolute_uri(org.logo.url) if org.logo else None,
                     'instagram_link': org.instagram_link,
                     'whatsapp_number': org.whatsapp_number,
+                    'slot_duration': org.slot_duration,
                 }
             })
             
@@ -174,6 +175,7 @@ class TmaMeView(APIView):
                 'logo_url': request.build_absolute_uri(user.organization.logo.url) if user.organization and user.organization.logo else None,
                 'instagram_link': user.organization.instagram_link if user.organization else None,
                 'whatsapp_number': user.organization.whatsapp_number if user.organization else None,
+                'slot_duration': user.organization.slot_duration if user.organization else 30,
             }
         })
 
