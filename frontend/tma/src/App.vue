@@ -89,6 +89,25 @@ const initTma = async () => {
     webApp.ready()
     webApp.expand()
 
+    // Listen for viewport changes to handle expanded state
+    const handleViewportChange = () => {
+      const root = document.documentElement
+      const isExpanded = webApp.isExpanded
+      root.classList.toggle('tma-expanded', isExpanded)
+      
+      // Handle Safe Area (API 8.0+)
+      if (webApp.safeAreaInsets) {
+        root.style.setProperty('--tg-safe-top', `${webApp.safeAreaInsets.top}px`)
+        root.style.setProperty('--tg-safe-bottom', `${webApp.safeAreaInsets.bottom}px`)
+      } else {
+        // Fallback or default for older versions when expanded
+        root.style.setProperty('--tg-safe-top', isExpanded ? '44px' : '0px')
+      }
+    }
+
+    webApp.onEvent('viewportChanged', handleViewportChange)
+    handleViewportChange() // Initial call
+
     const initData = webApp.initData
     const organizationId = webApp.initDataUnsafe?.start_param || null
 
