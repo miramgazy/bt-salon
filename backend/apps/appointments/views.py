@@ -34,11 +34,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             qs = qs.filter(service_id=service_id)
             
         if my == 'true':
-            if self.request.user.role == User.ROLE_MASTER:
-                from apps.masters.models import Master
-                master = Master.objects.filter(user=self.request.user).first()
-                if master:
-                    qs = qs.filter(master=master)
+            from apps.masters.models import Master
+            master = Master.objects.filter(user=self.request.user).first()
+            if master:
+                qs = qs.filter(master=master)
             elif hasattr(self.request.user, 'telegram_id') and self.request.user.telegram_id:
                 # For TMA requests, further filter by client
                 qs = qs.filter(client__telegram_id=self.request.user.telegram_id)
@@ -250,11 +249,9 @@ from datetime import timedelta
 class MasterStatsView(views.APIView):
     def get(self, request):
         user = request.user
-        if user.role != User.ROLE_MASTER:
-            return Response({'error': 'Not authorized'}, status=403)
-            
         from apps.masters.models import Master
         master = Master.objects.filter(user=user).first()
+        
         if not master:
             return Response({'error': 'Master profile not found'}, status=404)
             

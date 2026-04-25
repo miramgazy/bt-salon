@@ -64,10 +64,10 @@
           </div>
         </div>
 
-        <!-- Exit Button (Right - Always Fixed) -->
-        <button @click="exitApp" class="nav-control right">
-          <Icon icon="mdi:exit-to-app" width="24" />
-          <span>Выход</span>
+        <!-- Profile Button (Right - Always Fixed) -->
+        <button @click="setTab('profile')" class="nav-control right" :class="{ active: activeTab === 'profile' }">
+          <Icon icon="mdi:account-circle" width="24" />
+          <span>Профиль</span>
         </button>
       </div>
     </nav>
@@ -107,9 +107,11 @@ const cssVars = computed(() => {
 
 const setTab = (tabId) => {
   activeTab.value = tabId
-  // We'll update the OwnerDashboardView internal state via an event or query param
-  // For now, let's use a query param so the view can react
-  router.replace({ path: '/owner', query: { tab: tabId } })
+  if (tabId === 'profile') {
+    router.push('/owner/profile')
+  } else {
+    router.push({ path: '/owner', query: { tab: tabId } })
+  }
   if (isExpanded.value) isExpanded.value = false
 }
 

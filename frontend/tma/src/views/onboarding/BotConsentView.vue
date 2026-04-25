@@ -60,6 +60,7 @@ const error = ref('')
 function goNext() {
   if (auth.currentRole === 'admin') router.push('/admin')
   else if (auth.currentRole === 'master') router.push('/master')
+  else if (auth.currentRole === 'owner') router.push('/owner')
   else router.push('/')
 }
 

@@ -42,10 +42,10 @@
         <span>Отчеты</span>
       </router-link>
 
-      <button @click="exitApp" class="nav-item border-none bg-transparent cursor-pointer">
-        <Icon icon="mdi:exit-to-app" width="24" />
-        <span>Выход</span>
-      </button>
+      <router-link to="/admin/profile" class="nav-item" active-class="router-link-active">
+        <Icon icon="mdi:account-circle" width="24" :class="{'active-icon': $route.path.includes('/admin/profile')}" />
+        <span>Профиль</span>
+      </router-link>
     </nav>
   </div>
 </template>

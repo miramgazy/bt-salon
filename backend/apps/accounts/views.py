@@ -133,6 +133,8 @@ class TmaAuthView(APIView):
                     'phone': user.phone,
                     'is_onboarded': bool(user.phone),
                     'is_bot_subscribed': user.is_bot_subscribed,
+                    'has_master_profile': hasattr(user, 'master_profile'),
+                    'master_id': user.master_profile.id if hasattr(user, 'master_profile') else None,
                     'organization_id': org.id,
                     'organization_name': org.name,
                 },
@@ -163,6 +165,8 @@ class TmaMeView(APIView):
             'language': user.language,
             'is_onboarded': bool(user.phone),
             'is_bot_subscribed': user.is_bot_subscribed,
+            'has_master_profile': hasattr(user, 'master_profile'),
+            'master_id': user.master_profile.id if hasattr(user, 'master_profile') else None,
             'organization_id': user.organization_id,
             'organization_settings': {
                 'greeting_text': user.organization.greeting_text if user.organization else "Добро пожаловать!",

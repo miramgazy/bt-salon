@@ -17,11 +17,19 @@
     </div>
 
 
-    <!-- Role Switching (shown only if actual role is master) -->
-    <div v-if="auth.isMaster" class="card switch-card">
-       <button class="btn-switch" @click="switchToMaster">
+    <!-- Role Switching -->
+    <div v-if="auth.isMaster || auth.isAdmin || auth.isOwner" class="card switch-card" style="display: flex; flex-direction: column; gap: 8px;">
+       <button v-if="auth.isMaster" class="btn-switch" @click="switchToMaster">
          <Icon icon="mdi:shield-account-variant" width="20" />
-         <span>Вернуться в панель мастера</span>
+         <span>Панель мастера</span>
+       </button>
+       <button v-if="auth.isAdmin" class="btn-switch" @click="switchToAdmin" style="color: #22a060;">
+         <Icon icon="mdi:shield-crown" width="20" />
+         <span>Панель админа</span>
+       </button>
+       <button v-if="auth.isOwner" class="btn-switch" @click="switchToOwner" style="color: var(--gold);">
+         <Icon icon="mdi:shield-account" width="20" />
+         <span>Панель владельца</span>
        </button>
     </div>
 
@@ -134,6 +142,16 @@ const handleLogout = () => {
 const switchToMaster = () => {
   auth.setRoleMode('master')
   router.push('/master')
+}
+
+const switchToAdmin = () => {
+  auth.setRoleMode('admin')
+  router.push('/admin')
+}
+
+const switchToOwner = () => {
+  auth.setRoleMode('owner')
+  router.push('/owner')
 }
 </script>
 

@@ -250,18 +250,38 @@ const shiftClosed = ref(false)
 const fetchData = async () => {
   try {
     loading.value = true
-    const [catsRes, servsRes, mastersRes] = await Promise.all([
-      api.get('/categories/'),
-      api.get('/services/'),
-      api.get('/masters/')
-    ])
-    categories.value = catsRes.data.results || catsRes.data
-    services.value = servsRes.data.results || servsRes.data
-    masters.value = mastersRes.data.results || mastersRes.data
+    console.log('HomeView: Starting fetchData...')
+    
+    // Attempt to fetch categories
+    try {
+      const catsRes = await api.get('/categories/')
+      categories.value = catsRes.data.results || catsRes.data
+      console.log('HomeView: Categories loaded', categories.value.length)
+    } catch (e) { console.error('Cats fetch fail', e) }
+
+    // Attempt to fetch services
+    try {
+      const servsRes = await api.get('/services/')
+      services.value = servsRes.data.results || servsRes.data
+      console.log('HomeView: Services loaded', services.value.length)
+    } catch (e) { console.error('Servs fetch fail', e) }
+
+    // Attempt to fetch masters
+    try {
+      const mastersRes = await api.get('/masters/')
+      masters.value = mastersRes.data.results || mastersRes.data
+      console.log('HomeView: Masters loaded', masters.value.length)
+    } catch (e) { console.error('Masters fetch fail', e) }
+
+    // Ensure auth is updated if missing organization info
+    if (!auth.organizationSettings) {
+      await auth.fetchCurrentUser()
+    }
   } catch (err) {
-    console.error('Fetch error:', err)
+    console.error('General Fetch error:', err)
   } finally {
     loading.value = false
+    console.log('HomeView: fetchData finished')
   }
 }
 

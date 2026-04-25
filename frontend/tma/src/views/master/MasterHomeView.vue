@@ -71,7 +71,7 @@
           </div>
         </router-link>
 
-        <!-- Bookings Tile (Optional, but useful) -->
+        <!-- Bookings Tile -->
         <router-link to="/master/bookings" class="tile tile--wide">
            <div class="tile-flex">
               <div>
@@ -86,6 +86,20 @@
               </div>
            </div>
         </router-link>
+
+        <!-- Become Client Tile -->
+        <div class="tile tile--wide tile--client" @click="switchToClient">
+           <div class="tile-flex">
+              <div class="flex items-center gap-3">
+                 <div class="tile-icon m-0">🔄</div>
+                 <div>
+                    <div class="tile-label m-0">Перейти в режим клиента</div>
+                    <div class="tile-value text-sm opacity-70">Записаться на услуги</div>
+                 </div>
+              </div>
+              <div class="tile-arrow-static">›</div>
+           </div>
+        </div>
       </div>
 
       <div class="gold-line"></div>
@@ -129,10 +143,13 @@
 
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
 import api from '@/api'
 
 const auth = useAuthStore()
+const router = useRouter()
 
 const shiftStatus = reactive({
   isScheduled: false,
@@ -231,6 +248,11 @@ const handleStartShift = async () => {
   )
 }
 
+const switchToClient = () => {
+  auth.setRoleMode('client')
+  router.push('/')
+}
+
 onMounted(() => {
   fetchStatus()
   fetchStatsSummary()
@@ -277,6 +299,10 @@ onMounted(() => {
 .tile:active { transform: scale(0.97); background: var(--border); }
 .tile--success { border-color: rgba(76, 175, 125, 0.5); }
 .tile--wide { grid-column: 1 / -1; }
+.tile--client { background: var(--gold-glow); border-color: var(--gold); }
+.tile--client .tile-icon { font-size: 20px; }
+.m-0 { margin: 0 !important; }
+.gap-3 { gap: 12px; }
 
 .tile-icon { font-size: 28px; margin-bottom: 12px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
 .tile-label { font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }

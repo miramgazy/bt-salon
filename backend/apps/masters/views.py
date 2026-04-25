@@ -179,12 +179,11 @@ class MasterShiftViewSet(viewsets.ModelViewSet):
             organization=self.request.user.organization
         ).select_related('master')
 
-        # Filter by master identity if role is master
-        if self.request.user.role == User.ROLE_MASTER:
-            from .models import Master
-            master = Master.objects.filter(user=self.request.user).first()
-            if master:
-                qs = qs.filter(master=master)
+        # Filter by master identity if user has a master profile
+        from .models import Master
+        master = Master.objects.filter(user=self.request.user).first()
+        if master and (self.request.user.role == User.ROLE_MASTER or self.request.query_params.get('my') == 'true'):
+            qs = qs.filter(master=master)
 
         # Filter by single date
         date = self.request.query_params.get('date')
@@ -199,6 +198,26 @@ class MasterShiftViewSet(viewsets.ModelViewSet):
             except ValueError:
                 pass
         return qs
+
+    def create(self, request, *args, **kwargs):
+        master_id = request.data.get('master')
+        date = request.data.get('date')
+        
+        if master_id and date:
+            existing = MasterShift.objects.filter(master_id=master_id, date=date).first()
+            if existing:
+                if existing.is_open:
+                    return Response(
+                        {'error': 'shift_already_open', 'message': 'Смена для этого мастера на указанную дату уже открыта.'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                else:
+                    return Response(
+                        {'error': 'shift_exists', 'message': 'Смена на эту дату уже создана, но сейчас закрыта.'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+        
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(organization=self.request.user.organization)
@@ -242,8 +261,10 @@ class MasterShiftViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='start')
     def start_shift(self, request):
         user = request.user
-        if user.role != 'master':
-            return Response({'error': 'Only masters can start a shift'}, status=403)
+        # Allow masters, and allow admins/owners if they have a master profile
+        has_master_profile = hasattr(user, 'master_profile')
+        if user.role != 'master' and not has_master_profile:
+            return Response({'error': 'Only masters or staff with master profile can start a shift'}, status=403)
             
         lat_str = request.data.get('latitude')
         lon_str = request.data.get('longitude')

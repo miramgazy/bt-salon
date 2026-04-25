@@ -96,21 +96,42 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         org = self.request.user.organization
         role = self.request.data.get('role', User.ROLE_MASTER)
         phone = self.request.data.get('phone')
+        telegram_id = self.request.data.get('telegram_id')
         
-        if not phone:
-            raise serializers.ValidationError({"phone": "Phone number is required."})
+        if not phone and not telegram_id:
+            raise serializers.ValidationError({"phone": "Phone or Telegram ID is required."})
 
-        clean_phone = ''.join(filter(str.isdigit, phone))
-        username = f"emp_{clean_phone}_{org.id}_{User.objects.count()}"
+        # Check for existing user in this organization
+        existing_user = None
+        if telegram_id:
+            existing_user = User.objects.filter(organization=org, telegram_id=telegram_id).first()
+        if not existing_user and phone:
+            existing_user = User.objects.filter(organization=org, phone=phone).first()
 
-        user = serializer.save(
-            organization=org, 
-            role=role,
-            username=username
-        )
+        if existing_user:
+            # Update existing user role and other data
+            user = existing_user
+            user.role = role
+            if phone: user.phone = phone
+            if telegram_id: user.telegram_id = telegram_id
+            
+            # Update fields from serializer
+            for attr, value in serializer.validated_data.items():
+                setattr(user, attr, value)
+            user.save()
+        else:
+            # Create new user
+            clean_phone = ''.join(filter(str.isdigit, phone)) if phone else str(telegram_id)
+            username = f"emp_{clean_phone}_{org.id}_{User.objects.count()}"
+            user = serializer.save(
+                organization=org, 
+                role=role,
+                username=username
+            )
 
         if role == User.ROLE_MASTER:
-            master = Master.objects.create(user=user, organization=org)
+            # Ensure master profile exists
+            master, created = Master.objects.get_or_create(user=user, defaults={'organization': org})
             services = self.request.data.get('services', [])
             if services:
                 master.services.set(services)
@@ -121,8 +142,8 @@ class EmployeeViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         user = serializer.save()
-        if user.role == User.ROLE_MASTER and hasattr(user, 'master_profile'):
-            master = user.master_profile
+        if user.role == User.ROLE_MASTER:
+            master, created = Master.objects.get_or_create(user=user, defaults={'organization': user.organization})
             services = self.request.data.get('services')
             if services is not None:
                 master.services.set(services)

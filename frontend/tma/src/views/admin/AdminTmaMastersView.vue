@@ -415,7 +415,8 @@ const submitShift = async () => {
         alert(`Смена для ${activeMaster.value.first_name} успешно открыта на ${d}!`)
         showShiftModal.value = false
     } catch (e) {
-        alert(e.response?.data?.non_field_errors?.[0] || e.response?.data?.error || 'Смена возможно уже создана или произошла ошибка.')
+        const errorMsg = e.response?.data?.message || e.response?.data?.error || e.response?.data?.non_field_errors?.[0] || 'Смена возможно уже создана или произошла ошибка.'
+        alert(errorMsg)
     } finally {
         creatingShift.value = false
     }

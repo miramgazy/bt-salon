@@ -37,10 +37,19 @@
     </div>
 
     <!-- Role Switching Actions -->
-    <div class="card switch-card">
+    <div class="card switch-card" style="display: flex; flex-direction: column; gap: 8px;">
        <button class="btn-switch" @click="switchToClient">
          <Icon icon="mdi:account-convert" width="20" />
-         <span>Стать клиентом (Записаться)</span>
+         <span>Режим клиента</span>
+       </button>
+       <!-- Higher roles return options -->
+       <button v-if="auth.isAdmin" class="btn-switch" @click="switchToAdmin" style="color: #22a060;">
+         <Icon icon="mdi:shield-crown" width="20" />
+         <span>Панель админа</span>
+       </button>
+       <button v-if="auth.isOwner" class="btn-switch" @click="switchToOwner" style="color: var(--gold);">
+         <Icon icon="mdi:shield-account" width="20" />
+         <span>Панель владельца</span>
        </button>
     </div>
 
@@ -203,6 +212,16 @@ const handleLogout = () => {
 const switchToClient = () => {
   auth.setRoleMode('client')
   router.push('/')
+}
+
+const switchToAdmin = () => {
+  auth.setRoleMode('admin')
+  router.push('/admin')
+}
+
+const switchToOwner = () => {
+  auth.setRoleMode('owner')
+  router.push('/owner')
 }
 </script>
 

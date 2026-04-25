@@ -13,19 +13,7 @@ const { locale } = useI18n()
  * After successful login, determine where to redirect the user:
  */
 function navigateAfterAuth() {
-  const role = auth.currentRole
-  if (role === 'admin') {
-    router.replace('/admin')
-    return
-  }
-  if (role === 'owner') {
-    router.replace('/owner')
-    return
-  }
-  if (role === 'master') {
-    router.replace('/master')
-    return
-  }
+  // 1. Mandatory Onboarding Checks
   if (!auth.isOnboarded) {
     router.replace('/onboarding/welcome')
     return
@@ -34,6 +22,44 @@ function navigateAfterAuth() {
     router.replace('/onboarding/consent')
     return
   }
+
+  // 2. Explicit User Mode Choice (activeRole)
+  // If the user already explicitly switched to a mode (e.g., switched to Client mode while being an Owner), respect it.
+  if (auth.activeRole) {
+    if (auth.activeRole === 'admin' && auth.isAdmin) {
+      router.replace('/admin')
+      return
+    }
+    if (auth.activeRole === 'owner' && auth.isOwner) {
+      router.replace('/owner')
+      return
+    }
+    if (auth.activeRole === 'master' && auth.isMaster) {
+      router.replace('/master')
+      return
+    }
+    if (auth.activeRole === 'client') {
+      router.replace('/')
+      return
+    }
+  }
+
+  // 3. Auto-Detection by Physical Role
+  // If it's the first time or no preference, send to management panel immediately if they are staff.
+  if (auth.role === 'admin') {
+    router.replace('/admin')
+    return
+  }
+  if (auth.role === 'owner') {
+    router.replace('/owner')
+    return
+  }
+  if (auth.role === 'master') {
+    router.replace('/master')
+    return
+  }
+
+  // 4. Default to Client
   router.replace('/')
 }
 

@@ -46,6 +46,11 @@ const routes = [
         path: 'report',
         name: 'admin-report',
         component: () => import('../views/admin/AdminTmaReportView.vue')
+      },
+      {
+        path: 'profile',
+        name: 'admin-profile',
+        component: () => import('../views/admin/AdminProfileView.vue')
       }
     ]
   },
@@ -58,6 +63,11 @@ const routes = [
         path: '',
         name: 'owner-dashboard',
         component: () => import('../views/owner/OwnerDashboardView.vue')
+      },
+      {
+        path: 'profile',
+        name: 'owner-profile',
+        component: () => import('../views/owner/OwnerProfileView.vue')
       }
     ]
   },
