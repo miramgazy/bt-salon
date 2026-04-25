@@ -136,6 +136,7 @@
     "margin": "Маржа",
     "avg_check": "Средний чек",
     "clients": "Клиент",
+    "clients_count": "Клиентов",
     "margin_structure": "Структура маржи",
     "rev_exp_timeline": "Выручка и расходы по дням",
     "profit_timeline": "Прибыль по дням",
@@ -175,8 +176,32 @@
     "amount": "Сумма",
     "date": "Дата",
     "comment": "Комментарий",
+    "commentPlaceholder": "Дополнительная информация...",
     "saveExpense": "Сохранить расход",
-    "selectArticle": "Выберите статью"
+    "selectArticle": "Выберите статью",
+    "newArticleTitle": "Новая статья расхода",
+    "articleName": "Название статьи",
+    "marketingExample": "Например: Маркетинг",
+    "rentMayExample": "Например: Аренда за май",
+    "expenseType": "Тип расхода",
+    "createArticle": "Создать статью",
+    "creating": "Создание...",
+    "rentOrPurchase": "Аренда/Закуп",
+    "other": "Прочее",
+    "management": "Управление (Владелец)",
+    "compare": "Сравнение",
+    "chart": {
+      "masters": "Мастера",
+      "fixedExp": "Фикс. расходы",
+      "variableExp": "Перем. расходы",
+      "profit": "Прибыль"
+    },
+    "periods": {
+       "thisMonth": "Текущий месяц",
+       "lastMonth": "Прошлый месяц",
+       "thisWeek": "Текущая неделя",
+       "custom": "Произвольный"
+    }
   },
   "admin": {
     "nav": {

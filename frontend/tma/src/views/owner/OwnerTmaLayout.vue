@@ -4,8 +4,8 @@
     <div class="header">
       <div class="header-top">
         <div>
-          <div class="header-greeting">Управление (Владелец)</div>
-          <div class="header-name header-font">{{ authStore.organizationName || 'Организация' }}</div>
+          <div class="header-greeting">{{ $t('owner.management') }}</div>
+          <div class="header-name header-font">{{ authStore.organizationName || $t('common.organization') }}</div>
         </div>
         <div class="header-actions">
            <button class="icon-btn lang-btn" @click="toggleLang" style="margin-right: 8px">
@@ -38,15 +38,15 @@
           <div class="nav-row row-primary" :class="{ 'hidden': isExpanded }">
             <div class="nav-item-btn" @click="setTab('overview')" :class="{ active: activeTab === 'overview' }">
               <Icon icon="mdi:view-dashboard" width="22" />
-              <span>Главная</span>
+              <span>{{ $t('nav.home') }}</span>
             </div>
             <div class="nav-item-btn" @click="setTab('masters')" :class="{ active: activeTab === 'masters' }">
               <Icon icon="mdi:account-tie" width="22" />
-              <span>Мастера</span>
+              <span>{{ $t('tma.masters') }}</span>
             </div>
             <div class="nav-item-btn" @click="setTab('services')" :class="{ active: activeTab === 'services' }">
               <Icon icon="mdi:format-list-bulleted" width="22" />
-              <span>Услуги</span>
+              <span>{{ $t('tma.services') }}</span>
             </div>
           </div>
 
@@ -54,11 +54,11 @@
           <div class="nav-row row-secondary" :class="{ 'active': isExpanded }">
             <div class="nav-item-btn" @click="setTab('expenses')" :class="{ active: activeTab === 'expenses' }">
               <Icon icon="mdi:cash-multiple" width="22" />
-              <span>Расходы</span>
+              <span>{{ $t('owner.expenses') }}</span>
             </div>
             <div class="nav-item-btn" @click="setTab('compare')" :class="{ active: activeTab === 'compare' }">
               <Icon icon="mdi:compare-horizontal" width="22" />
-              <span>Сравнение</span>
+              <span>{{ $t('owner.compare') }}</span>
             </div>
             <div class="nav-item-btn placeholder"></div>
           </div>
@@ -67,7 +67,7 @@
         <!-- Profile Button (Right - Always Fixed) -->
         <button @click="setTab('profile')" class="nav-control right" :class="{ active: activeTab === 'profile' }">
           <Icon icon="mdi:account-circle" width="24" />
-          <span>Профиль</span>
+          <span>{{ $t('nav.profile') }}</span>
         </button>
       </div>
     </nav>

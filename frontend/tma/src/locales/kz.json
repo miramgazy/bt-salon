@@ -136,6 +136,7 @@
     "margin": "Маржа",
     "avg_check": "Орташа чек",
     "clients": "Клиенттер",
+    "clients_count": "Клиенттер саны",
     "margin_structure": "Маржа құрылымы",
     "rev_exp_timeline": "Табыс пен шығын (күндер бойынша)",
     "profit_timeline": "Пайда (күндер бойынша)",
@@ -175,8 +176,32 @@
     "amount": "Сома",
     "date": "Күн",
     "comment": "Түсініктеме",
+    "commentPlaceholder": "Қосымша ақпарат...",
     "saveExpense": "Шығынды сақтау",
-    "selectArticle": "Бапты таңдаңыз"
+    "selectArticle": "Бапты таңдаңыз",
+    "newArticleTitle": "Жаңа шығын бабы",
+    "articleName": "Бап атауы",
+    "marketingExample": "Мысалы: Маркетинг",
+    "rentMayExample": "Мысалы: Мамыр айының жалдау ақысы",
+    "expenseType": "Шығын түрі",
+    "createArticle": "Бапты жасау",
+    "creating": "Жасалуда...",
+    "rentOrPurchase": "Жалдау/Сатып алу",
+    "other": "Басқа",
+    "management": "Басқару (Бизнес иесі)",
+    "compare": "Салыстыру",
+    "chart": {
+      "masters": "Шеберлер",
+      "fixedExp": "Тұрақты шығындар",
+      "variableExp": "Ауыспалы шығындар",
+      "profit": "Пайда"
+    },
+    "periods": {
+       "thisMonth": "Осы ай",
+       "lastMonth": "Өткен ай",
+       "thisWeek": "Осы апта",
+       "custom": "Басқа кезең"
+    }
   },
   "admin": {
     "nav": {

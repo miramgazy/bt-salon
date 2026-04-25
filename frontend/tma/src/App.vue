@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, watch } from 'vue'
+import { onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { getStoredLocale } from './i18n/index'
@@ -16,52 +16,41 @@ const { locale } = useI18n()
 function navigateAfterAuth() {
   // 1. Mandatory Onboarding Checks
   if (!auth.isOnboarded) {
-    router.replace('/onboarding/welcome')
-    return
+    return router.replace('/onboarding/welcome')
   }
   if (auth.needsConsent) {
-    router.replace('/onboarding/consent')
-    return
+    return router.replace('/onboarding/consent')
   }
 
   // 2. Explicit User Mode Choice (activeRole)
-  // If the user already explicitly switched to a mode (e.g., switched to Client mode while being an Owner), respect it.
   if (auth.activeRole) {
     if (auth.activeRole === 'admin' && auth.isAdmin) {
-      router.replace('/admin')
-      return
+       return router.replace('/admin')
     }
     if (auth.activeRole === 'owner' && auth.isOwner) {
-      router.replace('/owner')
-      return
+       return router.replace('/owner')
     }
     if (auth.activeRole === 'master' && auth.isMaster) {
-      router.replace('/master')
-      return
+       return router.replace('/master')
     }
     if (auth.activeRole === 'client') {
-      router.replace('/')
-      return
+       return router.replace('/')
     }
   }
 
   // 3. Auto-Detection by Physical Role
-  // If it's the first time or no preference, send to management panel immediately if they are staff.
   if (auth.role === 'admin') {
-    router.replace('/admin')
-    return
+    return router.replace('/admin')
   }
   if (auth.role === 'owner') {
-    router.replace('/owner')
-    return
+    return router.replace('/owner')
   }
   if (auth.role === 'master') {
-    router.replace('/master')
-    return
+    return router.replace('/master')
   }
 
   // 4. Default to Client
-  router.replace('/')
+  return router.replace('/')
 }
 
 const applyThemeFromBot = () => {
@@ -85,8 +74,13 @@ const initTma = async () => {
   const storedLocale = getStoredLocale()
   if (storedLocale) locale.value = storedLocale
 
-  // Ensure minimum 5s loading to show the countdown animation if requested
   const startTime = Date.now()
+  
+  // Early navigation hint based on cached role (prevents initial jump)
+  auth.restoreAuth()
+  if (auth.isAuthenticated) {
+     navigateAfterAuth()
+  }
 
   if (window.Telegram && window.Telegram.WebApp) {
     const webApp = window.Telegram.WebApp
@@ -105,15 +99,17 @@ const initTma = async () => {
         const remaining = Math.max(0, 5200 - elapsed)
         await new Promise(r => setTimeout(r, remaining))
         
+        // Final navigation check (in case role changed on server)
         await navigateAfterAuth()
         await router.isReady()
+        await nextTick()
       }
       auth.loading = false
     } else {
       auth.loading = false
     }
   } else {
-    auth.restoreAuth()
+    // Non-Telegram environment (Development/Web)
     if (auth.isAuthenticated) {
       await auth.fetchCurrentUser()
       applyThemeFromBot()
@@ -124,10 +120,12 @@ const initTma = async () => {
       
       await navigateAfterAuth()
       await router.isReady()
+      await nextTick()
     } else {
       await new Promise(r => setTimeout(r, 5200))
-      router.replace('/onboarding/welcome')
+      await router.replace('/onboarding/welcome')
       await router.isReady()
+      await nextTick()
     }
     auth.loading = false
   }

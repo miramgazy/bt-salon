@@ -48,11 +48,11 @@
           <div class="kpi" style="grid-column: 1 / -1">
              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
-                   <div class="kpi-label">Средний чек</div>
+                   <div class="kpi-label">{{ $t('owner.avg_check') }}</div>
                    <div class="kpi-val">{{ formatM(data.summary.avg_check) }} ₸</div>
                 </div>
                 <div style="text-align: right">
-                   <div class="kpi-label">Клиентов</div>
+                   <div class="kpi-label">{{ $t('owner.clients_count') }}</div>
                    <div class="kpi-val gold">{{ data.summary.clients_count || 0 }}</div>
                 </div>
              </div>
@@ -104,11 +104,11 @@
       <div v-if="activeTab === 'masters'" class="fade-up">
         <div class="kpi-grid" style="margin-bottom: 12px;">
            <div class="kpi jade">
-              <div class="kpi-label">Итого выручка</div>
+              <div class="kpi-label">{{ $t('owner.totalRevenue') }}</div>
               <div class="kpi-val jade">{{ formatM(data.summary.revenue) }} ₸</div>
            </div>
            <div class="kpi crimson">
-              <div class="kpi-label">Итого выплат</div>
+              <div class="kpi-label">{{ $t('owner.totalPayouts') }}</div>
               <div class="kpi-val crimson">{{ formatM(totalMasterCommission) }} ₸</div>
            </div>
         </div>
@@ -133,7 +133,7 @@
                  <div class="m-avatar">{{ m.name.charAt(0) }}</div>
                  <div>
                     <div class="m-name-cell">{{ m.name.split(' ')[0] }}</div>
-                    <div class="text-hint">{{ m.sessions || 0 }} сеансов</div>
+                    <div class="text-hint">{{ m.sessions || 0 }} {{ $t('owner.sessions') }}</div>
                  </div>
                </div>
                <div class="td gold">{{ formatM(m.revenue) }}</div>
@@ -196,16 +196,16 @@
 
         <div class="kpi-grid">
            <div class="chart-card" style="margin-bottom:0; padding: 8px;">
-              <div class="chart-label" style="margin-bottom:4px">Типы расходов</div>
+              <div class="chart-label" style="margin-bottom:4px">{{ $t('owner.expTypes') }}</div>
               <apexchart type="donut" width="100%" height="180" :options="expenseTypeDonutOptions" :series="expenseTypeDonutSeries"></apexchart>
            </div>
            <div class="flex flex-col gap-3">
               <div class="kpi crimson" style="padding: 12px;">
-                <div class="kpi-label">Постоянные</div>
+                <div class="kpi-label">{{ $t('owner.fixed') }}</div>
                 <div class="kpi-val crimson" style="font-size: 18px;">{{ formatM(totalFixedExp) }} ₸</div>
               </div>
               <div class="kpi" style="padding: 12px;">
-                <div class="kpi-label">Переменные</div>
+                <div class="kpi-label">{{ $t('owner.variable') }}</div>
                 <div class="kpi-val" style="color:#e08030; font-size: 18px;">{{ formatM(totalVarExp) }} ₸</div>
               </div>
            </div>
@@ -221,7 +221,7 @@
             <div v-for="e in [...data.expenses_fixed, ...data.expenses_variable]" :key="e.label" class="expense-item">
               <div>
                  <div class="exp-label">{{ e.label }}</div>
-                 <div class="text-hint">{{ e.amount > 100000 ? 'Аренда/Закуп' : 'Прочее' }}</div>
+                 <div class="text-hint">{{ e.amount > 100000 ? $t('owner.rentOrPurchase') : $t('owner.other') }}</div>
               </div>
               <div class="exp-amount">{{ formatM(e.amount) }} ₸</div>
             </div>
@@ -293,8 +293,8 @@
 
         <form @submit.prevent="submitExpense" class="mt-4 flex flex-col gap-4 overflow-y-auto pb-10">
           <div>
-            <label class="form-label">Что купили / На что траты <span class="text-error">*</span></label>
-            <input v-model="expForm.name" type="text" class="form-input" required placeholder="Например: Аренда за май" />
+            <label class="form-label">{{ $t('owner.whatBought') }} <span class="text-error">*</span></label>
+            <input v-model="expForm.name" type="text" class="form-input" required :placeholder="$t('owner.rentMayExample')" />
           </div>
 
           <div>
@@ -310,18 +310,18 @@
 
           <div class="grid grid-cols-2 gap-3">
              <div>
-                <label class="form-label">Сумма (₸) <span class="text-error">*</span></label>
+                <label class="form-label">{{ $t('owner.amount') }} (₸) <span class="text-error">*</span></label>
                 <input v-model="expForm.amount" type="number" class="form-input" required />
              </div>
              <div>
-                <label class="form-label">Дата <span class="text-error">*</span></label>
+                <label class="form-label">{{ $t('owner.date') }} <span class="text-error">*</span></label>
                 <input v-model="expForm.date" type="date" class="form-input" required />
              </div>
           </div>
 
           <div>
-             <label class="form-label">Комментарий</label>
-             <textarea v-model="expForm.comment" class="form-input" rows="2" placeholder="Дополнительная информация..."></textarea>
+             <label class="form-label">{{ $t('owner.comment') }}</label>
+             <textarea v-model="expForm.comment" class="form-input" rows="2" :placeholder="$t('owner.commentPlaceholder')"></textarea>
           </div>
 
           <button type="submit" class="btn-sheet mt-4" :disabled="savingExp">
@@ -334,33 +334,33 @@
     <!-- Add Category Modal -->
     <div v-if="showExpCatModal" class="modal-overlay" style="z-index: 1100;" @click="showExpCatModal = false">
        <div class="sheet" @click.stop>
-          <div class="sheet-title mb-4">Новая статья расхода</div>
+          <div class="sheet-title mb-4">{{ $t('owner.newArticleTitle') }}</div>
           
           <div class="mb-4">
-             <label class="form-label">Название статьи</label>
-             <input v-model="expCatForm.name" type="text" class="form-input" placeholder="Например: Маркетинг" />
+             <label class="form-label">{{ $t('owner.articleName') }}</label>
+             <input v-model="expCatForm.name" type="text" class="form-input" :placeholder="$t('owner.marketingExample')" />
           </div>
 
           <div class="mb-6">
-             <label class="form-label">Тип расхода</label>
+             <label class="form-label">{{ $t('owner.expenseType') }}</label>
              <div class="type-selector">
                 <button 
                    type="button"
                    :class="['type-btn', { active: expCatForm.category_type === 'variable' }]"
                    @click="expCatForm.category_type = 'variable'"
-                >Переменный</button>
+                >{{ $t('owner.variable') }}</button>
                 <button 
                    type="button"
                    :class="['type-btn', { active: expCatForm.category_type === 'fixed' }]"
                    @click="expCatForm.category_type = 'fixed'"
-                >Постоянный</button>
+                >{{ $t('owner.fixed') }}</button>
              </div>
           </div>
 
           <button class="btn-sheet" @click="submitExpCat" :disabled="!expCatForm.name || savingExpCat">
-             {{ savingExpCat ? 'Создание...' : 'Создать статью' }}
+             {{ savingExpCat ? $t('owner.creating') : $t('owner.createArticle') }}
           </button>
-          <button class="btn-sheet btn-sheet-ghost mt-2" @click="showExpCatModal = false">Отмена</button>
+          <button class="btn-sheet btn-sheet-ghost mt-2" @click="showExpCatModal = false">{{ $t('common.close') }}</button>
        </div>
     </div>
 
@@ -415,10 +415,10 @@ const data = ref({
 })
 
 const periods = [
-  { id: 'this_month', label: 'Текущий месяц' },
-  { id: 'last_month', label: 'Прошлый месяц' },
-  { id: 'this_week', label: 'Текущая неделя' },
-  { id: 'custom', label: 'Произвольный' }
+  { id: 'this_month', key: 'owner.periods.thisMonth' },
+  { id: 'last_month', key: 'owner.periods.lastMonth' },
+  { id: 'this_week', key: 'owner.periods.thisWeek' },
+  { id: 'custom', key: 'owner.periods.custom' }
 ]
 
 const formatM = (n) => {
@@ -449,11 +449,11 @@ const totalFixedExp = computed(() => data.value.expenses_fixed.reduce((sum, e) =
 const totalVarExp = computed(() => data.value.expenses_variable.reduce((sum, e) => sum + e.amount, 0))
 
 const kpiComparisonRows = computed(() => [
-   { label: 'Выручка', cur: formatM(data.value.summary.revenue), delta: deltaPercent(data.value.summary.revenue, data.value.summary.prev_revenue) },
-   { label: 'Прибыль', cur: formatM(data.value.summary.profit), delta: deltaPercent(data.value.summary.profit, data.value.summary.prev_profit) },
-   { label: 'Клиентов', cur: data.value.summary.clients_count || 0, delta: 5 },
-   { label: 'Ср. чек', cur: formatM(data.value.summary.avg_check), delta: 3 },
-   { label: 'Маржа', cur: (data.value.summary.margin || 0) + '%', delta: 2 }
+   { label: t('owner.revenue'), cur: formatM(data.value.summary.revenue), delta: deltaPercent(data.value.summary.revenue, data.value.summary.prev_revenue) },
+   { label: t('owner.profit'), cur: formatM(data.value.summary.profit), delta: deltaPercent(data.value.summary.profit, data.value.summary.prev_profit) },
+   { label: t('owner.clients_count'), cur: data.value.summary.clients_count || 0, delta: 0 },
+   { label: t('owner.avg_check'), cur: formatM(data.value.summary.avg_check), delta: 0 },
+   { label: t('owner.margin'), cur: (data.value.summary.margin || 0) + '%', delta: 0 }
 ])
 
 // --- CHARTS ---
@@ -478,7 +478,7 @@ const areaChartOptions = computed(() => ({
 
 // Overview Profit Bar
 const profitBarSeries = computed(() => [
-  { name: 'Прибыль', data: (data.value.timeline || []).map(t => ({ x: t.day, y: Number(t.profit) || 0 })) }
+  { name: t('owner.profit'), data: (data.value.timeline || []).map(t => ({ x: t.day, y: Number(t.profit) || 0 })) }
 ])
 const profitBarOptions = computed(() => ({
   chart: { type: 'bar', toolbar: { show: false }, fontFamily: 'inherit' },
@@ -500,7 +500,7 @@ const revenuePieSeries = computed(() => [
 const revenuePieOptions = computed(() => ({
    chart: { type: 'donut', fontFamily: 'inherit' },
    theme: { mode: window.Telegram?.WebApp?.colorScheme || 'light' },
-   labels: ['Мастера', 'Фикс. расходы', 'Перем. расходы', 'Прибыль'],
+   labels: [t('owner.chart.masters'), t('owner.chart.fixedExp'), t('owner.chart.variableExp'), t('owner.chart.profit')],
    colors: ['#c9a84c', '#555', '#e05252', '#22a060'],
    legend: { position: 'bottom', labels: { colors: 'var(--tg-theme-text-color)' } },
    stroke: { show: false },
@@ -508,7 +508,7 @@ const revenuePieOptions = computed(() => ({
 }))
 
 // Master Revenue
-const masterBarSeries = computed(() => [{ name: 'Выручка', data: data.value.masters.map(m => m.revenue) }])
+const masterBarSeries = computed(() => [{ name: t('owner.revenue'), data: data.value.masters.map(m => m.revenue) }])
 const masterBarOptions = computed(() => ({
   chart: { type: 'bar', toolbar: { show: false }, fontFamily: 'inherit' },
   theme: { mode: window.Telegram?.WebApp?.colorScheme || 'light' },
@@ -521,8 +521,8 @@ const masterBarOptions = computed(() => ({
 
 // Master Avg Check vs Sessions
 const masterCompareSeries = computed(() => [
-   { name: 'Средний чек', data: data.value.masters.map(m => m.avg_check || 0) },
-   { name: 'Сеансов', data: data.value.masters.map(m => m.sessions || 0) }
+   { name: t('owner.avg_check'), data: data.value.masters.map(m => m.avg_check || 0) },
+   { name: t('owner.sessions'), data: data.value.masters.map(m => m.sessions || 0) }
 ])
 const masterCompareOptions = computed(() => ({
    chart: { type: 'bar', toolbar: { show: false }, fontFamily: 'inherit' },
@@ -551,7 +551,7 @@ const expenseTypeDonutSeries = computed(() => [totalFixedExp.value, totalVarExp.
 const expenseTypeDonutOptions = computed(() => ({
    chart: { type: 'donut', fontFamily: 'inherit' },
    theme: { mode: window.Telegram?.WebApp?.colorScheme || 'light' },
-   labels: ['Постоянные', 'Переменные'],
+   labels: [t('owner.fixed'), t('owner.variable')],
    colors: ['#c0392b', '#e08030'],
    legend: { show: false },
    stroke: { show: false },
@@ -562,7 +562,7 @@ const expenseTypeDonutOptions = computed(() => ({
             size: '70%', 
             labels: { 
                show: true, 
-               total: { show: true, label: 'Расходы', color: 'var(--tg-theme-hint-color)', formatter: () => formatM(data.value.summary.expenses) } 
+               total: { show: true, label: t('owner.expenses'), color: 'var(--tg-theme-hint-color)', formatter: () => formatM(data.value.summary.expenses) } 
             } 
          } 
       } 
@@ -570,7 +570,7 @@ const expenseTypeDonutOptions = computed(() => ({
 }))
 
 // Expense Vertical Bars
-const expenseBarSeries = computed(() => [{ name: 'Сумма', data: [...data.value.expenses_fixed, ...data.value.expenses_variable].sort((a,b)=>b.amount-a.amount).map(e => e.amount) }])
+const expenseBarSeries = computed(() => [{ name: t('owner.amount'), data: [...data.value.expenses_fixed, ...data.value.expenses_variable].sort((a,b)=>b.amount-a.amount).map(e => e.amount) }])
 const expenseBarOptions = computed(() => ({
    chart: { type: 'bar', toolbar: { show: false }, fontFamily: 'inherit' },
    theme: { mode: window.Telegram?.WebApp?.colorScheme || 'light' },
@@ -583,8 +583,8 @@ const expenseBarOptions = computed(() => ({
 
 // Compare Line Chart (Current vs Previous)
 const compareLineSeries = computed(() => [
-   { name: 'Текущий', data: (data.value.timeline || []).map(t => t.revenue) },
-   { name: 'Прошлый', data: (data.value.timeline || []).map(t => Math.round(t.revenue * 0.85)) } // Mocking prev if not in API
+   { name: t('owner.current'), data: (data.value.timeline || []).map(t => t.revenue) },
+   { name: t('owner.periods.lastMonth'), data: (data.value.timeline || []).map(t => Math.round(t.revenue * 0.85)) } // Mocking prev if not in API
 ])
 const compareLineOptions = computed(() => ({
    chart: { type: 'line', toolbar: { show: false }, fontFamily: 'inherit' },
@@ -598,14 +598,14 @@ const compareLineOptions = computed(() => ({
 }))
 
 const compareProfitSeries = computed(() => [
-    { name: 'Прибыль', data: [data.value.summary.prev_profit, data.value.summary.profit] }
+    { name: t('owner.profit'), data: [data.value.summary.prev_profit, data.value.summary.profit] }
 ])
 const compareProfitOptions = computed(() => ({
     chart: { type: 'bar', toolbar: { show: false }, fontFamily: 'inherit' },
     theme: { mode: window.Telegram?.WebApp?.colorScheme || 'light' },
     plotOptions: { bar: { borderRadius: 6, distributed: true } },
     colors: ['var(--tg-theme-secondary-bg-color)', '#22a060'],
-    xaxis: { categories: ['Прошлый', 'Текущий'], labels: { style: { colors: 'var(--tg-theme-hint-color)' } } },
+    xaxis: { categories: [t('owner.periods.lastMonth'), t('owner.periods.thisMonth')], labels: { style: { colors: 'var(--tg-theme-hint-color)' } } },
     yaxis: { labels: { style: { colors: 'var(--tg-theme-text-color)' } } },
     legend: { show: false }
 }))
