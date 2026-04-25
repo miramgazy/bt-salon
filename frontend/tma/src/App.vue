@@ -90,23 +90,28 @@ const initTma = async () => {
     webApp.expand()
 
     // Listen for viewport changes to handle expanded state
-    const handleViewportChange = () => {
+    const updateSafeAreas = () => {
       const root = document.documentElement
       const isExpanded = webApp.isExpanded
       root.classList.toggle('tma-expanded', isExpanded)
       
-      // Handle Safe Area (API 8.0+)
-      if (webApp.safeAreaInsets) {
-        root.style.setProperty('--tg-safe-top', `${webApp.safeAreaInsets.top}px`)
-        root.style.setProperty('--tg-safe-bottom', `${webApp.safeAreaInsets.bottom}px`)
+      // contentSafeAreaInsets (API 8.0+) - best for avoiding overlap with close buttons/status bar
+      const contentInsets = webApp.contentSafeAreaInsets || webApp.safeAreaInsets
+      
+      if (contentInsets) {
+        root.style.setProperty('--tg-safe-top', `${contentInsets.top}px`)
+        root.style.setProperty('--tg-safe-bottom', `${contentInsets.bottom}px`)
       } else {
-        // Fallback or default for older versions when expanded
-        root.style.setProperty('--tg-safe-top', isExpanded ? '44px' : '0px')
+        // Fallback for older versions: if expanded, we usually need more space for status bar + UI
+        root.style.setProperty('--tg-safe-top', isExpanded ? '60px' : '0px')
+        root.style.setProperty('--tg-safe-bottom', '0px')
       }
     }
 
-    webApp.onEvent('viewportChanged', handleViewportChange)
-    handleViewportChange() // Initial call
+    webApp.onEvent('viewportChanged', updateSafeAreas)
+    webApp.onEvent('safeAreaChanged', updateSafeAreas)
+    webApp.onEvent('contentSafeAreaChanged', updateSafeAreas)
+    updateSafeAreas() // Initial call
 
     const initData = webApp.initData
     const organizationId = webApp.initDataUnsafe?.start_param || null

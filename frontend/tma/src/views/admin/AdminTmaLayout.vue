@@ -96,11 +96,12 @@ const exitApp = () => {
 
 .header {
   background: var(--tg-bg);
-  padding: 16px 16px 12px;
+  padding: calc(var(--tg-safe-top, 0px) + 16px) 16px 12px;
   border-bottom: 1px solid var(--border);
   position: sticky; 
   top: 0; 
   z-index: 100;
+  transition: padding-top 0.3s ease;
 }
 .header-top { display: flex; justify-content: space-between; align-items: center; }
 .header-greeting { font-size: 11px; color: var(--gold); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
