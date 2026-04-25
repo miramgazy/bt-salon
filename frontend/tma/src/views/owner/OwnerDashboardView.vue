@@ -179,6 +179,21 @@
 
       <!-- ══ EXPENSES ══ -->
       <div v-if="activeTab === 'expenses'" class="fade-up">
+        
+        <!-- Add Expense Tile -->
+        <div class="add-expense-card" @click="openExpenseModal">
+           <div class="add-expense-content">
+              <div class="add-icon-circle">
+                 <Icon icon="mdi:cash-plus" width="24" />
+              </div>
+              <div class="add-text-box">
+                 <div class="add-title">Добавить расходы</div>
+                 <div class="add-subtitle">Зафиксируйте траты салона</div>
+              </div>
+           </div>
+           <Icon icon="mdi:chevron-right" width="24" class="gray" />
+        </div>
+
         <div class="kpi-grid">
           <div class="kpi crimson">
             <div class="kpi-label">Постоянные</div>
@@ -260,10 +275,93 @@
       </div>
     </div>
 
-    <!-- Loading State -->
     <div v-else class="loading-wrap">
        <div class="spinner"></div>
     </div>
+
+    <!-- ══ MODALS ══ -->
+    
+    <!-- Add Expense Modal (Sheet) -->
+    <div v-if="showExpenseModal" class="modal-overlay" @click="showExpenseModal = false">
+      <div class="sheet h-80vh" @click.stop>
+        <div class="sheet-title flex-between">
+           <span>Новый расход</span>
+           <Icon icon="mdi:close" width="24" @click="showExpenseModal = false" class="cursor-pointer" />
+        </div>
+
+        <form @submit.prevent="submitExpense" class="mt-4 flex flex-col gap-4 overflow-y-auto pb-10">
+          <div>
+            <label class="form-label">Что купили / На что траты <span class="text-error">*</span></label>
+            <input v-model="expForm.name" type="text" class="form-input" required placeholder="Например: Аренда за май" />
+          </div>
+
+          <div>
+            <label class="form-label flex-between">
+               Статья расхода <span class="text-error">*</span>
+               <span class="text-xs text-gold cursor-pointer" @click="showExpCatModal = true">+ Добавить статью</span>
+            </label>
+            <select v-model="expForm.category" class="form-input" required>
+              <option value="" disabled>Выберите статью</option>
+              <option v-for="cat in expCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+             <div>
+                <label class="form-label">Сумма (₸) <span class="text-error">*</span></label>
+                <input v-model="expForm.amount" type="number" class="form-input" required />
+             </div>
+             <div>
+                <label class="form-label">Дата <span class="text-error">*</span></label>
+                <input v-model="expForm.date" type="date" class="form-input" required />
+             </div>
+          </div>
+
+          <div>
+             <label class="form-label">Комментарий</label>
+             <textarea v-model="expForm.comment" class="form-input" rows="2" placeholder="Дополнительная информация..."></textarea>
+          </div>
+
+          <button type="submit" class="btn-sheet mt-4" :disabled="savingExp">
+             {{ savingExp ? 'Сохранение...' : 'Сохранить расход' }}
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add Category Modal -->
+    <div v-if="showExpCatModal" class="modal-overlay" style="z-index: 1100;" @click="showExpCatModal = false">
+       <div class="sheet" @click.stop>
+          <div class="sheet-title mb-4">Новая статья расхода</div>
+          
+          <div class="mb-4">
+             <label class="form-label">Название статьи</label>
+             <input v-model="expCatForm.name" type="text" class="form-input" placeholder="Например: Маркетинг" />
+          </div>
+
+          <div class="mb-6">
+             <label class="form-label">Тип расхода</label>
+             <div class="type-selector">
+                <button 
+                   type="button"
+                   :class="['type-btn', { active: expCatForm.category_type === 'variable' }]"
+                   @click="expCatForm.category_type = 'variable'"
+                >Переменный</button>
+                <button 
+                   type="button"
+                   :class="['type-btn', { active: expCatForm.category_type === 'fixed' }]"
+                   @click="expCatForm.category_type = 'fixed'"
+                >Постоянный</button>
+             </div>
+          </div>
+
+          <button class="btn-sheet" @click="submitExpCat" :disabled="!expCatForm.name || savingExpCat">
+             {{ savingExpCat ? 'Создание...' : 'Создать статью' }}
+          </button>
+          <button class="btn-sheet btn-sheet-ghost mt-2" @click="showExpCatModal = false">Отмена</button>
+       </div>
+    </div>
+
   </div>
 </template>
 
@@ -271,6 +369,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute } from 'vue-router'
+import { Icon } from '@iconify/vue'
 import api from '@/api'
 
 const auth = useAuthStore()
@@ -280,6 +379,26 @@ const activeTab = ref('overview')
 const periodId = ref('this_month')
 const customStart = ref('')
 const customEnd = ref('')
+
+// Expense Flow States
+const showExpenseModal = ref(false)
+const showExpCatModal = ref(false)
+const expCategories = ref([])
+const savingExp = ref(false)
+const savingExpCat = ref(false)
+
+const expForm = ref({
+    name: '',
+    category: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    comment: ''
+})
+
+const expCatForm = ref({
+    name: '',
+    category_type: 'variable'
+})
 
 const data = ref({
   summary: {},
@@ -486,6 +605,54 @@ const fetchData = async () => {
   }
 }
 
+const fetchExpCategories = async () => {
+    try {
+        const res = await api.get('/expenses/expense-categories/')
+        expCategories.value = res.data.results || res.data
+    } catch (e) { console.error(e) }
+}
+
+const openExpenseModal = () => {
+    expForm.value = {
+        name: '',
+        category: expCategories.value[0]?.id || '',
+        amount: '',
+        date: new Date().toISOString().split('T')[0],
+        comment: ''
+    }
+    showExpenseModal.value = true
+    fetchExpCategories()
+}
+
+const submitExpense = async () => {
+    if (!expForm.value.category || !expForm.value.amount) return
+    savingExp.value = true
+    try {
+        await api.post('/expenses/expenses/', expForm.value)
+        showExpenseModal.value = false
+        fetchData() // Refresh dashboard
+    } catch (e) {
+        alert('Ошибка при сохранении расхода')
+    } finally {
+        savingExp.value = false
+    }
+}
+
+const submitExpCat = async () => {
+    if (!expCatForm.value.name) return
+    savingExpCat.value = true
+    try {
+        const res = await api.post('/expenses/expense-categories/', expCatForm.value)
+        await fetchExpCategories()
+        expForm.value.category = res.data.id
+        showExpCatModal.value = false
+    } catch (e) {
+        alert('Ошибка при создании категории')
+    } finally {
+        savingExpCat.value = false
+    }
+}
+
 watch(() => route.query.tab, (newTab) => { if (newTab) activeTab.value = newTab })
 onMounted(() => {
   if (route.query.tab) activeTab.value = route.query.tab
@@ -598,4 +765,86 @@ onMounted(() => {
 
 .gray { color: var(--tg-theme-hint-color) !important; }
 .text-hint { font-size: 11px; color: var(--tg-theme-hint-color); }
+
+/* Expenses Additional Styles */
+.add-expense-card {
+   background: var(--tg-theme-bg-color);
+   border: 1px solid var(--border);
+   border-radius: 12px;
+   padding: 16px;
+   margin-bottom: 20px;
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+   cursor: pointer;
+   transition: transform 0.2s;
+}
+.add-expense-card:active { transform: scale(0.98); }
+.add-expense-content { display: flex; align-items: center; gap: 14px; }
+.add-icon-circle {
+   width: 44px; height: 44px; border-radius: 50%;
+   background: var(--gold-gradient);
+   color: #fff;
+   display: flex; align-items: center; justify-content: center;
+}
+.add-title { font-size: 16px; font-weight: 700; color: var(--tg-theme-text-color); }
+.add-subtitle { font-size: 11px; color: var(--tg-theme-hint-color); margin-top: 1px; }
+
+/* Modals & Forms */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
+  display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px);
+}
+.sheet {
+  background: var(--tg-theme-bg-color); width: 100%; border-radius: 24px 24px 0 0; padding: 24px;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.2); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.h-80vh { max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.sheet-title { font-size: 20px; font-weight: 800; color: var(--tg-theme-text-color); }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.cursor-pointer { cursor: pointer; }
+
+.btn-sheet {
+  display: block; width: 100%; background: var(--gold-gradient); color: #fff;
+  border: none; padding: 16px; border-radius: 16px; font-size: 16px; font-weight: 700; cursor: pointer;
+}
+.btn-sheet:disabled { opacity: 0.5; }
+.btn-sheet-ghost { background: transparent; color: var(--tg-theme-hint-color); border: 1px solid var(--border); }
+
+.form-label { display: block; font-size: 13px; font-weight: 600; color: var(--tg-theme-hint-color); margin-bottom: 6px; }
+.form-input {
+  width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-text-color); font-size: 15px; outline: none;
+  font-family: inherit;
+}
+.form-input:focus { border-color: var(--gold); }
+.text-error { color: #dc2626; }
+.text-gold { color: var(--gold); }
+.text-xs { font-size: 12px; }
+
+.grid { display: grid; }
+.grid-cols-2 { grid-template-columns: 1fr 1fr; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+.flex-col { flex-direction: column; }
+.mt-2 { margin-top: 8px; }
+.mt-4 { margin-top: 16px; }
+.mb-2 { margin-bottom: 8px; }
+.mb-4 { margin-bottom: 16px; }
+.mb-6 { margin-bottom: 24px; }
+.pb-10 { padding-bottom: 40px; }
+
+/* Type Selector */
+.type-selector { display: flex; gap: 8px; }
+.type-btn {
+   flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border);
+   background: var(--tg-theme-secondary-bg-color); color: var(--tg-theme-hint-color);
+   font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.type-btn.active {
+   background: var(--gold-glow); color: var(--gold); border-color: var(--gold);
+}
 </style>
