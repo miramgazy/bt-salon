@@ -66,6 +66,11 @@ class SetWebhookView(views.APIView):
         if not host:
             host = request.build_absolute_uri('/')[:-1] # e.g. https://yourdomain.com
             
+        # Clean host: remove trailing slash and common TMA prefix if it crawled in
+        host = host.rstrip('/')
+        if host.endswith('/tma'):
+            host = host[:-4]
+            
         slug = slugify_cyrillic(org.name)
         webhook_url = f"{host}/api/accounts/tma/webhook/{slug}/{org.bot_token}/"
         
