@@ -20,7 +20,7 @@ from apps.clients.models import Client
 from apps.masters.models import Master
 from apps.appointments.models import Appointment
 from .models import User
-from .utils import normalize_phone, send_telegram_message
+from .utils import normalize_phone, send_telegram_message, answer_telegram_callback
 
 logger = logging.getLogger(__name__)
 
@@ -331,22 +331,24 @@ class TmaWebhookView(APIView):
                         }
                     )
                     
-                    # Send feedback and ask for consent ONLY if not already answered
-                    if user.is_bot_subscribed is None:
+                    # Send welcome message and return button
+                    is_kz = user.language == 'kz'
+                    msg = (
+                        f"<b>Нөміріңіз расталды!</b>\n\n<b>{org.name}</b> салонына тіркелгеніңізге рахмет. Енді сіз шеберлерге жазылып, өз визиттеріңізді басқара аласыз."
+                        if is_kz else
+                        f"<b>Ваш номер подтвержден!</b>\n\nБлагодарим за регистрацию в <b>{org.name}</b>. Теперь вы можете записываться к мастерам и управлять своими визитами прямо здесь."
+                    )
+                    
+                    btn_return = "📱 Қосымшаға оралу" if is_kz else "📱 Вернуться в приложение"
+                    tma_url = f"https://t.me/{org.bot_username}/{org.tma_name}" if org.bot_username and org.tma_name else None
+                    
+                    markup = None
+                    if tma_url:
                         markup = {
-                            "inline_keyboard": [[
-                                {"text": "✅ Да, согласен", "callback_data": f"consent_yes_{user.id}"},
-                                {"text": "❌ Нет", "callback_data": f"consent_no_{user.id}"}
-                            ]]
+                            "inline_keyboard": [[{"text": btn_return, "url": tma_url}]]
                         }
-                        send_telegram_message(
-                            token, 
-                            tg_id, 
-                            f"<b>Ваш номер подтвержден!</b>\n\nВы согласны получать уведомления об акциях и специальных предложениях от <b>{org.name}</b>?",
-                            reply_markup=markup
-                        )
-                    else:
-                        send_telegram_message(token, tg_id, "<b>Ваш номер подтвержден!</b> Благодарим за доверие.")
+                        
+                    send_telegram_message(token, tg_id, msg, reply_markup=markup)
 
         # Handle Callback Query (Mailing Consent)
         if callback_query:
@@ -362,13 +364,27 @@ class TmaWebhookView(APIView):
                     user.is_bot_subscribed = is_yes
                     user.save(update_fields=['is_bot_subscribed'])
                     
-                    status_text = "Благодарим за доверие! Вы будете первыми узнавать о наших акциях." if is_yes else "Хорошо, мы не будем беспокоить вас рассылками."
+                    is_kz = user.language == 'kz'
+                    if is_yes:
+                        status_text = "Сенім білдіргеніңізге рахмет! Сіз біздің акцияларымыз туралы бірінші болып білетін боласыз." if is_kz else "Благодарим за доверие! Вы будете первыми узнавать о наших акциях."
+                    else:
+                        status_text = "Жақсы, біз сізді хабарламалармен мазаламаймыз." if is_kz else "Хорошо, мы не будем беспокоить вас рассылками."
                     
                     # Answer callback query to stop loading state
-                    # We can use a simple response message instead of answerCallbackQuery for simplicity
-                    send_telegram_message(token, chat_id, f"✅ {status_text}")
+                    answer_telegram_callback(token, callback_query.get('id'))
+                    
+                    btn_return = "📱 Қосымшаға оралу" if is_kz else "📱 Вернуться в приложение"
+                    tma_url = f"https://t.me/{user.organization.bot_username}/{user.organization.tma_name}" if user.organization and user.organization.bot_username and user.organization.tma_name else None
+                    
+                    markup = None
+                    if tma_url:
+                        markup = {
+                            "inline_keyboard": [[{"text": btn_return, "url": tma_url}]]
+                        }
+
+                    send_telegram_message(token, chat_id, f"✅ {status_text}", reply_markup=markup)
                 except User.DoesNotExist:
-                    pass
+                    answer_telegram_callback(token, callback_query.get('id'), text="Ошибка: пользователь не найден")
             
             # Handle Appointment Confirmation
             elif data.startswith('appt_'):
@@ -379,18 +395,19 @@ class TmaWebhookView(APIView):
                 
                 try:
                     appt = Appointment.objects.get(id=appt_id)
+                    answer_telegram_callback(token, callback_query.get('id'))
+                    
                     if action == 'confirm':
                         appt.client_confirmation = Appointment.CONFIRMATION_YES
                         msg = "Отлично! Мы ждем вас в запланированное время. 😊"
                     else:
                         appt.client_confirmation = Appointment.CONFIRMATION_NO
                         msg = "Жаль, что вы не сможете прийти. Мы отменили вашу запись. Надеемся увидеть вас в другой раз! 👋"
-                        # Optionally change the main appointment status to cancelled
-                        # appt.status = Appointment.STATUS_CANCELLED
                     
                     appt.save()
                     send_telegram_message(token, chat_id, f"<b>{appt.organization.name}</b>\n\n{msg}")
                 except Appointment.DoesNotExist:
+                    answer_telegram_callback(token, callback_query.get('id'), text="Запись не найдена")
                     send_telegram_message(token, chat_id, "Извините, запись не найдена или уже неактуальна.")
 
         return Response({'status': 'ok'})

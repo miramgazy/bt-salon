@@ -55,6 +55,26 @@ def send_telegram_message(bot_token, chat_id, text, reply_markup=None):
         print(f"Error sending telegram message: {e}")
         return None
 
+def answer_telegram_callback(bot_token, callback_query_id, text=None):
+    """
+    Answers a callback query via Telegram Bot API.
+    """
+    url = f"https://api.telegram.org/bot{bot_token}/answerCallbackQuery"
+    payload = {
+        'callback_query_id': callback_query_id,
+    }
+    if text:
+        payload['text'] = text
+        
+    try:
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req) as response:
+            return json.loads(response.read().decode())
+    except Exception as e:
+        print(f"Error answering telegram callback: {e}")
+        return None
+
 def normalize_phone(phone):
     """
     Normalizes phone numbers to +7XXXXXXXXXX format.
