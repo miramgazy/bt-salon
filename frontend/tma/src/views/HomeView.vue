@@ -86,7 +86,7 @@
         <button class="back-btn" @click="goHome">
             <Icon icon="mdi:arrow-left" width="20" />
         </button>
-        <div class="page-title header-font">{{ state.selectedCat?.name }}</div>
+        <div class="page-title header-font">{{ state.selectedMaster ? state.selectedMaster.first_name + " " + state.selectedMaster.last_name : state.selectedCat?.name }}</div>
       </div>
       <div class="service-list">
         <div v-for="svc in catServices" :key="svc.id" class="service-card" @click="handleServiceSelect(svc)">
@@ -115,7 +115,7 @@
       </div>
 
       <div class="master-grid">
-        <div v-for="m in masters" :key="m.id" 
+        <div v-for="m in masterOptions" :key="m.id" 
              :class="['master-card', { 'is-self': isSelf(m) }]" 
              @click="!isSelf(m) && handleMasterSelect(m)">
             <div class="master-photo">
@@ -134,7 +134,7 @@
     <!-- ══ SLOTS ══ -->
     <div v-else-if="state.page === 'slots'" class="fade-up">
       <div class="page-header">
-        <button class="back-btn" @click="state.page = 'master-select'">
+        <button class="back-btn" @click="state.selectedService ? (state.selectedCat ? (state.page = 'master-select') : (state.page = 'service-list')) : (state.page = 'home')">
             <Icon icon="mdi:arrow-left" width="20" />
         </button>
         <div class="page-title header-font">{{ $t('tma.chooseTime', 'Время записи') }}</div>
@@ -290,8 +290,19 @@ onMounted(() => {
 })
 
 const catServices = computed(() => {
-  if (!state.selectedCat) return []
-  return services.value.filter(s => s.category === state.selectedCat.id)
+  const baseServices = state.selectedCat 
+    ? services.value.filter(s => s.category === state.selectedCat.id)
+    : services.value
+    
+  if (state.selectedMaster) {
+    return baseServices.filter(s => state.selectedMaster.services?.includes(s.id))
+  }
+  return baseServices
+})
+
+const masterOptions = computed(() => {
+    if (!state.selectedService) return masters.value
+    return masters.value.filter(m => m.services?.includes(state.selectedService.id))
 })
 
 const filteredMasters = computed(() => {
@@ -318,12 +329,17 @@ const goHome = () => {
 
 const handleCatClick = (cat) => {
   state.selectedCat = cat
+  state.selectedMaster = null // Reset master if choosing from categories
   state.page = 'service-list'
 }
 
 const handleServiceSelect = (svc) => {
   state.selectedService = svc
-  state.page = 'master-select'
+  if (state.selectedMaster) {
+    state.page = 'slots'
+  } else {
+    state.page = 'master-select'
+  }
 }
 
 const handleMasterSelect = (master) => {
@@ -338,8 +354,8 @@ const handleSlotSelect = (slot) => {
 
 const handleMasterFirstSelect = (master) => {
   state.selectedMaster = master
-  // Jump to slot selection directly if master is selected from list
-  state.page = 'slots'
+  state.selectedCat = null // Clear category so we show all services of this master
+  state.page = 'service-list'
 }
 
 const fetchSlots = async () => {

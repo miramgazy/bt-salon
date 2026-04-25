@@ -91,6 +91,9 @@ class MasterViewSet(viewsets.ModelViewSet):
         if service_id:
             try:
                 service = Service.objects.get(id=service_id)
+                # Verify master provides this service
+                if not master.services.filter(id=service.id).exists():
+                    return Response({'error': 'Master does not provide this service'}, status=status.HTTP_400_BAD_REQUEST)
                 duration_minutes = service.duration_minutes
             except Service.DoesNotExist:
                 return Response({'error': 'Service not found'}, status=status.HTTP_400_BAD_REQUEST)
