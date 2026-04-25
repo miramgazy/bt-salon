@@ -3,9 +3,9 @@
     <!-- ══ SUCCESS ══ -->
     <div v-if="state.showSuccess" class="success fade-up">
       <div class="success-icon">✨</div>
-      <div class="success-title header-font">{{ $t('tma.confirmTitle', 'Запись подтверждена!') }}</div>
-      <div class="success-sub">{{ $t('tma.confirmSub', 'Ждём вас в нашем салоне!') }}</div>
-      <button class="btn-secondary" style="margin-top: 40px; width: 100%" @click="goHome">На главную</button>
+      <div class="success-title header-font">{{ $t('tma.confirmTitle') }}</div>
+      <div class="success-sub">{{ $t('tma.confirmSub') }}</div>
+      <button class="btn-secondary" style="margin-top: 40px; width: 100%" @click="goHome">{{ $t('tma.goHome') }}</button>
     </div>
 
     <!-- ══ HOME PAGE ══ -->
@@ -15,23 +15,101 @@
       <div class="tabs">
         <label class="tab" :class="{ active: state.activeTab === 'services' }" @click="state.activeTab = 'services'">
           <span class="tab-icon">✨</span>
-          {{ $t('tma.services', 'Услуги') }}
+          {{ $t('tma.services') }}
         </label>
         <label class="tab" :class="{ active: state.activeTab === 'masters' }" @click="state.activeTab = 'masters'">
           <span class="tab-icon">👤</span>
-          {{ $t('tma.masters', 'Мастера') }}
+          {{ $t('tma.masters') }}
         </label>
       </div>
 
-      <!-- Date bar -->
-      <div class="date-bar">
-        <div class="date-chip" :class="{ active: state.selectedDate === todayStr }" @click="state.selectedDate = todayStr">
-          {{ $t('tma.today', 'Сегодня') }}
+      <!-- Dynamic Filters Panel -->
+      <div class="filters-panel">
+        <div class="panel-main">
+          <button 
+            :class="['filter-toggle', { active: isFilterMode }]" 
+            @click="toggleFilterMode"
+          >
+            <Icon :icon="isFilterMode ? 'mdi:filter-off-outline' : 'mdi:filter-variant'" width="20" />
+          </button>
+
+          <TransitionGroup name="panel-slide" tag="div" class="panel-content">
+            <!-- Default: Date Selector -->
+            <div v-if="!isFilterMode" key="dates" class="date-selector-compact">
+              <button 
+                :class="['date-pill', { active: state.selectedDate === todayStr }]" 
+                @click="state.selectedDate = todayStr"
+              >{{ $t('tma.today') }}</button>
+              <button 
+                :class="['date-pill', { active: state.selectedDate === tomorrowStr }]" 
+                @click="state.selectedDate = tomorrowStr"
+              >{{ $t('tma.tomorrow') }}</button>
+              <div :class="['date-pill custom-date-wrapper', { active: state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr }]">
+                 <Icon icon="mdi:calendar-month-outline" width="16" />
+                 <input type="date" v-model="state.selectedDate" class="date-input-hidden" :min="todayStr" />
+                 <span>{{ (state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr) ? formatDateShort(state.selectedDate) : $t('master.date') }}</span>
+              </div>
+            </div>
+
+            <!-- Active Filters Mode -->
+            <div v-else key="filters" class="active-filters-row">
+              <!-- Compact Date -->
+              <div :class="['compact-btn', { active: state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr }]">
+                <Icon icon="mdi:calendar-edit" width="20" />
+                <input type="date" v-model="state.selectedDate" class="date-input-hidden" :min="todayStr" />
+              </div>
+
+              <!-- Categories Toggle -->
+              <button 
+                :class="['compact-btn', { active: activeFilterPanel === 'category' }]"
+                @click="toggleFilterPanel('category')"
+              >
+                <Icon icon="mdi:tag-outline" width="20" />
+              </button>
+
+              <!-- Search Toggle -->
+              <button 
+                :class="['compact-btn', { active: activeFilterPanel === 'search' }]"
+                @click="toggleFilterPanel('search')"
+              >
+                <Icon icon="mdi:magnify" width="20" />
+              </button>
+
+              <!-- Reset -->
+              <button class="compact-btn text-error" @click="resetMastersFilters" v-if="hasActiveMastersFilters">
+                <Icon icon="mdi:filter-remove-outline" width="20" />
+              </button>
+            </div>
+          </TransitionGroup>
         </div>
-        <div class="date-chip" :class="{ active: state.selectedDate === tomorrowStr }" @click="state.selectedDate = tomorrowStr">
-          {{ $t('tma.tomorrow', 'Завтра') }}
-        </div>
-        <input type="date" class="date-input" v-model="state.selectedDate" :min="todayStr" />
+
+        <!-- Expandable Panels -->
+        <Transition name="panel-expand">
+          <div v-if="isFilterMode && activeFilterPanel === 'category'" class="expanded-panel">
+            <div class="category-scroll">
+              <button 
+                :class="['pill', { active: !state.masterFilter }]" 
+                @click="state.masterFilter = null"
+              >{{ $t('tma.all') }}</button>
+              <button 
+                v-for="cat in categories" :key="cat.id"
+                :class="['pill', { active: state.masterFilter === cat.id }]" 
+                @click="state.masterFilter = cat.id"
+              >{{ cat.name }}</button>
+            </div>
+          </div>
+        </Transition>
+
+        <Transition name="panel-expand">
+          <div v-if="isFilterMode && activeFilterPanel === 'search'" class="expanded-panel">
+            <input 
+              v-model="masterSearchQuery" 
+              type="text" 
+              class="filter-input" 
+              :placeholder="$t('admin.searchPlaceholder', 'Поиск мастера...')"
+            />
+          </div>
+        </Transition>
       </div>
 
       <!-- Loading State -->
@@ -42,7 +120,7 @@
       <!-- Services tab -->
       <template v-else-if="state.activeTab === 'services'">
         <div class="section-title header-font" style="margin-bottom: 12px; font-size: 20px;">
-          {{ $t('tma.serviceCategories', 'Категории') }}
+          {{ $t('tma.serviceCategories') }}
         </div>
         <div class="cat-grid">
           <div v-for="cat in categories" :key="cat.id" class="cat-tile" @click="handleCatClick(cat)">
@@ -54,14 +132,7 @@
 
       <!-- Masters tab -->
       <template v-else-if="state.activeTab === 'masters'">
-        <div class="filter-pills" style="margin-bottom: 16px;">
-          <div class="pill" :class="{ active: !state.masterFilter }" @click="state.masterFilter = null">
-            {{ $t('tma.all', 'Все') }}
-          </div>
-          <div v-for="cat in categories" :key="cat.id" class="pill" :class="{ active: state.masterFilter === cat.id }" @click="state.masterFilter = cat.id">
-            {{ cat.name }}
-          </div>
-        </div>
+        <!-- Filter pills removed (integrated into filters-panel) -->
         <div class="master-grid">
           <div v-for="m in filteredMasters" :key="m.id" 
                :class="['master-card', { 'is-self': isSelf(m) }]" 
@@ -71,7 +142,7 @@
                <span v-else>👤</span>
             </div>
             <div class="master-info">
-              <div class="master-name">{{ m.first_name }} {{ m.last_name }} <span v-if="isSelf(m)" class="self-badge">(Это вы)</span></div>
+              <div class="master-name">{{ m.first_name }} {{ m.last_name }} <span v-if="isSelf(m)" class="self-badge">({{ $t('tma.itIsYou', 'Это вы') }})</span></div>
               <div class="master-rating">★ 5.0</div>
             </div>
             <Icon v-if="!isSelf(m)" icon="mdi:chevron-right" width="24" :style="{ color: 'var(--muted)' }" />
@@ -92,7 +163,7 @@
         <div v-for="svc in catServices" :key="svc.id" class="service-card" @click="handleServiceSelect(svc)">
           <div class="service-info">
             <div class="service-name">{{ svc.name }}</div>
-            <div class="service-meta">⏱ {{ svc.duration_minutes }} мин</div>
+            <div class="service-meta">⏱ {{ svc.duration_minutes }} {{ $t('tma.minutes') }}</div>
           </div>
           <div class="service-price">{{ svc.total_price }} ₸</div>
         </div>
@@ -105,13 +176,13 @@
         <button class="back-btn" @click="state.page = 'service-list'">
             <Icon icon="mdi:arrow-left" width="20" />
         </button>
-        <div class="page-title header-font">{{ $t('tma.chooseMaster', 'Выберите мастера') }}</div>
+        <div class="page-title header-font">{{ $t('tma.chooseMaster') }}</div>
       </div>
       
       <div v-if="state.selectedService" class="card glass" style="margin-bottom: 20px; border-left: 4px solid var(--gold);">
-        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); font-weight: 800; margin-bottom: 4px;">Выбрана услуга</div>
+        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); font-weight: 800; margin-bottom: 4px;">{{ $t('admin.serviceDetails') }}</div>
         <div style="font-weight: 600;">{{ state.selectedService.name }}</div>
-        <div style="font-size: 13px; color: var(--muted); margin-top: 2px;">{{ state.selectedService.total_price }} ₸ • {{ state.selectedService.duration_minutes }} мин</div>
+        <div style="font-size: 13px; color: var(--muted); margin-top: 2px;">{{ state.selectedService.total_price }} ₸ • {{ state.selectedService.duration_minutes }} {{ $t('tma.minutes') }}</div>
       </div>
 
       <div class="master-grid">
@@ -123,10 +194,10 @@
                <span v-else>👤</span>
             </div>
           <div class="master-info">
-            <div class="master-name">{{ m.first_name }} {{ m.last_name }} <span v-if="isSelf(m)" class="self-badge">(Это вы)</span></div>
-            <div class="master-rating">★ 5.0 • Доступен сегодня</div>
+            <div class="master-name">{{ m.first_name }} {{ m.last_name }} <span v-if="isSelf(m)" class="self-badge">({{ $t('tma.itIsYou') }})</span></div>
+            <div class="master-rating">★ 5.0 • {{ $t('tma.availableToday') }}</div>
           </div>
-          <button v-if="!isSelf(m)" class="status-badge confirmed" style="border: none; cursor: pointer;">Выбрать</button>
+          <button v-if="!isSelf(m)" class="status-badge confirmed" style="border: none; cursor: pointer;">{{ $t('common.select') }}</button>
         </div>
       </div>
     </div>
@@ -137,12 +208,12 @@
         <button class="back-btn" @click="state.selectedService ? (state.selectedCat ? (state.page = 'master-select') : (state.page = 'service-list')) : (state.page = 'home')">
             <Icon icon="mdi:arrow-left" width="20" />
         </button>
-        <div class="page-title header-font">{{ $t('tma.chooseTime', 'Время записи') }}</div>
+        <div class="page-title header-font">{{ $t('tma.chooseTime') }}</div>
       </div>
 
       <div class="page-header" style="margin-bottom: 24px;">
-        <div class="date-chip" :class="{ active: state.selectedDate === todayStr }" @click="state.selectedDate = todayStr">Сегодня</div>
-        <div class="date-chip" :class="{ active: state.selectedDate === tomorrowStr }" @click="state.selectedDate = tomorrowStr">Завтра</div>
+        <div class="date-chip" :class="{ active: state.selectedDate === todayStr }" @click="state.selectedDate = todayStr">{{ $t('tma.today') }}</div>
+        <div class="date-chip" :class="{ active: state.selectedDate === tomorrowStr }" @click="state.selectedDate = tomorrowStr">{{ $t('tma.tomorrow') }}</div>
         <input type="date" class="date-input" v-model="state.selectedDate" :min="todayStr" />
       </div>
 
@@ -152,13 +223,13 @@
       
       <div v-else-if="shiftClosed" class="card glass fade-up" style="text-align: center; border-color: #ef4444; padding: 32px 20px;">
          <div style="font-size: 40px; margin-bottom: 16px">🚫</div>
-         <div style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">Смена еще не открыта</div>
-         <div style="color: var(--muted); font-size: 14px;">Мастер еще не начал работу. Пожалуйста, загляните позже или выберите другого мастера.</div>
+         <div style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">{{ $t('tma.shiftNotStarted') }}</div>
+         <div style="color: var(--muted); font-size: 14px;">{{ $t('tma.masterNotWorkingYet') }}</div>
       </div>
 
       <div v-else-if="slots.length === 0" style="text-align:center; padding: 40px; color: var(--muted)">
          <Icon icon="mdi:calendar-blank" width="48" style="opacity: 0.2; margin-bottom: 12px" />
-         <div>Нет свободного времени на эту дату.</div>
+         <div>{{ $t('tma.noSlots') }}</div>
       </div>
 
       <div v-else class="slot-grid">
@@ -174,34 +245,34 @@
     <!-- ══ CONFIRMATION MODAL ══ -->
     <div v-if="state.showModal && state.selectedService && state.selectedMaster && state.selectedSlot" 
          class="modal-overlay" @click.self="state.showModal = false">
-      <div class="modal">
-        <div class="modal-title header-font">{{ $t('tma.confirmBooking', 'Детали записи') }}</div>
+       <div class="modal">
+        <div class="modal-title header-font">{{ $t('tma.confirmBooking') }}</div>
         
         <div class="card glass" style="margin-bottom: 24px; text-align: left;">
-            <div class="modal-row">
-              <span class="modal-label">Услуга</span>
-              <span class="modal-value">{{ state.selectedService.name }}</span>
-            </div>
-            <div class="modal-row">
-              <span class="modal-label">Мастер</span>
-              <span class="modal-value">{{ state.selectedMaster.first_name }} {{ state.selectedMaster.last_name }}</span>
-            </div>
-            <div class="modal-row">
-              <span class="modal-label">Когда</span>
-              <span class="modal-value">{{ state.selectedDate }}, {{ state.selectedSlot }}</span>
-            </div>
-            <div class="modal-row" style="border-bottom: none; margin-top: 12px;">
-              <span class="modal-label" style="font-size: 16px; color: var(--text); font-weight: 700;">К оплате</span>
-              <span class="modal-value gold header-font" style="font-size: 22px;">{{ state.selectedService.total_price }} ₸</span>
-            </div>
-        </div>
-        
-        <button class="btn-confirm" @click="handleConfirm">
-          Подтвердить запись
-        </button>
-        <button class="btn-secondary" style="margin-top: 12px; width: 100%" @click="state.showModal = false">
-          Отмена
-        </button>
+             <div class="modal-row">
+               <span class="modal-label">{{ $t('services.title') }}</span>
+               <span class="modal-value">{{ state.selectedService.name }}</span>
+             </div>
+             <div class="modal-row">
+               <span class="modal-label">{{ $t('tma.masters') }}</span>
+               <span class="modal-value">{{ state.selectedMaster.first_name }} {{ state.selectedMaster.last_name }}</span>
+             </div>
+             <div class="modal-row">
+               <span class="modal-label">{{ $t('common.time') }}</span>
+               <span class="modal-value">{{ state.selectedDate }}, {{ state.selectedSlot }}</span>
+             </div>
+             <div class="modal-row" style="border-bottom: none; margin-top: 12px;">
+               <span class="modal-label" style="font-size: 16px; color: var(--text); font-weight: 700;">{{ $t('tma.total') }}</span>
+               <span class="modal-value gold header-font" style="font-size: 22px;">{{ state.selectedService.total_price }} ₸</span>
+             </div>
+         </div>
+         
+         <button class="btn-confirm" @click="handleConfirm">
+           {{ $t('tma.book') }}
+         </button>
+         <button class="btn-secondary" style="margin-top: 12px; width: 100%" @click="state.showModal = false">
+           {{ $t('common.cancel') }}
+         </button>
       </div>
     </div>
 
@@ -212,6 +283,7 @@
 import { reactive, ref, onMounted, computed, watch } from 'vue'
 import api from '@/api'
 import { Icon } from '@iconify/vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -224,6 +296,12 @@ const getTomorrowStr = () => {
 
 const todayStr = getTodayStr()
 const tomorrowStr = getTomorrowStr()
+
+const formatDateShort = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return d.toLocaleDateString([], { day: 'numeric', month: 'short' })
+}
 
 const state = reactive({
   page: 'home',
@@ -246,6 +324,33 @@ const loading = ref(true)
 const slots = ref([])
 const slotsLoading = ref(false)
 const shiftClosed = ref(false)
+
+// ── Filters State ──────────────────────────────────────────────
+const isFilterMode = ref(false)
+const activeFilterPanel = ref(null) // 'category' or 'search'
+const masterSearchQuery = ref('')
+
+const toggleFilterMode = () => {
+  isFilterMode.value = !isFilterMode.value
+  if (!isFilterMode.value) {
+    resetMastersFilters()
+    activeFilterPanel.value = null
+  }
+}
+
+const toggleFilterPanel = (panel) => {
+  if (activeFilterPanel.value === panel) activeFilterPanel.value = null
+  else activeFilterPanel.value = panel
+}
+
+const resetMastersFilters = () => {
+  state.masterFilter = null
+  masterSearchQuery.value = ''
+}
+
+const hasActiveMastersFilters = computed(() => {
+  return state.masterFilter || masterSearchQuery.value
+})
 
 const fetchData = async () => {
   try {
@@ -306,11 +411,24 @@ const masterOptions = computed(() => {
 })
 
 const filteredMasters = computed(() => {
-  if (!state.masterFilter) return masters.value
-  return masters.value.filter(m => m.services?.some(s => {
-    const svc = services.value.find(sx => sx.id === s)
-    return svc && svc.category === state.masterFilter
-  }))
+  let result = masters.value
+  
+  if (state.masterFilter) {
+    result = result.filter(m => m.services?.some(s => {
+      const svc = services.value.find(sx => sx.id === s)
+      return svc && svc.category === state.masterFilter
+    }))
+  }
+
+  if (masterSearchQuery.value) {
+    const q = masterSearchQuery.value.toLowerCase()
+    result = result.filter(m => {
+      const full = (m.first_name + ' ' + (m.last_name || '')).toLowerCase()
+      return full.includes(q)
+    })
+  }
+
+  return result
 })
 
 const isSelf = (master) => {
@@ -389,6 +507,8 @@ watch([() => state.selectedMaster, () => state.selectedService, () => state.sele
     }
 })
 
+const { t } = useI18n()
+
 const handleConfirm = async () => {
   try {
     const start = new Date(`${state.selectedDate}T${state.selectedSlot}:00`)
@@ -401,10 +521,10 @@ const handleConfirm = async () => {
       end_time: end.toISOString()
     })
     
-    state.showModal = false
+     state.showModal = false
     state.showSuccess = true
   } catch (error) {
-    alert("Ошибка при создании записи")
+    alert(t('tma.error'))
     console.error(error)
   }
 }
@@ -424,21 +544,170 @@ const handleConfirm = async () => {
 .tab.active { background: var(--gold-gradient); color: #000; border-color: var(--gold); box-shadow: 0 4px 12px var(--gold-glow); }
 .tab-icon { font-size: 20px; display: block; margin-bottom: 4px; }
 
-/* Date selector */
-.date-bar { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }
-.date-bar::-webkit-scrollbar { display: none; }
-.date-chip {
-  padding: 8px 16px; border-radius: 20px; background: var(--card-bg);
-  border: 1px solid var(--border); cursor: pointer; font-size: 12px;
-  color: var(--muted); transition: all .2s; white-space: nowrap; font-weight: 600;
+/* Dynamic Filters Panel */
+.filters-panel {
+  background: var(--bg-secondary);
+  border-radius: 18px;
+  padding: 6px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
 }
-.date-chip.active { background: var(--gold); color: #000; border-color: var(--gold); }
-.date-input {
-  flex: 1; padding: 8px 12px; border-radius: 20px;
-  background: var(--card-bg); border: 1px solid var(--border);
-  color: var(--text); font-size: 12px; font-family: inherit;
-  cursor: pointer; min-width: 0;
+
+.panel-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.filter-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: var(--tg-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.filter-toggle.active {
+  background: var(--gold-gradient);
+  color: #000;
+  border-color: var(--gold);
+}
+
+.panel-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  overflow: hidden;
+}
+
+.date-selector-compact {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.date-pill {
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--tg-bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.date-pill.active {
+  background: var(--gold);
+  color: #000;
+  border-color: var(--gold);
+}
+
+.active-filters-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.compact-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--tg-bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.compact-btn.active {
+  background: var(--gold-accent, var(--gold-glow));
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+.expanded-panel {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--tg-bg);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+
+.category-scroll {
+  display: flex;
+  overflow-x: auto;
+  gap: 8px;
+  scrollbar-width: none;
+}
+.category-scroll::-webkit-scrollbar { display: none; }
+
+.pill {
+  white-space: nowrap; padding: 6px 14px; border-radius: 20px;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer;
+}
+.pill.active { background: var(--gold); color: #000; border-color: var(--gold); }
+
+.filter-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+}
+.filter-input:focus { border-color: var(--gold); }
+
+.text-error { color: #dc2626; }
+
+.custom-date-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+.date-input-hidden {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  opacity: 0; cursor: pointer;
+}
+
+/* Animations */
+.panel-slide-enter-active, .panel-slide-leave-active { transition: all 0.3s ease; }
+.panel-slide-enter-from { opacity: 0; transform: translateX(20px); }
+.panel-slide-leave-to { opacity: 0; transform: translateX(-20px); }
+
+.panel-expand-enter-active, .panel-expand-leave-active { 
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 100px;
+  overflow: hidden;
+}
+.panel-expand-enter-from, .panel-expand-leave-to { 
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Legacy Date selector (removed) */
+/*.date-bar styles... */
+
 
 /* Category grid */
 .cat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 24px; }

@@ -269,7 +269,7 @@ async function requestContact() {
     startPhonePolling()
     if (message && message.includes('отменили')) {
       waitingForContact.value = false
-      error.value = message
+      error.value = t('onboarding.phone.cancelled')
     }
   }
 
@@ -284,7 +284,7 @@ async function requestContact() {
 
     contactRequestedEventHandler = async (evt) => {
       if (evt?.status === 'cancelled') {
-        finishManual('Вы отменили отправку номера. Введите телефон вручную.')
+        finishManual(t('onboarding.phone.cancelled'))
         return
       }
       if (evt?.status === 'sent') connectWebSocket()
@@ -293,10 +293,10 @@ async function requestContact() {
 
     try {
       webApp.requestContact((shared) => {
-        if (shared === false) finishManual('Вы отменили отправку номера. Введите телефон вручную.')
+        if (shared === false) finishManual(t('onboarding.phone.cancelled'))
       })
     } catch {
-      finishManual('Не удалось запросить номер. Введите телефон вручную.')
+      finishManual(t('onboarding.phone.error'))
       return
     }
 
@@ -306,9 +306,9 @@ async function requestContact() {
 
   // Fallback: MainButton with request_contact
   const mainButton = webApp.MainButton
-  if (!mainButton) { finishManual('Введите телефон вручную.'); return }
+  if (!mainButton) { finishManual(t('onboarding.phone.error')); return }
 
-  mainButton.setText('Поделиться номером')
+  mainButton.setText(t('onboarding.phone.sharePhone'))
   mainButton.setParams({ request_contact: true })
   mainButton.show()
 
@@ -336,7 +336,7 @@ function formatPhone(event) {
 // ── Continue ───────────────────────────────────────────────────
 
 async function handleContinue() {
-  if (!phone.value) { error.value = 'Пожалуйста, укажите номер телефона'; return }
+  if (!phone.value) { error.value = t('onboarding.phone.errorEmpty'); return }
 
   let clean = phone.value.replace(/\D/g, '')
   
@@ -347,7 +347,7 @@ async function handleContinue() {
   }
 
   if (clean.length !== 11 || (!clean.startsWith('7') && !clean.startsWith('8'))) {
-    error.value = 'Введите корректный номер (например, +77001234567)'
+    error.value = t('onboarding.phone.errorFormat')
     return
   }
 
@@ -374,7 +374,7 @@ async function handleContinue() {
       else router.push('/')
     }
   } catch (err) {
-    error.value = err.response?.data?.phone?.[0] || 'Не удалось сохранить номер. Попробуйте ещё раз.'
+    error.value = err.response?.data?.phone?.[0] || t('onboarding.phone.errorSave')
   } finally {
     saving.value = false
   }

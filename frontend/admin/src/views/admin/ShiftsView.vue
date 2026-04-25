@@ -83,8 +83,14 @@
                   <p class="max-w-[200px] truncate text-xs" :title="shift.comment">{{ shift.comment || '—' }}</p>
                 </td>
                 <td class="py-5 px-4">
-                  <span class="inline-flex rounded-full bg-success/10 py-1 px-3 text-sm font-medium text-success">
-                    Открыта
+                  <span v-if="shift.opened_by_admin" class="inline-flex rounded-full bg-warning/10 py-1 px-3 text-sm font-medium text-warning">
+                    Админ
+                  </span>
+                  <span v-else class="inline-flex rounded-full bg-success/10 py-1 px-3 text-sm font-medium text-success">
+                    Мастер
+                  </span>
+                  <span v-if="shift.actual_start" class="ml-2 inline-flex rounded-full bg-success/10 py-1 px-3 text-sm font-medium text-success" title="Мастер на месте">
+                    <Icon icon="mdi:check-all" width="14" />
                   </span>
                 </td>
                 <td class="py-5 px-4">

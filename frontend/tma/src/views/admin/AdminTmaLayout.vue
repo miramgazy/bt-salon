@@ -4,8 +4,8 @@
     <div class="header">
       <div class="header-top">
         <div>
-          <div class="header-greeting">Управление (Админ)</div>
-          <div class="header-name header-font">{{ authStore.organizationName || 'Организация' }}</div>
+          <div class="header-greeting">{{ $t('admin.management') }}</div>
+          <div class="header-name header-font">{{ authStore.organizationName || $t('common.organization', 'Салон') }}</div>
         </div>
         <div class="header-actions">
            <button class="icon-btn lang-btn" @click="toggleLang" style="margin-right: 8px">
@@ -24,27 +24,27 @@
     <nav class="bottom-nav">
       <router-link to="/admin/bookings" class="nav-item" active-class="router-link-active">
         <Icon icon="mdi:calendar-multiple-check" width="24" :class="{'active-icon': $route.path.includes('/admin/bookings')}" />
-        <span>Записи</span>
+        <span>{{ $t('admin.nav.bookings') }}</span>
       </router-link>
 
       <router-link to="/admin/services" class="nav-item" active-class="router-link-active">
         <Icon icon="mdi:format-list-bulleted" width="24" :class="{'active-icon': $route.path.includes('/admin/services')}" />
-        <span>Услуги</span>
+        <span>{{ $t('admin.nav.services') }}</span>
       </router-link>
       
       <router-link to="/admin/masters" class="nav-item" active-class="router-link-active">
         <Icon icon="mdi:account-tie" width="24" :class="{'active-icon': $route.path.includes('/admin/masters')}" />
-        <span>Сотрудники</span>
+        <span>{{ $t('admin.nav.masters') }}</span>
       </router-link>
 
       <router-link to="/admin/report" class="nav-item" active-class="router-link-active">
         <Icon icon="mdi:chart-bar" width="24" :class="{'active-icon': $route.path.includes('/admin/report')}" />
-        <span>Отчеты</span>
+        <span>{{ $t('admin.nav.reports') }}</span>
       </router-link>
 
       <router-link to="/admin/profile" class="nav-item" active-class="router-link-active">
         <Icon icon="mdi:account-circle" width="24" :class="{'active-icon': $route.path.includes('/admin/profile')}" />
-        <span>Профиль</span>
+        <span>{{ $t('admin.nav.profile') }}</span>
       </router-link>
     </nav>
   </div>
@@ -62,9 +62,12 @@ const router = useRouter()
 const route = useRoute()
 const { locale } = useI18n()
 
-const toggleLang = () => {
+const toggleLang = async () => {
   locale.value = locale.value === 'ru' ? 'kz' : 'ru'
   localStorage.setItem('tma_locale', locale.value)
+  if (authStore.user) {
+    await authStore.updateProfile({ language: locale.value })
+  }
 }
 
 const cssVars = computed(() => {

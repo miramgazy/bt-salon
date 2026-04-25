@@ -4,7 +4,7 @@
        <button class="back-btn" @click="$router.push('/master')">
           <Icon icon="mdi:arrow-left" width="20" />
        </button>
-       <h1 class="page-title header-font">{{ $t('master.income', 'Доходы') }}</h1>
+       <h1 class="page-title header-font">{{ $t('master.income') }}</h1>
     </div>
 
     <!-- ── PERIOD SELECTOR ── -->
@@ -20,11 +20,11 @@
     <!-- ── CUSTOM DATE RANGE (shown only if activePeriod === 'custom') ── -->
     <div v-if="activePeriod === 'custom'" class="custom-range fade-in">
        <div class="range-field">
-         <label>С</label>
+         <label>{{ $t('master.from') }}</label>
          <input type="date" v-model="startDate" @change="fetchStats" class="range-input" />
        </div>
        <div class="range-field">
-         <label>По</label>
+         <label>{{ $t('master.to') }}</label>
          <input type="date" v-model="endDate" @change="fetchStats" class="range-input" />
        </div>
     </div>
@@ -32,15 +32,15 @@
     <!-- ── KPI GRID ── -->
     <div class="kpi-grid">
       <div class="kpi-card glass">
-        <div class="kpi-label">Доход ({{ periodLabel }})</div>
+        <div class="kpi-label">{{ $t('master.income') }} ({{ periodLabel }})</div>
         <div class="kpi-value text-gold">{{ Number(stats.total_income || 0).toLocaleString() }} ₸</div>
       </div>
       <div class="kpi-card glass">
-        <div class="kpi-label">Клиенты</div>
+        <div class="kpi-label">{{ $t('master.clients') }}</div>
         <div class="kpi-value">{{ stats.total_clients || 0 }}</div>
       </div>
       <div class="kpi-card glass">
-        <div class="kpi-label">Ср. чек</div>
+        <div class="kpi-label">{{ $t('master.avgCheck') }}</div>
         <div class="kpi-value">{{ Number(stats.avg_check || 0).toLocaleString() }} ₸</div>
       </div>
     </div>
@@ -48,8 +48,8 @@
     <!-- ── CHARTS ── -->
     <div class="chart-section card glass">
       <div class="chart-header">
-        <div class="chart-title">Динамика дохода</div>
-        <div class="chart-period">7 дней</div>
+        <div class="chart-title">{{ $t('master.chartTitle') }}</div>
+        <div class="chart-period">{{ $t('master.days7') }}</div>
       </div>
       <div class="chart-container">
         <apexchart
@@ -64,11 +64,11 @@
     <div class="gold-line"></div>
     
     <div v-if="stats.popular_services && stats.popular_services.length > 0" class="services-box">
-       <h3 class="box-title">Популярные услуги</h3>
+       <h3 class="box-title">{{ $t('master.popularServices') }}</h3>
        <div v-for="s in stats.popular_services" :key="s.name" class="service-row">
           <div class="s-info">
              <div class="s-name">{{ s.name }}</div>
-             <div class="s-count">{{ s.count }} записей</div>
+             <div class="s-count">{{ s.count }} {{ $t('master.records') }}</div>
           </div>
           <div class="s-income">{{ Number(s.income).toLocaleString() }} ₸</div>
        </div>
@@ -93,10 +93,10 @@ const startDate = ref('')
 const endDate = ref('')
 
 const periods = computed(() => [
-  { id: 'today', label: t('master.today', 'Сегодня') },
-  { id: 'week', label: t('master.incomeWeek', 'Неделя') },
-  { id: 'month', label: t('master.incomeMonth', 'Месяц') },
-  { id: 'custom', label: 'Вручную' }
+   { id: 'today', label: t('master.today') },
+   { id: 'week', label: t('master.incomeWeek') },
+   { id: 'month', label: t('master.incomeMonth') },
+   { id: 'custom', label: t('master.periodCustom') }
 ])
 
 const periodLabel = computed(() => {
@@ -138,7 +138,7 @@ onMounted(() => {
 })
 
 const chartSeries = computed(() => [{
-  name: 'Доход',
+  name: t('master.income'),
   data: stats.daily.map(d => d.income)
 }])
 

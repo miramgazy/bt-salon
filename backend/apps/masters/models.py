@@ -26,6 +26,7 @@ class MasterShift(models.Model):
     lunch_start = models.TimeField(null=True, blank=True)
     lunch_end = models.TimeField(null=True, blank=True)
     is_open = models.BooleanField(default=False)
+    opened_by_admin = models.BooleanField(default=False, help_text="True if the shift was manually opened by an administrator")
     
     actual_start = models.DateTimeField(null=True, blank=True)
     comment = models.TextField(null=True, blank=True)

@@ -4,7 +4,7 @@
     <div class="header">
       <div class="header-top">
         <div>
-          <div class="header-greeting">Управление (Мастер)</div>
+          <div class="header-greeting">{{ $t('master.management') }}</div>
           <div class="header-name header-font">{{ authStore.organizationName }}</div>
         </div>
         <div class="header-actions">
@@ -24,27 +24,27 @@
     <nav class="bottom-nav">
       <router-link to="/master" exact class="nav-item">
         <Icon icon="mdi:view-dashboard-outline" width="24" :class="{'active-icon': $route.path === '/master'}" />
-        <span>Главная</span>
+        <span>{{ $t('master.nav.home') }}</span>
       </router-link>
 
       <router-link to="/master/bookings" class="nav-item">
         <Icon icon="mdi:calendar-check-outline" width="24" :class="{'active-icon': $route.path === '/master/bookings'}" />
-        <span>Записи</span>
+        <span>{{ $t('master.nav.bookings') }}</span>
       </router-link>
 
       <router-link to="/master/income" class="nav-item">
         <Icon icon="mdi:wallet-outline" width="24" :class="{'active-icon': $route.path === '/master/income'}" />
-        <span>Доход</span>
+        <span>{{ $t('master.nav.income') }}</span>
       </router-link>
       
       <router-link to="/master/profile" class="nav-item">
         <Icon icon="mdi:account-circle-outline" width="24" :class="{'active-icon': $route.path === '/master/profile'}" />
-        <span>Профиль</span>
+        <span>{{ $t('master.nav.profile') }}</span>
       </router-link>
 
       <button @click="exitApp" class="nav-item border-none bg-transparent cursor-pointer">
         <Icon icon="mdi:exit-to-app" width="24" />
-        <span>Выход</span>
+        <span>{{ $t('master.nav.exit') }}</span>
       </button>
     </nav>
   </div>

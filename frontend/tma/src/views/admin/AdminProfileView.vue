@@ -4,7 +4,7 @@
       <button class="back-btn" @click="$router.push('/admin')">
         <Icon icon="mdi:arrow-left" width="20" />
       </button>
-      <div class="page-title header-font">Профиль администратора</div>
+      <div class="page-title header-font">{{ $t('admin.nav.profile') }}</div>
     </div>
     
     <div class="card user-info-card">
@@ -14,46 +14,38 @@
       </div>
       <div class="header-name header-font">{{ auth.user?.first_name }} {{ auth.user?.last_name || '' }}</div>
       <div style="color: var(--muted); font-size: 14px">+{{ auth.user?.phone }}</div>
-      <div class="role-badge admin-badge">Admin</div>
+      <div class="role-badge admin-badge">{{ $t('admin.adminRole') }}</div>
     </div>
 
     <!-- Role Switching Actions -->
     <div class="card switch-card">
-       <div class="section-title header-font">Управление ролью</div>
+       <div class="section-title header-font">{{ $t('admin.roleManagement') }}</div>
        <div class="switch-grid">
           <button v-if="auth.isMaster" class="btn-switch master-mode" @click="switchToMaster">
             <Icon icon="mdi:shield-account-variant" width="20" />
-            <span>Панель мастера</span>
+            <span>{{ $t('master.title') }}</span>
           </button>
           <button class="btn-switch client-mode" @click="switchToClient">
             <Icon icon="mdi:account-convert" width="20" />
-            <span>Режим клиента</span>
+            <span>{{ $t('admin.clientMode') }}</span>
           </button>
           <!-- For Admin who is also Owner -->
           <button v-if="auth.isOwner" class="btn-switch owner-mode" @click="switchToOwner">
             <Icon icon="mdi:shield-account" width="20" />
-            <span>Панель владельца</span>
+            <span>{{ $t('owner.dashboard_eyebrow') }}</span>
           </button>
        </div>
     </div>
 
     <div class="card settings-card">
-      <div class="section-title header-font">Настройки</div>
+      <div class="section-title header-font">{{ $t('master.schedule') }}</div>
       
       <div class="setting-row">
-        <span>Язык приложения</span>
+        <span>{{ $t('language.selectLanguage') }}</span>
         <select v-model="selectedLanguage" @change="updateLanguage" class="custom-select">
           <option value="ru">Русский</option>
           <option value="kz">Қазақша</option>
         </select>
-      </div>
-
-      <div class="setting-row" style="border-bottom: none">
-        <span>Уведомления мастера (если есть)</span>
-        <label class="toggle-switch">
-          <input type="checkbox" v-model="isBotSubscribed" @change="updateSubscription">
-          <span class="slider"></span>
-        </label>
       </div>
     </div>
 
@@ -61,7 +53,7 @@
     <div class="card logout-card" style="margin-top: 16px; border-color: rgba(224, 82, 82, 0.2);">
        <button class="btn-logout" @click="handleLogout">
          <Icon icon="mdi:logout" width="18" />
-         <span>Выйти из аккаунта</span>
+         <span>{{ $t('master.exit') }}</span>
        </button>
     </div>
   </div>

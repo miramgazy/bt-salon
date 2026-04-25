@@ -224,7 +224,11 @@ class MasterShiftViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        serializer.save(organization=self.request.user.organization)
+        # When created via standard ViewSet (usually Admin Desktop), it's by admin
+        serializer.save(
+            organization=self.request.user.organization,
+            opened_by_admin=True
+        )
 
     @action(detail=False, methods=['post'], url_path='open')
     def open_shifts(self, request):
@@ -255,7 +259,8 @@ class MasterShiftViewSet(viewsets.ModelViewSet):
                     'lunch_start': s_data.get('lunch_start', org.lunch_start),
                     'lunch_end': s_data.get('lunch_end', org.lunch_end),
                     'comment': s_data.get('comment'),
-                    'is_open': True
+                    'is_open': True,
+                    'opened_by_admin': True
                 }
             )
             opened.append(shift.id)
@@ -324,7 +329,8 @@ class MasterShiftViewSet(viewsets.ModelViewSet):
                 lunch_start=org.lunch_start,
                 lunch_end=org.lunch_end,
                 is_open=True,
-                actual_start=timezone.now()
+                actual_start=timezone.now(),
+                opened_by_admin=False
             )
         else:
             # Update existing shift

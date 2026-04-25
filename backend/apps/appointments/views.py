@@ -92,18 +92,15 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             organization=org,
             master=master,
             date=start_time.date()
-            # removed is_open=True check so admins or clients can book future closed shifts
         ).first()
 
         if not shift:
-            # Try to auto-create a shift if it's an admin or if we allow open booking
+            # Try to auto-create a shift
             shift, _ = MasterShift.objects.get_or_create(
                 organization=org,
                 master=master,
                 date=start_time.date(),
-                defaults={
-                    'is_open': False
-                }
+                defaults={'is_open': False}
             )
             
         serializer.save(
@@ -112,6 +109,29 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             shift=shift,
             created_by_admin=(user.role == User.ROLE_ADMIN)
         )
+
+    def perform_update(self, serializer):
+        from apps.masters.models import MasterShift
+        start_time = serializer.validated_data.get('start_time')
+        master = serializer.validated_data.get('master', serializer.instance.master)
+        
+        if start_time:
+            shift = MasterShift.objects.filter(
+                organization=serializer.instance.organization,
+                master=master,
+                date=start_time.date()
+            ).first()
+            
+            if not shift:
+                shift, _ = MasterShift.objects.get_or_create(
+                    organization=serializer.instance.organization,
+                    master=master,
+                    date=start_time.date(),
+                    defaults={'is_open': False}
+                )
+            serializer.save(shift=shift)
+        else:
+            serializer.save()
 
     @action(detail=True, methods=['post'])
     def confirm(self, request, pk=None):

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { getStoredLocale } from './i18n/index'
 import { useI18n } from 'vue-i18n'
+import AuthLoader from './components/common/AuthLoader.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -84,6 +85,9 @@ const initTma = async () => {
   const storedLocale = getStoredLocale()
   if (storedLocale) locale.value = storedLocale
 
+  // Ensure minimum 5s loading to show the countdown animation if requested
+  const startTime = Date.now()
+
   if (window.Telegram && window.Telegram.WebApp) {
     const webApp = window.Telegram.WebApp
     webApp.ready()
@@ -96,9 +100,15 @@ const initTma = async () => {
       const ok = await auth.login(initData, organizationId)
       if (ok) {
         applyThemeFromBot()
-        await navigateAfterAuth() // Wait for redirect to be triggered
+        
+        // Wait for both auth and the 5s timer
+        const elapsed = Date.now() - startTime
+        const remaining = Math.max(0, 5200 - elapsed) // Slightly more than 5s for smoothness
+        await new Promise(r => setTimeout(r, remaining))
+        
+        await navigateAfterAuth()
       }
-      auth.loading = false // Only now stop loading
+      auth.loading = false
     } else {
       auth.loading = false
     }
@@ -107,8 +117,15 @@ const initTma = async () => {
     if (auth.isAuthenticated) {
       await auth.fetchCurrentUser()
       applyThemeFromBot()
+      
+      const elapsed = Date.now() - startTime
+      const remaining = Math.max(0, 5200 - elapsed)
+      await new Promise(r => setTimeout(r, remaining))
+      
       await navigateAfterAuth()
     } else {
+      // For local dev without TG, we can still show the loader for context
+      await new Promise(r => setTimeout(r, 5200))
       router.replace('/onboarding/welcome')
     }
     auth.loading = false
@@ -122,18 +139,18 @@ onMounted(() => {
 
 <template>
   <div class="tma-container">
-    <div v-if="auth.loading" class="loading-overlay">
-      <div class="spinner"></div>
-      <div style="margin-top: 16px; color: var(--muted); font-size: 13px;">{{ $t('common.loading') }}...</div>
-    </div>
-    <div v-else-if="auth.error" class="error-banner">
+    <transition name="fade">
+      <AuthLoader v-if="auth.loading" />
+    </transition>
+    
+    <div v-if="!auth.loading && auth.error" class="error-banner">
       <div class="card glass" style="border-color: #ef4444; padding: 24px;">
         <div style="font-size: 40px; margin-bottom: 12px;">⚠️</div>
         <div style="color: #ef4444; font-weight: 600;">{{ auth.error }}</div>
         <button class="btn-secondary" style="margin-top: 20px; width: 100%" @click="initTma">Попробовать снова</button>
       </div>
     </div>
-    <router-view v-else v-slot="{ Component }">
+    <router-view v-else-if="!auth.loading" v-slot="{ Component }">
       <transition name="fade" mode="out-in">
         <component :is="Component" />
       </transition>

@@ -8,7 +8,7 @@
             <img :src="auth.organizationSettings.logo_url" alt="logo" />
           </div>
           <div>
-            <div class="header-greeting">{{ auth.organizationSettings?.greeting_text || 'Добро пожаловать!' }}</div>
+            <div class="header-greeting">{{ auth.organizationSettings?.greeting_text || $t('master.welcome') }}</div>
             <div class="header-name header-font">{{ auth.organizationName || 'Beauty Salon' }}</div>
           </div>
         </div>

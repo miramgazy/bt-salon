@@ -4,7 +4,7 @@
       <button class="back-btn" @click="$router.push('/')">
         <Icon icon="mdi:arrow-left" width="20" />
       </button>
-      <div class="page-title header-font">{{ $t('profile.title', 'Профиль') }}</div>
+      <div class="page-title header-font">{{ $t('profile.title') }}</div>
     </div>
     
     <div class="card user-info-card">
@@ -12,35 +12,34 @@
         <img v-if="auth.user?.photo_url" :src="auth.user.photo_url" class="avatar-img" />
         <div v-else class="avatar-placeholder">👤</div>
       </div>
-      <div class="header-name header-font">{{ auth.user?.first_name || 'Клиент' }} {{ auth.user?.last_name || '' }}</div>
+      <div class="header-name header-font">{{ auth.user?.first_name || $t('common.client') }} {{ auth.user?.last_name || '' }}</div>
       <div style="color: var(--muted); font-size: 14px">+{{ auth.user?.phone }}</div>
     </div>
 
 
-    <!-- Role Switching Actions -->
     <div v-if="auth.isMaster || auth.isAdmin || auth.isOwner" class="card switch-card">
-       <div class="section-title header-font">Управление ролью</div>
+       <div class="section-title header-font">{{ $t('profile.roleManagement') }}</div>
        <div class="switch-grid">
           <button v-if="auth.isMaster" class="btn-switch master-mode" @click="switchToMaster">
             <Icon icon="mdi:shield-account-variant" width="20" />
-            <span>Панель мастера</span>
+            <span>{{ $t('profile.masterMode') }}</span>
           </button>
           <button v-if="auth.isAdmin" class="btn-switch admin-mode" @click="switchToAdmin">
             <Icon icon="mdi:shield-crown" width="20" />
-            <span>Панель админа</span>
+            <span>{{ $t('profile.adminMode') }}</span>
           </button>
           <button v-if="auth.isOwner" class="btn-switch owner-mode" @click="switchToOwner">
             <Icon icon="mdi:shield-account" width="20" />
-            <span>Панель владельца</span>
+            <span>{{ $t('profile.ownerMode') }}</span>
           </button>
        </div>
     </div>
 
     <div class="card settings-card">
-      <div class="section-title header-font">Настройки</div>
+      <div class="section-title header-font">{{ $t('common.settings') }}</div>
       
       <div class="setting-row">
-        <span>{{ $t('profile.phone', 'Номер телефона') }}</span>
+        <span>{{ $t('profile.phone') }}</span>
         <div v-if="!editingPhone" class="phone-display">
           <span>+{{ auth.user?.phone }}</span>
           <button class="btn-icon" @click="startEditPhone">✏️</button>
@@ -55,7 +54,7 @@
       </div>
 
       <div class="setting-row">
-        <span>Язык интерфейса</span>
+        <span>{{ $t('profile.language') }}</span>
         <select v-model="selectedLanguage" @change="updateLanguage" class="custom-select">
           <option value="ru">Русский</option>
           <option value="kz">Қазақша</option>
@@ -63,7 +62,7 @@
       </div>
 
       <div class="setting-row" style="border-bottom: none">
-        <span>Уведомления бота</span>
+        <span>{{ $t('profile.notifications') }}</span>
         <label class="toggle-switch">
           <input type="checkbox" v-model="isBotSubscribed" @change="updateSubscription">
           <span class="slider"></span>
@@ -71,11 +70,10 @@
       </div>
     </div>
 
-    <!-- Auth Actions -->
     <div class="card logout-card" style="margin-top: 16px; border-color: rgba(224, 82, 82, 0.2);">
        <button class="btn-logout" @click="handleLogout">
          <Icon icon="mdi:logout" width="18" />
-         <span>Выйти из аккаунта</span>
+         <span>{{ $t('profile.logout') }}</span>
        </button>
     </div>
   </div>
@@ -89,7 +87,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 const auth = useAuthStore()
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 const router = useRouter()
 
 const selectedLanguage = ref('ru')
@@ -115,7 +113,7 @@ const savePhone = async () => {
   let clean = tempPhone.value.replace(/\D/g, '')
   if (clean.length === 10) clean = '7' + clean
   if (clean.length !== 11) {
-    alert('Неверный формат номера')
+    alert(t('onboarding.phone.errorFormat'))
     return
   }
   if (clean.startsWith('8')) clean = '7' + clean.slice(1)
@@ -124,7 +122,7 @@ const savePhone = async () => {
     await auth.updateProfile({ phone: clean })
     editingPhone.value = false
   } catch (e) {
-    alert('Ошибка при сохранении номера. Возможно, он уже используется.')
+    alert(t('onboarding.phone.errorSave'))
   }
 }
 

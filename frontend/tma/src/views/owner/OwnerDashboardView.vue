@@ -4,7 +4,7 @@
     <div class="fixed-period-bar">
       <div class="period-controls">
         <select class="period-select" v-model="periodId" @change="handlePeriodChange">
-          <option v-for="p in periods" :key="p.id" :value="p.id">{{ p.label }}</option>
+          <option v-for="p in periods" :key="p.id" :value="p.id">{{ $t(p.key) }}</option>
         </select>
         <div class="date-row" v-if="periodId === 'custom'">
           <input type="date" v-model="customStart" @change="handlePeriodChange" class="mini-date" />
@@ -19,20 +19,20 @@
       <div v-if="activeTab === 'overview'" class="fade-up">
         <div class="kpi-grid">
           <div class="kpi jade">
-            <div class="kpi-label">Выручка</div>
+            <div class="kpi-label">{{ $t('owner.revenue') }}</div>
             <div class="kpi-val jade">{{ formatM(data.summary.revenue) }} ₸</div>
             <div :class="['kpi-sub', deltaClass(data.summary.revenue, data.summary.prev_revenue)]">
               {{ deltaIcon(data.summary.revenue, data.summary.prev_revenue) }} 
-              {{ deltaPercent(data.summary.revenue, data.summary.prev_revenue) }}% к пред.
+              {{ deltaPercent(data.summary.revenue, data.summary.prev_revenue) }}% {{ $t('owner.prevPeriod') }}
             </div>
           </div>
           <div class="kpi crimson">
-            <div class="kpi-label">Расходы</div>
+            <div class="kpi-label">{{ $t('owner.expenses') }}</div>
             <div class="kpi-val crimson">{{ formatM(data.summary.expenses) }} ₸</div>
-            <div class="kpi-sub neutral">Фикс: {{ formatM(totalFixedExp) }} · Пер: {{ formatM(totalVarExp) }}</div>
+            <div class="kpi-sub neutral">{{ $t('owner.fixed') }}: {{ formatM(totalFixedExp) }} · {{ $t('owner.variable') }}: {{ formatM(totalVarExp) }}</div>
           </div>
           <div class="kpi gold">
-            <div class="kpi-label">Чистая прибыль</div>
+            <div class="kpi-label">{{ $t('owner.profit') }}</div>
             <div :class="['kpi-val', data.summary.profit >= 0 ? 'jade' : 'crimson']">{{ formatM(data.summary.profit) }} ₸</div>
             <div :class="['kpi-sub', deltaClass(data.summary.profit, data.summary.prev_profit)]">
                {{ deltaIcon(data.summary.profit, data.summary.prev_profit) }} 
@@ -40,7 +40,7 @@
             </div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Маржа</div>
+            <div class="kpi-label">{{ $t('owner.margin') }}</div>
             <div :class="['kpi-val', marginClass(data.summary.margin)]">{{ data.summary.margin }}%</div>
             <div class="kpi-sub neutral">{{ marginLabel(data.summary.margin) }}</div>
           </div>
@@ -60,22 +60,22 @@
         </div>
 
         <div class="chart-card">
-          <div class="chart-label">Структура маржи</div>
+          <div class="chart-label">{{ $t('owner.margin_structure') }}</div>
           <div class="gauge-wrap">
             <div class="gauge-row">
-              <div class="gauge-label">Выручка</div>
+              <div class="gauge-label">{{ $t('owner.revenue') }}</div>
               <div class="gauge-track"><div class="gauge-fill" style="width:100%; background:#22a060"></div></div>
               <div class="gauge-pct">{{ formatM(data.summary.revenue) }}</div>
             </div>
             <div class="gauge-row">
-              <div class="gauge-label">Расходы</div>
+              <div class="gauge-label">{{ $t('owner.expenses') }}</div>
               <div class="gauge-track">
                 <div class="gauge-fill" :style="{ width: expPercent + '%', background:'#c0392b' }"></div>
               </div>
               <div class="gauge-pct">{{ expPercent }}%</div>
             </div>
             <div class="gauge-row">
-              <div class="gauge-label">Прибыль</div>
+              <div class="gauge-label">{{ $t('owner.profit') }}</div>
               <div class="gauge-track">
                 <div class="gauge-fill" :style="{ width: data.summary.margin + '%', background:'var(--gold)' }"></div>
               </div>
@@ -85,17 +85,17 @@
         </div>
 
         <div class="chart-card">
-          <div class="chart-label">Выручка и расходы по дням</div>
+          <div class="chart-label">{{ $t('owner.rev_exp_timeline') }}</div>
           <apexchart type="area" height="180" :options="areaChartOptions" :series="areaChartSeries"></apexchart>
         </div>
 
         <div class="chart-card">
-          <div class="chart-label">Прибыль по дням</div>
+          <div class="chart-label">{{ $t('owner.profit_timeline') }}</div>
           <apexchart type="bar" height="140" :options="profitBarOptions" :series="profitBarSeries"></apexchart>
         </div>
 
         <div class="chart-card">
-           <div class="chart-label">Распределение выручки</div>
+           <div class="chart-label">{{ $t('owner.revDistribution') }}</div>
            <apexchart type="donut" height="240" :options="revenuePieOptions" :series="revenuePieSeries"></apexchart>
         </div>
       </div>
@@ -113,19 +113,19 @@
            </div>
         </div>
         <div class="chart-card">
-          <div class="chart-label">Выручка по мастерам</div>
+          <div class="chart-label">{{ $t('owner.mastersRev') }}</div>
           <apexchart type="bar" height="200" :options="masterBarOptions" :series="masterBarSeries"></apexchart>
         </div>
         <div class="chart-card">
-          <div class="chart-label">Средний чек · Сеансов</div>
+          <div class="chart-label">{{ $t('owner.avgCheckSessions') }}</div>
           <apexchart type="bar" height="180" :options="masterCompareOptions" :series="masterCompareSeries"></apexchart>
         </div>
         <div class="section">
-          <div class="sec-title">Рейтинг мастеров</div>
+          <div class="sec-title">{{ $t('owner.master_rating') }}</div>
           <div class="master-table">
             <div class="table-head">
-               <div class="th">Мастер</div>
-               <div class="th">Выручка</div>
+               <div class="th">{{ $t('common.master') }}</div>
+               <div class="th">{{ $t('owner.revenue') }}</div>
             </div>
             <div v-for="(m, i) in data.masters" :key="m.id" class="table-row">
                <div class="master-cell">
@@ -146,26 +146,26 @@
       <div v-if="activeTab === 'services'" class="fade-up">
          <div class="kpi-grid" style="margin-bottom:12px">
             <div class="kpi">
-               <div class="kpi-label">Всего записей</div>
+               <div class="kpi-label">{{ $t('admin.reports.totalRecords') }}</div>
                <div class="kpi-val">{{ data.summary.sessions_count || 0 }}</div>
             </div>
             <div class="kpi jade">
-               <div class="kpi-label">Топ услуга</div>
+               <div class="kpi-label">{{ $t('owner.top_services') }}</div>
                <div class="kpi-val small" style="color:var(--jade2)">{{ data.services[0]?.name.split(' ')[0] || '—' }}</div>
             </div>
          </div>
          <div class="chart-card">
-            <div class="chart-label">Доля услуг в выручке</div>
+            <div class="chart-label">{{ $t('owner.serviceShare') }}</div>
             <apexchart type="donut" height="240" :options="serviceDonutOptions" :series="serviceDonutSeries"></apexchart>
          </div>
          <div class="section">
-            <div class="sec-title">Топ услуг</div>
+            <div class="sec-title">{{ $t('owner.top_services') }}</div>
             <div class="master-table">
                <div v-for="s in data.services" :key="s.name" class="svc-row-container">
                   <div class="svc-row-main">
                      <div>
                         <div class="svc-name">{{ s.name }}</div>
-                        <div class="svc-count">{{ s.count }} записей</div>
+                        <div class="svc-count">{{ s.count }} {{ $t('owner.sessions') }}</div>
                      </div>
                      <div class="svc-amount">{{ formatM(s.revenue) }} ₸</div>
                   </div>
@@ -187,8 +187,8 @@
                  <Icon icon="mdi:cash-plus" width="24" />
               </div>
               <div class="add-text-box">
-                 <div class="add-title">Добавить расходы</div>
-                 <div class="add-subtitle">Зафиксируйте траты салона</div>
+                 <div class="add-title">{{ $t('owner.addExpenses') }}</div>
+                 <div class="add-subtitle">{{ $t('owner.logSpent') }}</div>
               </div>
            </div>
            <Icon icon="mdi:chevron-right" width="24" class="gray" />
@@ -212,11 +212,11 @@
         </div>
 
         <div class="chart-card">
-           <div class="chart-label">Детальная структура</div>
+           <div class="chart-label">{{ $t('owner.details') }}</div>
            <apexchart type="bar" height="200" :options="expenseBarOptions" :series="expenseBarSeries"></apexchart>
         </div>
         <div class="section">
-          <div class="sec-title">Детализация</div>
+          <div class="sec-title">{{ $t('owner.details') }}</div>
           <div class="master-table">
             <div v-for="e in [...data.expenses_fixed, ...data.expenses_variable]" :key="e.label" class="expense-item">
               <div>
@@ -234,35 +234,35 @@
          <!-- Compare Strips -->
          <div class="compare-strip">
             <div class="compare-col">
-               <div class="compare-period">Маржа</div>
+               <div class="compare-period">{{ $t('owner.margin') }}</div>
                <div :class="['compare-val', marginClass(data.summary.margin)]">{{ data.summary.margin }}%</div>
             </div>
             <div class="compare-col">
-               <div class="compare-period">Клиентов</div>
+               <div class="compare-period">{{ $t('owner.clients') }}</div>
                <div class="compare-val" style="color:var(--gold)">{{ data.summary.clients_count || 0 }}</div>
             </div>
             <div class="compare-col">
-               <div class="compare-period">Ср. чек</div>
+               <div class="compare-period">{{ $t('owner.avg_check') }}</div>
                <div class="compare-val" style="font-size:16px; color:var(--jade2)">{{ formatM(data.summary.avg_check) }}</div>
             </div>
          </div>
 
          <div class="chart-card">
-            <div class="chart-label">Выручка: текущий vs прошлый</div>
+            <div class="chart-label">{{ $t('owner.compareRev') }}</div>
             <apexchart type="line" height="180" :options="compareLineOptions" :series="compareLineSeries"></apexchart>
          </div>
 
          <div class="chart-card">
-            <div class="chart-label">Сравнение прибыли</div>
+            <div class="chart-label">{{ $t('owner.compareProfit') }}</div>
             <apexchart type="bar" height="180" :options="compareProfitOptions" :series="compareProfitSeries"></apexchart>
          </div>
 
          <div class="section">
-            <div class="sec-title">Показатели эффективности</div>
+            <div class="sec-title">{{ $t('owner.effMetrics') }}</div>
             <div class="master-table">
                <div class="table-head" style="grid-template-columns: 1fr 1fr 1fr;">
-                  <div class="th">Параметр</div>
-                  <div class="th">Тек.</div>
+                  <div class="th">{{ $t('owner.parameter') }}</div>
+                  <div class="th">{{ $t('owner.current') }}</div>
                   <div class="th">Δ %</div>
                </div>
                <div v-for="row in kpiComparisonRows" :key="row.label" class="table-row" style="grid-template-columns: 1fr 1fr 1fr;">
@@ -287,7 +287,7 @@
     <div v-if="showExpenseModal" class="modal-overlay" @click="showExpenseModal = false">
       <div class="sheet h-80vh" @click.stop>
         <div class="sheet-title flex-between">
-           <span>Новый расход</span>
+           <span>{{ $t('owner.newExpense') }}</span>
            <Icon icon="mdi:close" width="24" @click="showExpenseModal = false" class="cursor-pointer" />
         </div>
 
@@ -299,11 +299,11 @@
 
           <div>
             <label class="form-label flex-between">
-               Статья расхода <span class="text-error">*</span>
-               <span class="text-xs text-gold cursor-pointer" @click="showExpCatModal = true">+ Добавить статью</span>
+               {{ $t('owner.expArticle') }} <span class="text-error">*</span>
+               <span class="text-xs text-gold cursor-pointer" @click="showExpCatModal = true">+ {{ $t('owner.addArticle') }}</span>
             </label>
             <select v-model="expForm.category" class="form-input" required>
-              <option value="" disabled>Выберите статью</option>
+              <option value="" disabled>{{ $t('owner.selectArticle') }}</option>
               <option v-for="cat in expCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
             </select>
           </div>
@@ -325,7 +325,7 @@
           </div>
 
           <button type="submit" class="btn-sheet mt-4" :disabled="savingExp">
-             {{ savingExp ? 'Сохранение...' : 'Сохранить расход' }}
+             {{ savingExp ? $t('common.saving') : $t('owner.saveExpense') }}
           </button>
         </form>
       </div>
@@ -433,7 +433,7 @@ const deltaPercent = (cur, prev) => {
 const deltaIcon = (cur, prev) => (cur >= prev ? '▲' : '▼')
 const deltaClass = (cur, prev) => (cur >= prev ? 'up' : 'down')
 const marginClass = (m) => (m >= 30 ? 'jade' : m >= 15 ? 'gold' : 'crimson')
-const marginLabel = (m) => (m >= 30 ? 'Отлично' : m >= 15 ? 'Норма' : 'Низкая')
+const marginLabel = (m) => (m >= 30 ? t('owner.excellent') : m >= 15 ? t('owner.normal') : t('owner.low'))
 
 // Computed metrics
 const expPercent = computed(() => {

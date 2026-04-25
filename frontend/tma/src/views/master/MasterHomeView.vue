@@ -19,7 +19,7 @@
                 {{ $t('master.shiftOpened') }} · {{ shiftStatus.startTime }}
               </template>
               <template v-else-if="shiftStatus.isScheduled">
-                Смена запланирована (ожидание)
+                {{ $t('master.shiftScheduled') }}
               </template>
               <template v-else>
                 {{ $t('master.shiftClosed') }}
@@ -46,59 +46,56 @@
           <div v-if="!shiftStatus.isOpen" class="tile-arrow">›</div>
         </div>
 
-        <!-- Profile Tile -->
         <router-link to="/master/profile" class="tile">
           <div class="tile-icon">👤</div>
-          <div class="tile-label">Профиль</div>
-          <div class="tile-value">Настройки</div>
+          <div class="tile-label">{{ $t('master.nav.profile') }}</div>
+          <div class="tile-value">{{ $t('master.settings') }}</div>
           <div class="tile-arrow">›</div>
         </router-link>
 
         <!-- Income Wide Tile -->
         <router-link to="/master/income" class="tile tile--wide">
           <div class="tile-flex">
-             <div>
-                <div class="tile-icon">💰</div>
-                <div class="tile-label">Личный доход</div>
-                <div class="tile-value text-gold">{{ Number(stats.total_income).toLocaleString() }} ₸</div>
-                <div class="tile-hint">За текущую неделю</div>
-             </div>
-             <div class="tile-right">
-                <div class="tile-label">Клиентов</div>
-                <div class="tile-value">{{ stats.total_clients }}</div>
-                <div class="tile-arrow-static">›</div>
-             </div>
+              <div>
+                 <div class="tile-icon">💰</div>
+                 <div class="tile-label">{{ $t('master.personalIncome') }}</div>
+                 <div class="tile-value text-gold">{{ Number(stats.total_income).toLocaleString() }} ₸</div>
+                 <div class="tile-hint">{{ $t('master.weekIncome') }}</div>
+              </div>
+              <div class="tile-right">
+                 <div class="tile-label">{{ $t('master.clients') }}</div>
+                 <div class="tile-value">{{ stats.total_clients }}</div>
+                 <div class="tile-arrow-static">›</div>
+              </div>
           </div>
         </router-link>
 
         <!-- Bookings Tile -->
         <router-link to="/master/bookings" class="tile tile--wide">
            <div class="tile-flex">
-              <div>
-                 <div class="tile-icon">📅</div>
-                 <div class="tile-label">{{ $t('master.myAppointments') }}</div>
-                 <div class="tile-value">Расписание</div>
-              </div>
-              <div class="tile-right">
-                 <div class="tile-label">Записей</div>
-                 <div class="tile-value">{{ appointmentsToday }}</div>
-                 <div class="tile-arrow-static">›</div>
-              </div>
+               <div>
+                  <div class="tile-icon">📅</div>
+                  <div class="tile-label">{{ $t('master.myAppointments') }}</div>
+                  <div class="tile-value">{{ $t('master.appointments') }}</div>
+               </div>
+               <div class="tile-right">
+                  <div class="tile-label">{{ $t('master.records') }}</div>
+                  <div class="tile-value">{{ appointmentsToday }}</div>
+                  <div class="tile-arrow-static">›</div>
+               </div>
            </div>
         </router-link>
 
         <!-- Become Client Tile -->
         <div class="tile tile--wide tile--client" @click="switchToClient">
-           <div class="tile-flex">
-              <div class="flex items-center gap-3">
-                 <div class="tile-icon m-0">🔄</div>
-                 <div>
-                    <div class="tile-label m-0">Перейти в режим клиента</div>
-                    <div class="tile-value text-sm opacity-70">Записаться на услуги</div>
-                 </div>
-              </div>
-              <div class="tile-arrow-static">›</div>
-           </div>
+               <div class="flex items-center gap-3">
+                  <div class="tile-icon m-0">🔄</div>
+                  <div>
+                     <div class="tile-label m-0">{{ $t('master.switchToClient') }}</div>
+                     <div class="tile-value text-sm opacity-70">{{ $t('master.bookService') }}</div>
+                  </div>
+               </div>
+               <div class="tile-arrow-static">›</div>
         </div>
       </div>
 
@@ -108,20 +105,20 @@
     <!-- ── MODALS ── -->
     <div v-if="sheet.show" class="overlay" @click="sheet.status !== 'loading' && (sheet.show = false)">
       <div class="sheet" @click.stop>
-        <div v-if="sheet.status === 'loading'">
-          <div class="loading-spin"></div>
-          <div class="sheet-title">{{ $t('master.geolocating') }}</div>
-          <div class="sheet-sub">Проверяем ваше местоположение, пожалуйста подождите...</div>
-        </div>
+         <div v-if="sheet.status === 'loading'">
+           <div class="loading-spin"></div>
+           <div class="sheet-title">{{ $t('master.geolocating') }}</div>
+           <div class="sheet-sub">{{ $t('master.geolocatingSub') }}</div>
+         </div>
 
         <div v-if="sheet.status === 'success'">
           <div class="sheet-icon">✅</div>
           <div class="sheet-title">{{ $t('master.shiftOpened') }}</div>
-          <div class="sheet-sub text-success">
-            {{ $t('master.successStart') }}<br/>
-            Время начала: <strong>{{ shiftStatus.startTime }}</strong>
-          </div>
-          <button class="btn-sheet" @click="sheet.show = false">Отлично, за работу!</button>
+           <div class="sheet-sub text-success">
+             {{ $t('master.successStart') }}<br/>
+             {{ $t('master.startTime') }}: <strong>{{ shiftStatus.startTime }}</strong>
+           </div>
+           <button class="btn-sheet" @click="sheet.show = false">{{ $t('master.successStartBtn') }}</button>
         </div>
 
         <div v-if="sheet.status === 'fail'">
@@ -148,7 +145,10 @@ import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 import api from '@/api'
 
+import { useI18n } from 'vue-i18n'
+
 const auth = useAuthStore()
+const { locale } = useI18n()
 const router = useRouter()
 
 const shiftStatus = reactive({
@@ -218,11 +218,11 @@ const handleStartShift = async () => {
   sheet.status = 'loading'
   sheet.errorMsg = ''
 
-  if (!navigator.geolocation) {
-    sheet.status = 'fail'
-    sheet.errorMsg = 'Геолокация не поддерживается вашим устройством.'
-    return
-  }
+   if (!navigator.geolocation) {
+     sheet.status = 'fail'
+     sheet.errorMsg = locale.value === 'kz' ? 'Құрылғыңыз геолокацияны қолдамайды.' : 'Геолокация не поддерживается вашим устройством.'
+     return
+   }
 
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
@@ -235,15 +235,15 @@ const handleStartShift = async () => {
           sheet.status = 'success'
           fetchStatsSummary()
         }
-      } catch (e) {
-        sheet.status = 'fail'
-        sheet.errorMsg = e.response?.data?.message || 'Ошибка сервера при запуске смены.'
-      }
+       } catch (e) {
+         sheet.status = 'fail'
+         sheet.errorMsg = e.response?.data?.message || (locale.value === 'kz' ? 'Ауысымды бастау кезінде сервер қатесі орын алды.' : 'Ошибка сервера при запуске смены.')
+       }
     },
-    (err) => {
-      sheet.status = 'fail'
-      sheet.errorMsg = 'Не удалось получить доступ к местоположению. Пожалуйста, разрешите доступ в настройках.'
-    },
+     (err) => {
+       sheet.status = 'fail'
+       sheet.errorMsg = locale.value === 'kz' ? 'Орналасқан жерге қол жеткізу мүмкін болмады. Параметрлерден рұқсат беріңіз.' : 'Не удалось получить доступ к местоположению. Пожалуйста, разрешите доступ в настройках.'
+     },
     { timeout: 10000 }
   )
 }

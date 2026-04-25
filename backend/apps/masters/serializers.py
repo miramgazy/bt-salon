@@ -99,6 +99,7 @@ class MasterSerializer(serializers.ModelSerializer):
 
 class MasterShiftSerializer(serializers.ModelSerializer):
     master_name = serializers.CharField(source='master.user.first_name', read_only=True)
+    master_last_name = serializers.CharField(source='master.user.last_name', read_only=True)
     
     class Meta:
         model = MasterShift

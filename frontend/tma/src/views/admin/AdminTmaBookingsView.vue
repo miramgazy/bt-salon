@@ -1,26 +1,110 @@
 <template>
   <div class="admin-bookings">
     <div class="page-header">
-      <h1 class="page-title">Записи салона</h1>
+      <h1 class="page-title">{{ $t('admin.bookingsTitle') }}</h1>
       <button class="add-btn" @click="checkAndOpenModal">
         <Icon icon="mdi:plus" width="24" />
       </button>
     </div>
     
-    <div class="date-selector">
-      <button 
-        :class="['date-pill', { active: activeTab === 'today' }]" 
-        @click="setDate('today')"
-      >Сегодня</button>
-      <button 
-        :class="['date-pill', { active: activeTab === 'tomorrow' }]" 
-        @click="setDate('tomorrow')"
-      >Завтра</button>
-      <div :class="['date-pill custom-date-wrapper', { active: activeTab === 'custom' }]">
-         <Icon icon="mdi:calendar-month-outline" width="16" />
-         <input type="date" v-model="selectedDate" class="date-input-hidden" @change="activeTab = 'custom'" />
-         <span>{{ activeTab === 'custom' ? formatDateShort(selectedDate) : 'Выбрать' }}</span>
+    <!-- Dynamic Header / Filter Panel -->
+    <div class="filters-panel">
+      <div class="panel-main">
+        <!-- Trigger Icon -->
+        <button 
+          :class="['filter-toggle', { active: isFilterMode }]" 
+          @click="toggleFilterMode"
+        >
+          <Icon :icon="isFilterMode ? 'mdi:filter-off-outline' : 'mdi:filter-variant'" width="20" />
+        </button>
+
+        <TransitionGroup name="panel-slide" tag="div" class="panel-content">
+          <!-- Default Mode: Date Selector -->
+          <div v-if="!isFilterMode" key="dates" class="date-selector-compact">
+            <button 
+              :class="['date-pill', { active: activeTab === 'today' }]" 
+              @click="setDate('today')"
+            >{{ $t('master.today') }}</button>
+            <button 
+              :class="['date-pill', { active: activeTab === 'tomorrow' }]" 
+              @click="setDate('tomorrow')"
+            >{{ $t('master.tomorrow') }}</button>
+            <div :class="['date-pill custom-date-wrapper', { active: activeTab === 'custom' }]">
+               <Icon icon="mdi:calendar-month-outline" width="16" />
+               <input type="date" v-model="selectedDate" class="date-input-hidden" @change="activeTab = 'custom'" />
+               <span>{{ activeTab === 'custom' ? formatDateShort(selectedDate) : $t('master.selectDate') }}</span>
+            </div>
+          </div>
+
+          <!-- Filter Mode: Compact Controls -->
+          <div v-else key="filters" class="active-filters-row">
+            <!-- Compact Date -->
+            <div :class="['compact-btn', { active: activeTab === 'custom' }]">
+              <Icon icon="mdi:calendar-edit" width="20" />
+              <input type="date" v-model="selectedDate" class="date-input-hidden" @change="activeTab = 'custom'" />
+            </div>
+
+            <!-- Master/Service Filter Toggle -->
+            <button 
+              :class="['compact-btn', { active: activeFilterPanel === 'master-service' }]"
+              @click="toggleFilterPanel('master-service')"
+            >
+              <div class="icon-group">
+                <Icon icon="mdi:account-tie-outline" width="18" />
+                <Icon icon="mdi:content-cut" width="14" class="sub-icon" />
+              </div>
+            </button>
+
+            <!-- Search Filter Toggle -->
+            <button 
+              :class="['compact-btn', { active: activeFilterPanel === 'search' }]"
+              @click="toggleFilterPanel('search')"
+            >
+              <Icon icon="mdi:magnify" width="20" />
+            </button>
+
+            <!-- Clear All -->
+            <button class="compact-btn text-error" @click="resetFilters" v-if="hasActiveFilters">
+              <Icon icon="mdi:filter-remove-outline" width="20" />
+            </button>
+          </div>
+        </TransitionGroup>
       </div>
+
+      <!-- Expandable Filter Panels -->
+      <Transition name="panel-expand">
+        <div v-if="isFilterMode && activeFilterPanel === 'master-service'" class="expanded-panel">
+          <div class="filter-row">
+            <div class="filter-col">
+              <label class="filter-label">{{ $t('admin.masterRole') }}</label>
+              <select v-model="filters.masterId" class="filter-select">
+                <option value="">{{ $t('admin.selectMaster') }}</option>
+                <option v-for="m in mastersList" :key="m.id" :value="m.id">{{ m.first_name }}</option>
+              </select>
+            </div>
+            <div class="filter-col">
+              <label class="filter-label">{{ $t('common.service') }}</label>
+              <select v-model="filters.serviceId" class="filter-select">
+                <option value="">{{ $t('admin.selectService') }}</option>
+                <option v-for="s in servicesList" :key="s.id" :value="s.id">{{ s.name }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
+      <Transition name="panel-expand">
+        <div v-if="isFilterMode && activeFilterPanel === 'search'" class="expanded-panel">
+          <div class="filter-row">
+            <input 
+              v-model="filters.searchQuery" 
+              type="text" 
+              class="filter-input" 
+              :placeholder="$t('admin.searchPlaceholder')"
+            />
+          </div>
+        </div>
+      </Transition>
     </div>
 
     <div v-if="loading" class="loading-state">
@@ -29,25 +113,28 @@
 
     <div v-else-if="appointments.length === 0" class="empty-state">
        <div class="empty-icon">📅</div>
-       <p>Нет записей на выбранную дату</p>
+       <p>{{ $t('admin.noSlots') }}</p>
     </div>
 
     <div v-else class="bookings-list">
-       <div v-for="apt in appointments" :key="apt.id" class="booking-card" @click="openActions(apt)">
+       <div v-for="apt in filteredAppointments" :key="apt.id" class="booking-card" @click="openActions(apt)">
           <div class="booking-time">
              <div class="time-main">{{ formatStartTime(apt.start_time) }}</div>
-             <div class="time-duration">{{ getDuration(apt.start_time, apt.end_time) }} мин</div>
+             <div class="time-duration">{{ getDuration(apt.start_time, apt.end_time) }} {{ $t('common.min') }}</div>
           </div>
           <div class="booking-info">
-             <div class="client-name">{{ apt.client_detail?.full_name || 'Оффлайн клиент' }} <span v-if="apt.client_detail?.phone" class="client-phone">{{ apt.client_detail.phone }}</span></div>
-             <div class="service-name text-gold">{{ apt.service_detail?.name || 'Услуга' }} ({{ apt.master_detail?.first_name || 'Мастер' }})</div>
+             <div class="client-name">{{ apt.client_detail?.full_name || $t('common.offlineClient') }} <span v-if="apt.client_detail?.phone" class="client-phone">{{ apt.client_detail.phone }}</span></div>
+             <div class="service-name text-gold">{{ apt.service_detail?.name || $t('admin.selectService') }} ({{ apt.master_detail?.first_name || $t('admin.masterRole') }})</div>
              <div v-if="apt.notes" class="booking-notes">
                 <Icon icon="mdi:note-text-outline" width="14" />
                 <span>{{ apt.notes }}</span>
              </div>
           </div>
-          <div class="booking-status">
+          <div class="booking-status flex flex-col items-end gap-2">
              <span :class="['status-badge', apt.status.toLowerCase()]">{{ getStatusText(apt.status) }}</span>
+             <button class="edit-apt-btn" @click.stop="openEditMode(apt)">
+                <Icon icon="mdi:pencil-outline" width="18" />
+             </button>
           </div>
        </div>
     </div>
@@ -55,44 +142,99 @@
     <!-- Actions Modal (Bottom Sheet) -->
     <div v-if="activeApt" class="overlay" @click="activeApt = null">
       <div class="sheet" @click.stop>
-        <div class="sheet-title mb-4">Управление записью #{{ activeApt.id }}</div>
+        <div class="sheet-title mb-4">{{ $t('admin.editBooking') }} #{{ activeApt.id }}</div>
         
         <div v-if="!showCancelPrompt">
-          <button v-if="activeApt.status === 'pending' || activeApt.status === 'confirmed'" class="btn-sheet" @click="markAsDone">Завершить (Услуга оказана)</button>
-          <button v-if="activeApt.status === 'pending'" class="btn-sheet bg-secondary mt-2" @click="confirmApt">Подтвердить</button>
-          <button v-if="activeApt.status !== 'cancelled' && activeApt.status !== 'done'" class="btn-sheet bg-danger mt-2" @click="showCancelPrompt = true">Отменить</button>
-          <button class="btn-sheet btn-sheet-ghost mt-4" @click="activeApt = null">Закрыть</button>
+          <button v-if="activeApt.status === 'pending' || activeApt.status === 'confirmed'" class="btn-sheet" @click="markAsDone">{{ $t('admin.finishService') }}</button>
+          <button v-if="activeApt.status === 'pending'" class="btn-sheet bg-secondary mt-2" @click="confirmApt">{{ $t('admin.status.confirmed') }}</button>
+          <button v-if="activeApt.status !== 'cancelled' && activeApt.status !== 'done'" class="btn-sheet bg-danger mt-2" @click="showCancelPrompt = true">{{ $t('admin.status.cancelled') }}</button>
+          <button class="btn-sheet btn-sheet-ghost mt-4" @click="activeApt = null">{{ $t('common.close') }}</button>
         </div>
         
         <div v-else>
           <div class="mb-4">
-            <label class="form-label">Причина отмены (обязательно)</label>
-            <textarea v-model="cancelReason" class="form-input" rows="3" placeholder="Укажите причину"></textarea>
+            <label class="form-label">{{ $t('admin.cancelReasonLabel') }}</label>
+            <textarea v-model="cancelReason" class="form-input" rows="3" :placeholder="$t('admin.cancelReasonPlaceholder')"></textarea>
           </div>
-          <button class="btn-sheet bg-danger" :disabled="!cancelReason.trim()" @click="cancelApt">Подтвердить отмену</button>
-          <button class="btn-sheet btn-sheet-ghost mt-2" @click="showCancelPrompt = false">Назад</button>
+          <button class="btn-sheet bg-danger" :disabled="!cancelReason.trim()" @click="cancelApt">{{ $t('admin.status.cancelled') }}</button>
+          <button class="btn-sheet btn-sheet-ghost mt-2" @click="showCancelPrompt = false">{{ $t('common.back') }}</button>
         </div>
       </div>
     </div>
 
-    <!-- Create Appointment Modal -->
+    <!-- Edit Appointment Modal -->
+    <div v-if="showEditModal" class="overlay" @click="showEditModal = false">
+      <div class="sheet h-80vh" @click.stop>
+        <div class="sheet-title flex justify-between">
+            <span>{{ $t('admin.editBooking') }}</span>
+            <Icon icon="mdi:close" width="24" @click="showEditModal = false" class="cursor-pointer" />
+        </div>
+        
+        <div class="mt-4 flex flex-col gap-4 overflow-y-auto pb-6" style="flex: 1">
+          <div class="p-4 bg-secondary rounded-2xl">
+            <div class="text-sm text-muted mb-1">{{ $t('admin.currentTime') }}:</div>
+            <div class="font-bold">{{ formatDateShort(editForm.date) }}, {{ editForm.oldTime }}</div>
+          </div>
+
+          <label class="form-label mt-2">{{ $t('admin.selectTime', { date: formatDateShort(editForm.date) }) }}</label>
+          <div v-if="slotsLoading" class="spinner"></div>
+          <div v-else-if="slots.length === 0" class="text-muted text-center py-4">
+              {{ $t('admin.noSlots') }}
+          </div>
+          <div v-else class="slots-grid">
+              <div v-for="slot in slots" :key="slot.time"
+                   class="slot-item"
+                   :class="{ disabled: !slot.is_available, selected: editForm.time === slot.time }"
+                   @click="if (slot.is_available) { editForm.time = slot.time; showConfirmModal = true }">
+                  {{ slot.time }}
+              </div>
+          </div>
+        </div>
+        <button class="btn-sheet btn-sheet-ghost mt-2" @click="showEditModal = false">{{ $t('common.cancel') }}</button>
+      </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div v-if="showConfirmModal" class="overlay z-high" @click="showConfirmModal = false">
+      <div class="sheet" @click.stop>
+        <div class="confirm-icon">❓</div>
+        <h3 class="sheet-title text-center">{{ $t('admin.confirmTransfer') }}</h3>
+        <p class="confirm-text text-center">
+          {{ $t('admin.confirmTransferText', { time: editForm.time }) }}
+        </p>
+        <div class="mt-6">
+          <button class="btn-sheet" @click="saveAptChanges" :disabled="saving">
+            {{ saving ? $t('common.saving') : $t('admin.confirmTransferBtn') }}
+          </button>
+          <button class="btn-sheet btn-sheet-ghost mt-2" @click="showConfirmModal = false">{{ $t('common.cancel') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success Feedback Overlay -->
+    <Transition name="fade">
+      <div v-if="successMsg" class="success-toast">
+        <Icon icon="mdi:check-circle" width="24" />
+        <span>{{ successMsg }}</span>
+      </div>
+    </Transition>
     <div v-if="showCreateModal" class="overlay" @click="showCreateModal = false">
       <div class="sheet h-80vh" @click.stop>
         <div class="sheet-title flex justify-between">
-            <span>Новая запись (Шаг {{ creationStep }}/4)</span>
+            <span>{{ $t('admin.newBooking') }} ({{ $t('admin.step') }} {{ creationStep }}/4)</span>
             <Icon icon="mdi:close" width="24" @click="showCreateModal = false" class="cursor-pointer" />
         </div>
         
         <div class="mt-4 flex flex-col gap-4 overflow-y-auto pb-6" style="flex: 1">
           <!-- Step 1: Services -->
           <div v-if="creationStep === 1">
-             <label class="form-label mb-2">Выберите услугу</label>
+             <label class="form-label mb-2">{{ $t('admin.selectService') }}</label>
              
              <div class="category-scroll mb-5">
                  <button 
                     :class="['date-pill', 'flex-shrink-0', { active: selectedCategory === 'all' }]"
                     @click="selectedCategory = 'all'"
-                 >Все</button>
+                 >{{ $t('admin.allCategories') }}</button>
                  <button 
                     v-for="cat in categoriesList" :key="cat.id"
                     :class="['date-pill', 'flex-shrink-0', { active: selectedCategory === cat.id }]"
@@ -107,7 +249,7 @@
                       @click="form.service_id = srv.id; currentServiceDuration = srv.duration; creationStep = 2">
                     <div>
                         <div class="font-medium">{{ srv.name }}</div>
-                        <div class="text-xs text-muted">{{ srv.duration }} мин</div>
+                        <div class="text-xs text-muted">{{ srv.duration }} {{ $t('common.min') }}</div>
                     </div>
                     <div class="font-bold text-gold">{{ srv.price }} ₸</div>
                  </div>
@@ -116,7 +258,7 @@
 
           <!-- Step 2: Masters -->
           <div v-if="creationStep === 2">
-             <label class="form-label mb-2">Выберите мастера</label>
+             <label class="form-label mb-2">{{ $t('admin.selectMaster') }}</label>
              <div class="flex flex-col gap-2">
                  <div v-for="m in filteredWorkingMasters" :key="m.id"
                       class="master-card"
@@ -130,18 +272,18 @@
                      </div>
                  </div>
                  <div v-if="filteredWorkingMasters.length === 0" class="text-muted text-sm text-center py-4">
-                     Нет мастеров, оказывающих эту услугу сегодня.
+                     {{ $t('admin.noMastersForService') }}
                  </div>
              </div>
-             <button class="btn-sheet bg-secondary mt-4" @click="creationStep = 1">Назад</button>
+             <button class="btn-sheet bg-secondary mt-4" @click="creationStep = 1">{{ $t('common.back') }}</button>
           </div>
 
           <!-- Step 3: Slots -->
           <div v-if="creationStep === 3">
-             <label class="form-label mb-2">Выберите время на {{ formatDateShort(selectedDate) }}</label>
+             <label class="form-label mb-2">{{ $t('admin.selectTime', { date: formatDateShort(selectedDate) }) }}</label>
              <div v-if="slotsLoading" class="spinner"></div>
              <div v-else-if="slots.length === 0" class="text-muted text-center py-4">
-                 Доступных окон для этой услуги больше нет.
+                 {{ $t('admin.noSlots') }}
              </div>
              <div v-else class="slots-grid">
                  <div v-for="slot in slots" :key="slot.time"
@@ -151,33 +293,33 @@
                      {{ slot.time }}
                  </div>
              </div>
-             <button class="btn-sheet bg-secondary mt-4" @click="creationStep = 2">Назад</button>
+             <button class="btn-sheet bg-secondary mt-4" @click="creationStep = 2">{{ $t('common.back') }}</button>
           </div>
 
           <!-- Step 4: Client Info -->
           <div v-if="creationStep === 4">
              <form @submit.prevent="createAppointment" class="flex flex-col gap-4">
                  <div>
-                    <label class="form-label">Имя клиента <span class="text-error">*</span></label>
+                    <label class="form-label">{{ $t('admin.clientName') }} <span class="text-error">*</span></label>
                     <input v-model="form.client_name" type="text" class="form-input" required autofocus />
                  </div>
                  <div>
-                    <label class="form-label">Телефон клиента <span class="text-error">*</span></label>
+                    <label class="form-label">{{ $t('admin.clientPhone') }} <span class="text-error">*</span></label>
                     <input v-model="form.client_phone" type="text" class="form-input" required placeholder="+7 (___) ___-__-__" />
                  </div>
                  <div>
-                    <label class="form-label">Заметки</label>
+                    <label class="form-label">{{ $t('admin.clientNotes') }}</label>
                     <textarea v-model="form.notes" class="form-input" rows="2"></textarea>
                  </div>
                  <div class="p-3 bg-secondary rounded-xl text-sm mb-2 opacity-80">
-                    <div><b>Услуга:</b> Услуга на {{ currentServiceDuration }} мин</div>
-                    <div><b>Время:</b> {{ formatDateShort(selectedDate) }}, {{ form.time }}</div>
+                    <div><b>{{ $t('common.service') }}:</b> {{ currentServiceDuration }} {{ $t('common.min') }}</div>
+                    <div><b>{{ $t('common.time') }}:</b> {{ formatDateShort(selectedDate) }}, {{ form.time }}</div>
                  </div>
                  <button type="submit" class="btn-sheet mt-2" :disabled="creating">
-                    {{ creating ? 'Создание...' : 'Создать запись' }}
+                    {{ creating ? $t('admin.creating') : $t('admin.createBtn') }}
                  </button>
              </form>
-             <button class="btn-sheet btn-sheet-ghost mt-2" @click="creationStep = 3">Назад</button>
+             <button class="btn-sheet btn-sheet-ghost mt-2" @click="creationStep = 3">{{ $t('common.back') }}</button>
           </div>
         </div>
       </div>
@@ -189,8 +331,10 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
+const { t, locale } = useI18n()
 const activeTab = ref('today')
 const selectedDate = ref(new Date().toISOString().split('T')[0])
 const appointments = ref([])
@@ -211,6 +355,72 @@ const selectedCategory = ref('all')
 const slots = ref([])
 const slotsLoading = ref(false)
 const currentServiceDuration = ref(0)
+const mastersList = ref([])
+
+// Filters states
+const isFilterMode = ref(false)
+const activeFilterPanel = ref(null) // 'master-service' or 'search'
+const filters = ref({
+    masterId: '',
+    serviceId: '',
+    searchQuery: ''
+})
+
+const showEditModal = ref(false)
+const showConfirmModal = ref(false)
+const saving = ref(false)
+const successMsg = ref('')
+const editForm = ref({
+    id: null,
+    master_id: '',
+    service_id: '',
+    date: '',
+    time: '',
+    oldTime: ''
+})
+
+const toggleFilterMode = () => {
+    isFilterMode.value = !isFilterMode.value
+    if (!isFilterMode.value) {
+        resetFilters()
+        activeFilterPanel.value = null
+    }
+}
+
+const toggleFilterPanel = (panel) => {
+    if (activeFilterPanel.value === panel) activeFilterPanel.value = null
+    else activeFilterPanel.value = panel
+}
+
+const resetFilters = () => {
+    filters.value = { masterId: '', serviceId: '', searchQuery: '' }
+}
+
+const hasActiveFilters = computed(() => {
+    return filters.value.masterId || filters.value.serviceId || filters.value.searchQuery
+})
+
+const filteredAppointments = computed(() => {
+    let result = appointments.value
+    
+    if (filters.value.masterId) {
+        result = result.filter(a => String(a.master) === String(filters.value.masterId) || a.master_detail?.id === filters.value.masterId)
+    }
+    if (filters.value.serviceId) {
+        result = result.filter(a => String(a.service) === String(filters.value.serviceId) || a.service_detail?.id === filters.value.serviceId)
+    }
+    if (filters.value.searchQuery) {
+        const q = filters.value.searchQuery.toLowerCase()
+        result = result.filter(a => {
+            const name = a.client_detail?.full_name?.toLowerCase() || ''
+            const phone = a.client_detail?.phone?.toLowerCase() || ''
+            const master = a.master_detail?.first_name?.toLowerCase() || ''
+            return name.includes(q) || phone.includes(q) || master.includes(q)
+        })
+    }
+    
+    return result
+})
 
 const form = ref({
     client_name: '',
@@ -235,13 +445,7 @@ const filteredServicesList = computed(() => {
 })
 
 const getStatusText = (status) => {
-    const map = {
-        'pending': 'Ожидает',
-        'confirmed': 'Подтверждено',
-        'done': 'Завершено',
-        'cancelled': 'Отменено'
-    }
-    return map[status?.toLowerCase()] || status
+    return t(`admin.status.${status?.toLowerCase()}`) || status
 }
 
 const setDate = (type) => {
@@ -293,7 +497,14 @@ const selectMaster = async (masterId) => {
 }
 
 const formatStartTime = (iso) => {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const currentLocale = locale.value === 'kz' ? 'kk-KZ' : 'ru-RU'
+  return new Date(iso).toLocaleTimeString(currentLocale, { hour: '2-digit', minute: '2-digit' })
+}
+
+const formatDateShort = (d) => {
+    if (!d) return ''
+    const currentLocale = locale.value === 'kz' ? 'kk-KZ' : 'ru-RU'
+    return new Date(d).toLocaleDateString(currentLocale, { day: 'numeric', month: 'short' })
 }
 
 const getDuration = (start, end) => {
@@ -301,11 +512,7 @@ const getDuration = (start, end) => {
   return Math.round(diff)
 }
 
-const formatDateShort = (iso) => {
-  if (!iso) return ''
-  const d = new Date(iso)
-  return d.toLocaleDateString([], { day: 'numeric', month: 'short' })
-}
+
 
 const openActions = (apt) => {
     activeApt.value = apt
@@ -319,7 +526,7 @@ const confirmApt = async () => {
         await api.post(`/appointments/${activeApt.value.id}/confirm/`)
         activeApt.value = null
         fetchAppointments()
-    } catch (e) { alert('Ошибка!') }
+    } catch (e) { alert(t('common.error')) }
 }
 
 const markAsDone = async () => {
@@ -328,7 +535,7 @@ const markAsDone = async () => {
         await api.post(`/appointments/${activeApt.value.id}/done/`)
         activeApt.value = null
         fetchAppointments()
-    } catch (e) { alert('Ошибка!') }
+    } catch (e) { alert(t('common.error')) }
 }
 
 const cancelApt = async () => {
@@ -339,7 +546,7 @@ const cancelApt = async () => {
         })
         activeApt.value = null
         fetchAppointments()
-    } catch (e) { alert('Ошибка!') }
+    } catch (e) { alert(t('common.error')) }
 }
 
 const checkAndOpenModal = async () => {
@@ -347,7 +554,7 @@ const checkAndOpenModal = async () => {
         const res = await api.get('/masters/working/', { params: { date: selectedDate.value } })
         workingMasters.value = res.data
         if (workingMasters.value.length === 0) {
-            alert('На выбранную дату нет мастеров с открытой сменой! Сначала откройте смену в разделе "Сотрудники".')
+            alert(t('admin.noMastersWorking'))
             return
         }
         
@@ -358,24 +565,28 @@ const checkAndOpenModal = async () => {
         ])
         servicesList.value = sRes.data.results || sRes.data
         categoriesList.value = cRes.data.results || cRes.data
-
-        form.value = {
-            client_name: '', client_phone: '', master_id: '', service_id: '',
-            date: selectedDate.value, time: '', notes: ''
-        }
-        selectedCategory.value = 'all'
-        creationStep.value = 1
         showCreateModal.value = true
     } catch (e) {
-        alert('Ошибка при загрузке данных')
+        alert(t('common.error'))
     }
+}
+
+const fetchInitialData = async () => {
+    try {
+        const [mRes, sRes] = await Promise.all([
+            api.get('/masters/'),
+            api.get('/services/')
+        ])
+        mastersList.value = mRes.data.results || mRes.data
+        servicesList.value = sRes.data.results || sRes.data
+    } catch (e) { console.error('Initial data error', e) }
 }
 
 const createAppointment = async () => {
     creating.value = true
     try {
         const start_time = new Date(`${selectedDate.value}T${form.value.time}:00`).toISOString()
-        const duration = currentServiceDuration.value || auth.organizationSettings?.slot_duration || 30
+        const duration = currentServiceDuration.value || 30
         const end_time = new Date(new Date(start_time).getTime() + duration * 60000).toISOString()
         
         await api.post('/appointments/', {
@@ -389,11 +600,64 @@ const createAppointment = async () => {
         })
         
         showCreateModal.value = false
+        successMsg.value = t('admin.bookingSuccess')
+        setTimeout(() => successMsg.value = '', 3000)
         fetchAppointments()
     } catch (e) {
-        alert(e.response?.data?.error || e.message || 'Ошибка создания записи')
+        alert(e.response?.data?.error || e.message || t('common.error'))
     } finally {
         creating.value = false
+    }
+}
+
+const openEditMode = async (apt) => {
+    editForm.value = {
+        id: apt.id,
+        master_id: apt.master || apt.master_detail?.id,
+        service_id: apt.service || apt.service_detail?.id,
+        date: apt.start_time.split('T')[0],
+        time: formatStartTime(apt.start_time),
+        oldTime: formatStartTime(apt.start_time)
+    }
+    showEditModal.value = true
+    
+    // Fetch Slots for this master and date
+    slotsLoading.value = true
+    slots.value = []
+    try {
+        const res = await api.get(`/masters/${editForm.value.master_id}/available-slots/`, {
+            params: {
+                date: editForm.value.date,
+                service_id: editForm.value.service_id
+            }
+        })
+        slots.value = res.data
+    } catch (e) { console.error(e) }
+    finally { slotsLoading.value = false }
+}
+
+const saveAptChanges = async () => {
+    saving.value = true
+    try {
+        const start_time = new Date(`${editForm.value.date}T${editForm.value.time}:00`).toISOString()
+        const apt = filteredAppointments.value.find(a => a.id === editForm.value.id)
+        const duration = getDuration(apt.start_time, apt.end_time)
+        const end_time = new Date(new Date(start_time).getTime() + duration * 60000).toISOString()
+
+        await api.patch(`/appointments/${editForm.value.id}/`, {
+            start_time,
+            end_time
+        })
+        
+        showConfirmModal.value = false
+        showEditModal.value = false
+        successMsg.value = t('admin.transferSuccess')
+        setTimeout(() => successMsg.value = '', 3000)
+        fetchAppointments()
+    } catch (e) {
+        alert(t('common.error') + ': ' + (e.response?.data?.error || e.message))
+    } finally {
+        saving.value = false
     }
 }
 
@@ -403,6 +667,7 @@ watch(selectedDate, () => {
 
 onMounted(() => {
   fetchAppointments()
+  fetchInitialData()
 })
 </script>
 
@@ -417,11 +682,60 @@ onMounted(() => {
 .date-selector { display: flex; gap: 10px; align-items: center; margin-bottom: 24px; padding: 4px 0; overflow-x: auto; scrollbar-width: none; }
 .date-selector::-webkit-scrollbar { display: none; }
 
+/* Filters Panel Modernized */
+.filters-panel {
+  background: var(--bg-secondary);
+  border-radius: 18px;
+  padding: 6px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.panel-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: var(--tg-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.filter-toggle.active {
+  background: var(--gold-gradient);
+  color: #fff;
+  border-color: var(--gold);
+}
+
+.panel-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  overflow: hidden;
+}
+
+.date-selector-compact {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
 .date-pill {
   white-space: nowrap;
-  padding: 8px 16px;
-  border-radius: 20px;
-  background: var(--bg-secondary);
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--tg-bg);
   border: 1px solid var(--border);
   color: var(--muted);
   font-size: 13px;
@@ -433,7 +747,101 @@ onMounted(() => {
   background: var(--gold-gradient);
   color: #000;
   border-color: var(--gold);
-  box-shadow: 0 4px 10px var(--gold-glow);
+}
+
+.active-filters-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.compact-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--tg-bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.compact-btn.active {
+  background: var(--gold-glow);
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+.icon-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sub-icon {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: var(--tg-bg);
+  border-radius: 50%;
+  padding: 1px;
+}
+
+.expanded-panel {
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--tg-bg);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+
+.filter-row {
+  display: flex;
+  gap: 10px;
+}
+.filter-col { flex: 1; }
+.filter-label { font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase; margin-bottom: 4px; display: block; }
+.filter-select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+
+/* Animations */
+.panel-slide-enter-active, .panel-slide-leave-active { transition: all 0.3s ease; }
+.panel-slide-enter-from { opacity: 0; transform: translateX(20px); }
+.panel-slide-leave-to { opacity: 0; transform: translateX(-20px); }
+
+.panel-expand-enter-active, .panel-expand-leave-active { 
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 100px;
+  overflow: hidden;
+}
+.panel-expand-enter-from, .panel-expand-leave-to { 
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .custom-date-wrapper {
@@ -591,3 +999,40 @@ onMounted(() => {
     border-radius: 4px;
 }
 </style>
+.edit-apt-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    transition: all 0.2s;
+}
+.edit-apt-btn:active { transform: scale(0.9); background: var(--border); }
+
+.z-high { z-index: 2000; }
+
+.confirm-icon { font-size: 48px; margin-bottom: 16px; text-align: center; }
+.confirm-text { font-size: 16px; color: var(--muted); margin-bottom: 8px; line-height: 1.5; }
+
+.success-toast {
+  position: fixed;
+  top: 20px; left: 50%;
+  transform: translateX(-50%);
+  background: #10b981;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+  z-index: 3000;
+}
+
+.flex-col { flex-direction: column; }
+.items-end { align-items: flex-end; }

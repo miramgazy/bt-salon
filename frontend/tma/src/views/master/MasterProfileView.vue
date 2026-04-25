@@ -4,7 +4,7 @@
       <button class="back-btn" @click="$router.push('/master')">
         <Icon icon="mdi:arrow-left" width="20" />
       </button>
-      <div class="page-title header-font">{{ $t('profile.masterTitle', 'Мой Профиль') }}</div>
+      <div class="page-title header-font">{{ $t('profile.title') }}</div>
     </div>
     
     <div class="card user-info-card">
@@ -18,48 +18,48 @@
       </div>
       <div class="header-name header-font">{{ auth.user?.first_name }} {{ auth.user?.last_name || '' }}</div>
       <div style="color: var(--muted); font-size: 14px">+{{ auth.user?.phone }}</div>
-      <div class="role-badge">Мастер</div>
+      <div class="role-badge">{{ $t('admin.masterRole') }}</div>
     </div>
 
     <!-- Master Bio Section (Primary here) -->
     <div class="card bio-card">
-      <div class="section-title header-font">О себе (публично)</div>
-      <p class="section-hint">Это описание будут видеть клиенты при выборе мастера.</p>
+      <div class="section-title header-font">{{ $t('master.bioTitle') }}</div>
+      <p class="section-hint">{{ $t('master.bioHint') }}</p>
       <textarea 
         v-model="bio" 
         class="custom-textarea" 
-        placeholder="Расскажите о своем опыте, специализации..."
+        :placeholder="$t('master.bioPlaceholder')"
         rows="5"
       ></textarea>
       <button class="btn-save" :disabled="savingBio" @click="saveBio">
-        {{ savingBio ? 'Сохранение...' : 'Сохранить описание' }}
+        {{ savingBio ? $t('common.saving') : $t('master.bioSave') }}
       </button>
     </div>
 
     <!-- Role Switching Actions -->
     <div class="card switch-card">
-       <div class="section-title header-font">Управление ролью</div>
+       <div class="section-title header-font">{{ $t('admin.roleManagement') }}</div>
        <div class="switch-grid">
           <button class="btn-switch client-mode" @click="switchToClient">
             <Icon icon="mdi:account-convert" width="20" />
-            <span>Режим клиента</span>
+            <span>{{ $t('profile.clientMode') }}</span>
           </button>
           <button v-if="auth.isAdmin" class="btn-switch admin-mode" @click="switchToAdmin">
             <Icon icon="mdi:shield-crown" width="20" />
-            <span>Панель админа</span>
+            <span>{{ $t('profile.adminMode') }}</span>
           </button>
           <button v-if="auth.isOwner" class="btn-switch owner-mode" @click="switchToOwner">
             <Icon icon="mdi:shield-account" width="20" />
-            <span>Панель владельца</span>
+            <span>{{ $t('profile.ownerMode') }}</span>
           </button>
        </div>
     </div>
 
     <div class="card settings-card">
-      <div class="section-title header-font">Настройки аккаунта</div>
+      <div class="section-title header-font">{{ $t('common.settings') }}</div>
       
       <div class="setting-row">
-        <span>{{ $t('profile.phone', 'Номер телефона') }}</span>
+        <span>{{ $t('profile.phone') }}</span>
         <div v-if="!editingPhone" class="phone-display">
           <span>+{{ auth.user?.phone }}</span>
           <button class="btn-icon" @click="startEditPhone">✏️</button>
@@ -74,7 +74,7 @@
       </div>
 
       <div class="setting-row">
-        <span>Язык приложения</span>
+        <span>{{ $t('language.selectLanguage') }}</span>
         <select v-model="selectedLanguage" @change="updateLanguage" class="custom-select">
           <option value="ru">Русский</option>
           <option value="kz">Қазақша</option>
@@ -82,7 +82,7 @@
       </div>
 
       <div class="setting-row" style="border-bottom: none">
-        <span>Уведомления мастера</span>
+        <span>{{ $t('onboarding.consent.title') }}</span>
         <label class="toggle-switch">
           <input type="checkbox" v-model="isBotSubscribed" @change="updateSubscription">
           <span class="slider"></span>
@@ -94,7 +94,7 @@
     <div class="card logout-card" style="margin-top: 16px; border-color: rgba(224, 82, 82, 0.2);">
        <button class="btn-logout" @click="handleLogout">
          <Icon icon="mdi:logout" width="18" />
-         <span>Выйти из аккаунта</span>
+         <span>{{ $t('profile.logout') }}</span>
        </button>
     </div>
   </div>
@@ -109,7 +109,7 @@ import { useRouter } from 'vue-router'
 import api from '../../api'
 
 const auth = useAuthStore()
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 const router = useRouter()
 
 const selectedLanguage = ref('ru')
@@ -145,13 +145,13 @@ const startEditPhone = () => {
 const savePhone = async () => {
   let clean = tempPhone.value.replace(/\D/g, '')
   if (clean.length === 10) clean = '7' + clean
-  if (clean.length !== 11) { alert('Неверный формат номера'); return }
+  if (clean.length !== 11) { alert(t('onboarding.phone.errorFormat')); return }
   if (clean.startsWith('8')) clean = '7' + clean.slice(1)
   try {
     await auth.updateProfile({ phone: clean })
     editingPhone.value = false
   } catch (e) {
-    alert('Ошибка при сохранении номера.')
+    alert(t('common.error'))
   }
 }
 
@@ -170,10 +170,10 @@ const saveBio = async () => {
     savingBio.value = true
     const res = await api.patch('/masters/me/', { bio: bio.value })
     console.log('Bio saved response:', res.data)
-    alert('Описание успешно сохранено!')
+    alert(t('master.bioSuccess'))
   } catch (e) {
     console.error('Save bio error', e)
-    alert('Ошибка при сохранении описания: ' + (e.response?.data?.detail || e.message))
+    alert(t('common.error') + ': ' + (e.response?.data?.detail || e.message))
   } finally {
     savingBio.value = false
   }
@@ -198,11 +198,11 @@ const handlePhotoUpload = async (event) => {
       } else {
         masterData.value = { photo_url: res.data.photo_url }
       }
-      alert('Фото успешно обновлено!')
+      alert(t('master.photoSuccess'))
     }
   } catch (e) {
     console.error('Photo upload error', e)
-    alert('Ошибка при загрузке фото: ' + (e.response?.data?.detail || e.message))
+    alert(t('master.uploadError') + ': ' + (e.response?.data?.detail || e.message))
   }
 }
 

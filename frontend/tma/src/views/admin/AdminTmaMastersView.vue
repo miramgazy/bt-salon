@@ -1,7 +1,7 @@
 <template>
   <div class="admin-masters">
     <div class="page-header flex-between mb-4">
-      <h1 class="page-title">Сотрудники</h1>
+      <h1 class="page-title">{{ $t('admin.mastersTitle') }}</h1>
       <button class="add-btn" @click="openCreateModal">
         <Icon icon="mdi:plus" width="24" />
       </button>
@@ -11,10 +11,10 @@
        <div class="spinner"></div>
     </div>
 
-    <div v-else-if="employees.length === 0" class="empty-state">
-       <div class="empty-icon">👥</div>
-       <p>Сотрудники пока не добавлены</p>
-    </div>
+     <div v-else-if="employees.length === 0" class="empty-state">
+        <div class="empty-icon">👥</div>
+        <p>{{ $t('admin.noEmployees') }}</p>
+     </div>
 
     <div v-else class="employees-list">
        <div v-for="emp in employees" :key="emp.id" class="employee-card">
@@ -28,13 +28,25 @@
                  <div class="emp-name">{{ emp.first_name }} {{ emp.last_name }}</div>
                  <div class="emp-role">
                    <span class="role-badge" :class="emp.role === 'admin' ? 'admin' : 'master'">
-                     {{ emp.role === 'admin' ? 'Администратор' : 'Мастер' }}
+                     {{ emp.role === 'admin' ? $t('admin.adminRole') : $t('admin.masterRole') }}
                    </span>
                  </div>
                  <div class="emp-phone" v-if="emp.phone">{{ emp.phone }}</div>
              </div>
              
              <div class="emp-edit-col">
+                  <div v-if="emp.role === 'master'" class="shift-indicators">
+                      <Icon 
+                          :icon="emp.today_shift?.opened_by_admin ? 'mdi:check-circle' : 'mdi:check-circle-outline'" 
+                          class="indicator-icon"
+                          :class="{ 'admin-active': emp.today_shift?.is_open && emp.today_shift?.opened_by_admin }"
+                      />
+                      <Icon 
+                          :icon="emp.today_shift?.actual_start ? 'mdi:check-circle' : 'mdi:check-circle-outline'" 
+                          class="indicator-icon"
+                          :class="{ 'master-active': emp.today_shift?.is_open && emp.today_shift?.actual_start }"
+                      />
+                  </div>
                   <button v-if="emp.role === 'master'" class="edit-icon-btn" @click="handleEditClick(emp)">
                       <Icon icon="mdi:pencil-outline" width="22" />
                   </button>
@@ -43,14 +55,14 @@
           
           <div class="emp-actions mt-3" v-if="emp.role === 'master'">
                 <div class="master-btns-row">
-                    <button class="btn-action btn-smena" @click="handleSmenaClick(emp)">
-                        <Icon icon="mdi:calendar-check" width="16" />
-                        Смена
-                    </button>
-                    <button class="btn-action btn-zapis" @click="handleZapisClick(emp)">
-                        <Icon icon="mdi:calendar-plus" width="16" />
-                        Запись
-                    </button>
+                     <button class="btn-action btn-smena" @click="handleSmenaClick(emp)">
+                         <Icon icon="mdi:calendar-check" width="16" />
+                         {{ $t('admin.shift') }}
+                     </button>
+                     <button class="btn-action btn-zapis" @click="handleZapisClick(emp)">
+                         <Icon icon="mdi:calendar-plus" width="16" />
+                         {{ $t('admin.booking') }}
+                     </button>
                 </div>
           </div>
        </div>
@@ -59,46 +71,46 @@
     <!-- Employee Modal (Bottom Sheet - Create/Edit) -->
     <div v-if="showCreateModal" class="overlay" @click="showCreateModal = false">
       <div class="sheet h-80vh" @click.stop>
-        <div class="sheet-title flex justify-between">
-            <span>{{ isEditing ? 'Редактирование' : 'Новый сотрудник' }}</span>
+         <div class="sheet-title flex justify-between">
+            <span>{{ isEditing ? $t('admin.editMaster') : $t('admin.addMaster') }}</span>
             <Icon icon="mdi:close" width="24" @click="showCreateModal = false" class="cursor-pointer" />
-        </div>
+         </div>
         
         <form @submit.prevent="submitEmployee" class="mt-4 flex flex-col gap-4 overflow-y-auto pb-6">
-          <p v-if="!isEditing" class="text-xs text-muted text-center uppercase tracking-wider font-bold">Добавление мастера</p>
+          <p v-if="!isEditing" class="text-xs text-muted text-center uppercase tracking-wider font-bold">{{ $t('admin.addMasterTitle') }}</p>
           <div>
-            <label class="form-label">Имя <span class="text-error">*</span></label>
+            <label class="form-label">{{ $t('admin.firstName') }} <span class="text-error">*</span></label>
             <input v-model="form.first_name" type="text" class="form-input" required />
           </div>
           <div>
-            <label class="form-label">Фамилия</label>
+            <label class="form-label">{{ $t('admin.lastName') }}</label>
             <input v-model="form.last_name" type="text" class="form-input" />
           </div>
           <div>
-            <label class="form-label">Телефон <span class="text-error">*</span></label>
+            <label class="form-label">{{ $t('admin.phone') }} <span class="text-error">*</span></label>
             <input v-model="form.phone" type="text" class="form-input" placeholder="+7 (___) ___-__-__" required />
           </div>
           <div>
-            <label class="form-label">Telegram ID (необязательно)</label>
-            <input v-model="form.telegram_id" type="number" class="form-input" placeholder="Например: 12345678" />
+            <label class="form-label">{{ $t('admin.telegramId') }}</label>
+            <input v-model="form.telegram_id" type="number" class="form-input" :placeholder="$t('admin.telegramIdPlaceholder', 'Например: 12345678')" />
           </div>
           <div>
-            <label class="form-label">Услуги мастера</label>
-            <div v-if="servicesList.length === 0" class="text-sm text-muted">Нет доступных услуг в салоне</div>
+            <label class="form-label">{{ $t('admin.masterServices') }}</label>
+            <div v-if="servicesList.length === 0" class="text-sm text-muted">{{ $t('admin.noServicesInSalon') }}</div>
             <div class="flex flex-col gap-2 mt-2">
                 <label v-for="srv in servicesList" :key="srv.id" class="flex items-center gap-3 bg-secondary p-3 rounded-xl border border-[var(--border)] cursor-pointer">
                     <input type="checkbox" :value="srv.id" v-model="form.services" class="w-5 h-5 accent-gold border-gray-300 rounded focus:ring-gold" />
                     <div>
                         <div class="text-sm font-semibold">{{ srv.name }}</div>
-                        <div class="text-xs text-muted font-mono">{{ srv.duration }} мин • {{ srv.price }} ₸</div>
+                        <div class="text-xs text-muted font-mono">{{ srv.duration }} {{ $t('common.min') }} • {{ srv.price }} ₸</div>
                     </div>
                 </label>
             </div>
           </div>
           
-          <button type="submit" class="btn-sheet mt-4" :disabled="creating">
-             {{ creating ? 'Сохранение...' : 'Сохранить' }}
-          </button>
+           <button type="submit" class="btn-sheet mt-4" :disabled="creating">
+              {{ creating ? $t('common.saving') : $t('common.save') }}
+           </button>
         </form>
       </div>
     </div>
@@ -106,21 +118,21 @@
     <!-- Open Shift Modal (Bottom Sheet) -->
     <div v-if="showShiftModal" class="overlay" @click="showShiftModal = false">
       <div class="sheet" @click.stop>
-        <div class="sheet-title flex justify-between">
-            <span>Открыть смену</span>
+         <div class="sheet-title flex justify-between">
+            <span>{{ $t('admin.openShift') }}</span>
             <Icon icon="mdi:close" width="24" @click="showShiftModal = false" class="cursor-pointer" />
-        </div>
+         </div>
         
         <form @submit.prevent="submitShift" class="mt-4 flex flex-col gap-4 pb-6">
-          <p class="text-sm font-medium">Мастер: <b>{{ activeMaster?.first_name }}</b></p>
+          <p class="text-sm font-medium">{{ $t('admin.masterRole') }}: <b>{{ activeMaster?.first_name }}</b></p>
           <div>
-            <label class="form-label">Дата смены <span class="text-error">*</span></label>
+            <label class="form-label">{{ $t('shift.date') }} <span class="text-error">*</span></label>
             <input v-model="shiftForm.date" type="date" class="form-input" required />
           </div>
           
-          <button type="submit" class="btn-sheet mt-2" :disabled="creatingShift">
-             {{ creatingShift ? 'Открытие...' : 'Подтвердить' }}
-          </button>
+           <button type="submit" class="btn-sheet mt-2" :disabled="creatingShift">
+              {{ creatingShift ? $t('common.saving') : $t('common.continue') }}
+           </button>
         </form>
       </div>
     </div>
@@ -128,50 +140,48 @@
     <!-- Booking Modal (Special Workflow) -->
     <div v-if="showBookingModal" class="overlay" @click="showBookingModal = false">
       <div class="sheet h-80vh" @click.stop>
-        <div class="sheet-title flex justify-between">
-            <span>Запись: Шаг {{ bookingStep }}/4</span>
+         <div class="sheet-title flex justify-between">
+            <span>{{ $t('admin.booking') }}: {{ $t('admin.step') }} {{ bookingStep }}/4</span>
             <Icon icon="mdi:close" width="24" @click="showBookingModal = false" class="cursor-pointer" />
-        </div>
+         </div>
         
-        <div class="mt-4 flex flex-col gap-4 overflow-y-auto pb-6" style="flex: 1">
-          <div class="p-3 bg-secondary rounded-xl text-sm mb-1">
-             <b>Мастер:</b> {{ activeMaster?.first_name }} {{ activeMaster?.last_name }}
-          </div>
+         <div class="mt-4 flex flex-col gap-4 overflow-y-auto pb-6" style="flex: 1">
+           <div class="p-3 bg-secondary rounded-xl text-sm mb-1">
+              <b>{{ $t('admin.masterRole') }}:</b> {{ activeMaster?.first_name }} {{ activeMaster?.last_name }}
+           </div>
 
-          <!-- Step 0: Date Selection -->
-          <div v-if="bookingStep === 0">
-             <label class="form-label mb-3">Выберите дату записи</label>
-             <div class="date-selector mb-4">
-                 <button 
-                    :class="['date-pill', { active: isToday(bookingDate) }]" 
-                    @click="setBookingDate('today')"
-                 >Сегодня</button>
-                 <button 
-                    :class="['date-pill', { active: isTomorrow(bookingDate) }]" 
-                    @click="setBookingDate('tomorrow')"
-                 >Завтра</button>
-                 <div class="custom-date-wrapper">
-                    <button :class="['date-pill', { active: isCustomDate(bookingDate) }]">
-                        {{ isCustomDate(bookingDate) ? formatDateShort(bookingDate) : 'Выбрать' }}
-                    </button>
-                    <input type="date" class="date-input-hidden" @change="onCustomDateChange" />
-                 </div>
-             </div>
-             <button class="btn-sheet" @click="bookingStep = 1">Далее</button>
-          </div>
+           <div v-if="bookingStep === 0">
+              <label class="form-label mb-3">{{ $t('master.selectDate') }}</label>
+              <div class="date-selector mb-4">
+                  <button 
+                     :class="['date-pill', { active: isToday(bookingDate) }]" 
+                     @click="setBookingDate('today')"
+                  >{{ $t('master.today') }}</button>
+                  <button 
+                     :class="['date-pill', { active: isTomorrow(bookingDate) }]" 
+                     @click="setBookingDate('tomorrow')"
+                  >{{ $t('master.tomorrow') }}</button>
+                  <div class="custom-date-wrapper">
+                     <button :class="['date-pill', { active: isCustomDate(bookingDate) }]">
+                         {{ isCustomDate(bookingDate) ? formatDateShort(bookingDate) : $t('master.selectDate') }}
+                     </button>
+                     <input type="date" class="date-input-hidden" @change="onCustomDateChange" />
+                  </div>
+              </div>
+              <button class="btn-sheet" @click="bookingStep = 1">{{ $t('common.continue') }}</button>
+           </div>
 
-          <!-- Step 1: Services Filtered for this Master -->
-          <div v-if="bookingStep === 1">
-             <div class="p-3 mb-2 bg-[var(--gold-glow)] border border-[var(--gold)] rounded-xl text-sm flex justify-between items-center">
-                <span><b>Дата:</b> {{ formatDateShort(bookingDate) }}</span>
-                <span class="text-gold cursor-pointer font-bold" @click="bookingStep = 0">Изменить</span>
-             </div>
-             <label class="form-label mb-2">Выберите услугу мастера</label>
-             <div class="category-scroll mb-5">
-                 <button 
-                    :class="['date-pill', 'flex-shrink-0', { active: selectedCategory === 'all' }]"
-                    @click="selectedCategory = 'all'"
-                 >Все</button>
+           <div v-if="bookingStep === 1">
+              <div class="p-3 mb-2 bg-[var(--gold-glow)] border border-[var(--gold)] rounded-xl text-sm flex justify-between items-center">
+                 <span><b>{{ $t('shift.date') }}:</b> {{ formatDateShort(bookingDate) }}</span>
+                 <span class="text-gold cursor-pointer font-bold" @click="bookingStep = 0">{{ $t('common.change') }}</span>
+              </div>
+              <label class="form-label mb-2">{{ $t('admin.selectService') }}</label>
+               <div class="category-scroll mb-5">
+                  <button 
+                     :class="['date-pill', 'flex-shrink-0', { active: selectedCategory === 'all' }]"
+                     @click="selectedCategory = 'all'"
+                  >{{ $t('admin.allCategories') }}</button>
                  <button 
                     v-for="cat in categoriesList" :key="cat.id"
                     :class="['date-pill', 'flex-shrink-0', { active: selectedCategory === cat.id }]"
@@ -185,24 +195,23 @@
                       @click="selectService(srv)">
                     <div>
                         <div class="font-bold text-base">{{ srv.name }}</div>
-                        <div class="text-xs text-muted">{{ srv.duration_minutes }} мин</div>
+                        <div class="text-xs text-muted">{{ srv.duration_minutes }} {{ $t('common.min') }}</div>
                     </div>
                     <div class="font-bold text-gold text-lg">{{ srv.total_price }} ₸</div>
                  </div>
                  <div v-if="filteredServices.length === 0" class="text-center py-4 text-muted">
-                    У мастера нет услуг в этой категории.
+                    {{ $t('admin.masterNoServicesInCategory') }}
                  </div>
              </div>
           </div>
 
-          <!-- Step 3: Slots -->
-          <div v-if="bookingStep === 3">
-             <div class="p-3 bg-secondary rounded-xl text-sm mb-2 opacity-80"><b>Услуга:</b> {{ selectedService?.name }}</div>
-             <label class="form-label mb-2">Выберите время на сегодня</label>
-             <div v-if="slotsLoading" class="spinner"></div>
-             <div v-else-if="slots.length === 0" class="text-muted text-center py-4">
-                 Доступных окон больше нет.
-             </div>
+           <div v-if="bookingStep === 3">
+              <div class="p-3 bg-secondary rounded-xl text-sm mb-2 opacity-80"><b>{{ $t('services.title') }}:</b> {{ selectedService?.name }}</div>
+              <label class="form-label mb-2">{{ $t('admin.selectTime', { date: $t('master.today') }) }}</label>
+              <div v-if="slotsLoading" class="spinner"></div>
+              <div v-else-if="slots.length === 0" class="text-muted text-center py-4">
+                  {{ $t('admin.noSlots') }}
+              </div>
              <div v-else class="slots-grid">
                  <div v-for="slot in slots" :key="slot.time"
                       class="slot-item"
@@ -211,29 +220,28 @@
                      {{ slot.time }}
                  </div>
              </div>
-             <button class="btn-sheet bg-secondary mt-4" @click="bookingStep = 1">Назад</button>
+             <button class="btn-sheet bg-secondary mt-4" @click="bookingStep = 1">{{ $t('common.back') }}</button>
           </div>
 
-          <!-- Step 4: Info -->
-          <div v-if="bookingStep === 4">
-             <form @submit.prevent="createAppointment" class="flex flex-col gap-4">
-                 <div>
-                    <label class="form-label">Имя клиента *</label>
-                    <input v-model="bookingForm.client_name" type="text" class="form-input" required autofocus />
-                 </div>
-                 <div>
-                    <label class="form-label">Телефон клиента *</label>
-                    <input v-model="bookingForm.client_phone" type="text" class="form-input" required placeholder="+7 (___) ___-__-__" />
-                 </div>
-                 <div class="p-3 bg-secondary rounded-xl text-sm mb-2 opacity-80">
-                    <div><b>Время:</b> Сегодня, {{ bookingForm.time }}</div>
-                 </div>
-                 <button type="submit" class="btn-sheet mt-2" :disabled="bookingLoading">
-                    {{ bookingLoading ? 'Создание...' : 'Создать запись' }}
-                 </button>
-             </form>
-             <button class="btn-sheet btn-sheet-ghost mt-2" @click="bookingStep = 3">Назад</button>
-          </div>
+           <div v-if="bookingStep === 4">
+              <form @submit.prevent="createAppointment" class="flex flex-col gap-4">
+                  <div>
+                     <label class="form-label">{{ $t('admin.clientName') }} *</label>
+                     <input v-model="bookingForm.client_name" type="text" class="form-input" required autofocus />
+                  </div>
+                  <div>
+                     <label class="form-label">{{ $t('admin.clientPhone') }} *</label>
+                     <input v-model="bookingForm.client_phone" type="text" class="form-input" required placeholder="+7 (___) ___-__-__" />
+                  </div>
+                  <div class="p-3 bg-secondary rounded-xl text-sm mb-2 opacity-80">
+                     <div><b>{{ $t('common.time') }}:</b> {{ formatDateShort(bookingDate) }}, {{ bookingForm.time }}</div>
+                  </div>
+                  <button type="submit" class="btn-sheet mt-2" :disabled="bookingLoading">
+                     {{ bookingLoading ? $t('common.saving') : $t('admin.createBooking') }}
+                  </button>
+              </form>
+              <button class="btn-sheet btn-sheet-ghost mt-2" @click="bookingStep = 3">{{ $t('common.back') }}</button>
+           </div>
         </div>
       </div>
     </div>
@@ -244,8 +252,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
+const { t, locale } = useI18n()
 const employees = ref([])
 const loading = ref(false)
 
@@ -265,7 +275,8 @@ const isCustomDate = (d) => !isToday(d) && !isTomorrow(d)
 
 const formatDateShort = (d) => {
     if (!d) return ''
-    return new Date(d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+    const currentLocale = locale.value === 'kz' ? 'kk-KZ' : 'ru-RU'
+    return new Date(d).toLocaleDateString(currentLocale, { day: 'numeric', month: 'short' })
 }
 
 const showCreateModal = ref(false)
@@ -297,7 +308,6 @@ const onCustomDateChange = (e) => {
 }
 
 const filteredServices = computed(() => {
-    // Only services that THIS master can provide
     const masterServiceIds = activeMaster.value?.services_detail?.map(s => s.id) || activeMaster.value?.services || []
     let base = servicesList.value.filter(s => masterServiceIds.includes(s.id))
     if (selectedCategory.value === 'all') return base
@@ -376,7 +386,7 @@ const submitEmployee = async () => {
         await fetchData()
         showCreateModal.value = false
     } catch (e) {
-        alert(e.response?.data?.error || 'Ошибка!')
+        alert(e.response?.data?.error || t('common.error'))
     } finally {
         creating.value = false
     }
@@ -407,15 +417,15 @@ const submitShift = async () => {
         await api.post('/masters/shifts/', {
             master: activeMaster.value.master_id,
             date: shiftForm.value.date,
-            work_start: "09:00:00", // Default working hours
+            work_start: "09:00:00",
             work_end: "20:00:00",
             is_open: true
         })
         const d = new Date(shiftForm.value.date).toLocaleDateString()
-        alert(`Смена для ${activeMaster.value.first_name} успешно открыта на ${d}!`)
+        alert(t('admin.shiftOpened', { name: activeMaster.value.first_name, date: d }))
         showShiftModal.value = false
     } catch (e) {
-        const errorMsg = e.response?.data?.message || e.response?.data?.error || e.response?.data?.non_field_errors?.[0] || 'Смена возможно уже создана или произошла ошибка.'
+        const errorMsg = e.response?.data?.message || e.response?.data?.error || e.response?.data?.non_field_errors?.[0] || t('admin.shiftError')
         alert(errorMsg)
     } finally {
         creatingShift.value = false
@@ -439,7 +449,7 @@ const startBooking = async (emp) => {
         
         showBookingModal.value = true
     } catch (e) {
-        alert('Ошибка!')
+        alert(t('common.error'))
     }
 }
 
@@ -473,9 +483,9 @@ const createAppointment = async () => {
             client_phone: bookingForm.value.client_phone
         })
         showBookingModal.value = false
-        alert('Запись успешно создана!')
+        alert(t('admin.bookingSuccess'))
     } catch (e) {
-        alert('Ошибка!')
+        alert(t('common.error'))
     } finally {
         bookingLoading.value = false
     }
@@ -539,6 +549,26 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 12px;
+}
+
+.shift-indicators {
+    display: flex;
+    gap: 4px;
+}
+.indicator-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--border);
+    transition: all 0.3s;
+}
+.indicator-icon.admin-active {
+    color: #FF9800;
+    filter: drop-shadow(0 0 4px rgba(255, 152, 0, 0.4));
+}
+.indicator-icon.master-active {
+    color: #4CAF50;
+    filter: drop-shadow(0 0 4px rgba(76, 175, 80, 0.4));
 }
 
 .role-badge {

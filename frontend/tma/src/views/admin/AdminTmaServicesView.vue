@@ -1,7 +1,13 @@
 <template>
   <div class="admin-services">
+    <Transition name="fade">
+      <div v-if="successMsg" class="success-toast">
+        <Icon icon="mdi:check-circle" width="24" />
+        <span>{{ successMsg }}</span>
+      </div>
+    </Transition>
     <div class="page-header flex-between mb-4">
-      <h1 class="page-title">Услуги</h1>
+      <h1 class="page-title">{{ $t('services.title') }}</h1>
       <button class="add-btn" @click="openCreateModal">
         <Icon icon="mdi:plus" width="24" />
       </button>
@@ -9,10 +15,10 @@
 
     <!-- Category Filter Row -->
     <div class="category-scroll mb-6">
-        <button 
-           :class="['date-pill', 'flex-shrink-0', { active: selectedCategory === 'all' }]"
-           @click="selectedCategory = 'all'"
-        >Все</button>
+         <button 
+            :class="['date-pill', 'flex-shrink-0', { active: selectedCategory === 'all' }]"
+            @click="selectedCategory = 'all'"
+         >{{ $t('admin.allCategories') }}</button>
         <button 
            v-for="cat in categories" :key="cat.id"
            :class="['date-pill', 'flex-shrink-0', { active: selectedCategory === cat.id }]"
@@ -24,9 +30,9 @@
        <div class="spinner"></div>
     </div>
 
-    <div v-else-if="services.length === 0" class="empty-state">
+     <div v-else-if="services.length === 0" class="empty-state">
        <div class="empty-icon">✂️</div>
-       <p>Услуги пока не добавлены</p>
+       <p>{{ $t('services.empty') }}</p>
     </div>
 
     <div v-else class="services-list mt-4">
@@ -41,9 +47,9 @@
                 </div>
              </div>
              <div class="service-details-row">
-                <div class="service-meta">
-                   <Icon icon="mdi:clock-outline" width="14" /> {{ srv.duration_minutes }} мин
-                </div>
+                 <div class="service-meta">
+                    <Icon icon="mdi:clock-outline" width="14" /> {{ srv.duration_minutes }} {{ $t('services.minutes') }}
+                 </div>
                 <div class="service-price">
                    {{ srv.total_price }} ₸
                 </div>
@@ -51,10 +57,10 @@
              
              <div class="service-actions-row mt-3">
                 <div class="master-btns-row">
-                   <button class="btn-action btn-zapis" @click.stop="startBooking(srv)">
-                      <Icon icon="mdi:calendar-plus" width="16" />
-                      Запись
-                   </button>
+                    <button class="btn-action btn-zapis" @click.stop="startBooking(srv)">
+                       <Icon icon="mdi:calendar-plus" width="16" />
+                       {{ $t('admin.booking') }}
+                    </button>
                 </div>
              </div>
           </div>
@@ -64,57 +70,57 @@
     <!-- Create Service Modal (Bottom Sheet) -->
     <div v-if="showCreateModal" class="overlay" @click="showCreateModal = false">
       <div class="sheet h-80vh" @click.stop>
-        <div class="sheet-title flex justify-between">
-            <span>{{ isEditing ? 'Изменить услугу' : 'Новая услуга' }}</span>
+         <div class="sheet-title flex justify-between">
+            <span>{{ isEditing ? $t('common.change') : $t('services.title') }}</span>
             <Icon icon="mdi:close" width="24" @click="showCreateModal = false" class="cursor-pointer" />
         </div>
         
         <form @submit.prevent="submitService" class="mt-4 flex flex-col gap-4 overflow-y-auto pb-6">
           <div>
-            <label class="form-label">Название услуги <span class="text-error">*</span></label>
+            <label class="form-label">{{ $t('admin.serviceName') }} <span class="text-error">*</span></label>
             <input v-model="form.name" type="text" class="form-input" required />
           </div>
           <div>
             <label class="form-label flex-between">
-               Категория <span class="text-error">*</span>
-               <span class="text-xs text-gold cursor-pointer" @click="openCategoryModal">+ Новая</span>
+               {{ $t('admin.category') }} <span class="text-error">*</span>
+               <span class="text-xs text-gold cursor-pointer" @click="openCategoryModal">{{ $t('admin.newCategory') }}</span>
             </label>
             <select v-model="form.category" class="form-input" required>
-              <option value="" disabled>Выберите категорию</option>
+              <option value="" disabled>{{ $t('admin.selectCategory') }}</option>
               <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
             </select>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="form-label">Длит. (минут) <span class="text-error">*</span></label>
+              <label class="form-label">{{ $t('admin.durationMin') }} <span class="text-error">*</span></label>
               <input v-model="form.duration_minutes" type="number" class="form-input" required />
             </div>
             <div>
-              <label class="form-label">Базовая цена ₸ <span class="text-error">*</span></label>
+              <label class="form-label">{{ $t('admin.basePrice') }} <span class="text-error">*</span></label>
               <input v-model="form.base_price" type="number" class="form-input" required />
             </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="form-label">Тип наценки</label>
+              <label class="form-label">{{ $t('admin.marginType') }}</label>
               <select v-model="form.margin_type" class="form-input">
-                <option value="fixed">Фикс (₸)</option>
-                <option value="percent">Процент (%)</option>
+                <option value="fixed">{{ $t('admin.fixed') }}</option>
+                <option value="percent">{{ $t('admin.percent') }}</option>
               </select>
             </div>
             <div>
-              <label class="form-label">Размер наценки</label>
+              <label class="form-label">{{ $t('admin.marginSize') }}</label>
               <input v-model="form.margin_value" type="number" class="form-input" />
             </div>
           </div>
           
           <div class="total-price-box mt-2">
-            <span class="text-muted">Итого для клиента:</span>
+            <span class="text-muted">{{ $t('admin.totalForClient') }}:</span>
             <span class="text-gold bold text-lg">{{ computedTotal }} ₸</span>
           </div>
 
           <button type="submit" class="btn-sheet mt-2" :disabled="creating">
-             {{ creating ? 'Сохранение...' : 'Сохранить' }}
+             {{ creating ? $t('common.saving') : $t('common.save') }}
           </button>
         </form>
       </div>
@@ -123,12 +129,12 @@
     <!-- Category Create Modal -->
     <div v-if="showCategoryModal" class="overlay" style="z-index: 1010" @click="showCategoryModal = false">
        <div class="sheet" @click.stop>
-          <div class="sheet-title mb-4">Создать категорию</div>
-          <input v-model="newCategory" type="text" class="form-input mb-4" placeholder="Название категории" />
+          <div class="sheet-title mb-4">{{ $t('admin.createCategoryTitle') }}</div>
+          <input v-model="newCategory" type="text" class="form-input mb-4" :placeholder="$t('admin.categoryPlaceholder')" />
           <button class="btn-sheet mb-2" @click="createCategory" :disabled="!newCategory.trim() || savingCat">
-            {{ savingCat ? 'Сохранение...' : 'Сохранить категорию' }}
+            {{ savingCat ? $t('common.saving') : $t('common.save') }}
           </button>
-          <button class="btn-sheet btn-sheet-ghost" @click="showCategoryModal = false">Отмена</button>
+          <button class="btn-sheet btn-sheet-ghost" @click="showCategoryModal = false">{{ $t('common.close') }}</button>
        </div>
     </div>
 
@@ -136,44 +142,44 @@
     <div v-if="showBookingModal" class="overlay" @click="showBookingModal = false">
       <div class="sheet h-80vh" @click.stop>
         <div class="sheet-title flex justify-between">
-            <span>Запись: Шаг {{ bookingStep }}/4</span>
+            <span>{{ $t('admin.booking') }}: {{ $t('admin.step') }} {{ bookingStep }}/4</span>
             <Icon icon="mdi:close" width="24" @click="showBookingModal = false" class="cursor-pointer" />
         </div>
         
         <div class="mt-4 flex flex-col gap-4 overflow-y-auto pb-6" style="flex: 1">
           <div class="p-3 bg-secondary rounded-xl text-sm mb-1">
-             <b>Услуга:</b> {{ activeService?.name }}
+             <b>{{ $t('common.service') }}:</b> {{ activeService?.name }}
           </div>
 
           <!-- Step 0: Date Selection -->
           <div v-if="bookingStep === 0">
-             <label class="form-label mb-3">Выберите дату записи</label>
+             <label class="form-label mb-3">{{ $t('master.selectDate') }}</label>
              <div class="date-selector mb-4">
                  <button 
                     :class="['date-pill', { active: isToday(bookingDate) }]" 
                     @click="setBookingDate('today')"
-                 >Сегодня</button>
+                 >{{ $t('master.today') }}</button>
                  <button 
                     :class="['date-pill', { active: isTomorrow(bookingDate) }]" 
                     @click="setBookingDate('tomorrow')"
-                 >Завтра</button>
+                 >{{ $t('master.tomorrow') }}</button>
                  <div class="custom-date-wrapper">
                     <button :class="['date-pill', { active: isCustomDate(bookingDate) }]">
-                        {{ isCustomDate(bookingDate) ? formatDateShort(bookingDate) : 'Выбрать' }}
+                        {{ isCustomDate(bookingDate) ? formatDateShort(bookingDate) : $t('master.selectDate') }}
                     </button>
                     <input type="date" class="date-input-hidden" @change="onCustomDateChange" />
                  </div>
              </div>
-             <button class="btn-sheet" @click="bookingStep = 2">Далее</button>
+             <button class="btn-sheet" @click="bookingStep = 2">{{ $t('admin.next') }}</button>
           </div>
 
           <!-- Step 2: Masters -->
           <div v-if="bookingStep === 2">
              <div class="p-3 mb-2 bg-[var(--gold-glow)] border border-[var(--gold)] rounded-xl text-sm flex justify-between items-center">
-                <span><b>Дата:</b> {{ formatDateShort(bookingDate) }}</span>
-                <span class="text-gold cursor-pointer font-bold" @click="bookingStep = 0">Изменить</span>
+                <span><b>{{ $t('admin.date') }}:</b> {{ formatDateShort(bookingDate) }}</span>
+                <span class="text-gold cursor-pointer font-bold" @click="bookingStep = 0">{{ $t('common.change') }}</span>
              </div>
-             <label class="form-label mb-2">Выберите мастера</label>
+             <label class="form-label mb-2">{{ $t('admin.selectMaster') }}</label>
              <div class="flex flex-col gap-2">
                  <div v-for="m in filteredWorkingMasters" :key="m.id"
                       class="master-card"
@@ -187,17 +193,17 @@
                      </div>
                  </div>
                  <div v-if="filteredWorkingMasters.length === 0" class="text-muted text-sm text-center py-4">
-                     Нет мастеров на сегодня.
+                     {{ $t('admin.noMastersToday') }}
                  </div>
              </div>
           </div>
 
           <!-- Step 3: Slots -->
           <div v-if="bookingStep === 3">
-             <label class="form-label mb-2">Выберите время на сегодня</label>
+             <label class="form-label mb-2">{{ $t('admin.selectTimeToday') }}</label>
              <div v-if="slotsLoading" class="spinner"></div>
              <div v-else-if="slots.length === 0" class="text-muted text-center py-4">
-                 Доступных окон больше нет.
+                 {{ $t('admin.noSlots') }}
              </div>
              <div v-else class="slots-grid">
                  <div v-for="slot in slots" :key="slot.time"
@@ -207,28 +213,28 @@
                      {{ slot.time }}
                  </div>
              </div>
-             <button class="btn-sheet bg-secondary mt-4" @click="bookingStep = 2">Назад</button>
+             <button class="btn-sheet bg-secondary mt-4" @click="bookingStep = 2">{{ $t('common.back') }}</button>
           </div>
 
           <!-- Step 4: Client Info -->
           <div v-if="bookingStep === 4">
              <form @submit.prevent="createAppointment" class="flex flex-col gap-4">
                  <div>
-                    <label class="form-label">Имя клиента *</label>
+                    <label class="form-label">{{ $t('admin.clientName') }} *</label>
                     <input v-model="bookingForm.client_name" type="text" class="form-input" required autofocus />
                  </div>
                  <div>
-                    <label class="form-label">Телефон клиента *</label>
+                    <label class="form-label">{{ $t('admin.clientPhone') }} *</label>
                     <input v-model="bookingForm.client_phone" type="text" class="form-input" required placeholder="+7 (___) ___-__-__" />
                  </div>
                  <div class="p-3 bg-secondary rounded-xl text-sm mb-2 opacity-80">
-                    <div><b>Время:</b> Сегодня, {{ bookingForm.time }}</div>
+                    <div><b>{{ $t('common.time') }}:</b> {{ $t('master.today') }}, {{ bookingForm.time }}</div>
                  </div>
                  <button type="submit" class="btn-sheet mt-2" :disabled="bookingLoading">
-                    {{ bookingLoading ? 'Создание...' : 'Создать запись' }}
+                    {{ bookingLoading ? $t('admin.creating') : $t('admin.createBtn') }}
                  </button>
              </form>
-             <button class="btn-sheet btn-sheet-ghost mt-2" @click="bookingStep = 3">Назад</button>
+             <button class="btn-sheet btn-sheet-ghost mt-2" @click="bookingStep = 3">{{ $t('common.back') }}</button>
           </div>
         </div>
       </div>
@@ -239,7 +245,10 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
+ 
+const { t, locale } = useI18n()
 
 const services = ref([])
 const categories = ref([])
@@ -261,7 +270,8 @@ const isCustomDate = (d) => !isToday(d) && !isTomorrow(d)
 
 const formatDateShort = (d) => {
     if (!d) return ''
-    return new Date(d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+    const currentLocale = locale.value === 'kz' ? 'kk-KZ' : 'ru-RU'
+    return new Date(d).toLocaleDateString(currentLocale, { day: 'numeric', month: 'short' })
 }
 
 const showCreateModal = ref(false)
@@ -272,6 +282,7 @@ const showCategoryModal = ref(false)
 const newCategory = ref('')
 const creating = ref(false)
 const savingCat = ref(false)
+const successMsg = ref('')
 
 const form = ref({
     name: '',
@@ -351,7 +362,7 @@ const createCategory = async () => {
         categories.value = resCat.data.results || resCat.data
         showCategoryModal.value = false
     } catch (e) {
-        alert('Ошибка!')
+        alert(t('common.error'))
     } finally {
         savingCat.value = false
     }
@@ -398,8 +409,10 @@ const submitService = async () => {
         }
         await fetchData()
         showCreateModal.value = false
+        successMsg.value = t('common.save')
+        setTimeout(() => successMsg.value = '', 3000)
     } catch (e) {
-        alert(e.response?.data?.error || 'Ошибка!')
+        alert(e.response?.data?.error || t('common.error'))
     } finally {
         creating.value = false
     }
@@ -460,9 +473,10 @@ const createAppointment = async () => {
             client_phone: bookingForm.value.client_phone
         })
         showBookingModal.value = false
-        alert('Запись успешно создана!')
+        successMsg.value = t('admin.bookingSuccess')
+        setTimeout(() => successMsg.value = '', 3000)
     } catch (e) {
-        alert('Ошибка!')
+        alert(t('common.error'))
     } finally {
         bookingLoading.value = false
     }

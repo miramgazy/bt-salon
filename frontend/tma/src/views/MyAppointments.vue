@@ -4,28 +4,28 @@
       <button class="back-btn" @click="$router.push('/')">
         <Icon icon="mdi:arrow-left" width="20" />
       </button>
-      <div class="page-title header-font" style="font-size: 24px;">{{ $t('appointments.title', 'Мои записи') }}</div>
+       <div class="page-title header-font" style="font-size: 24px;">{{ $t('appointments.title') }}</div>
     </div>
     
     <div v-if="loading" style="text-align:center; padding: 60px;">
       <div class="spinner"></div>
     </div>
 
-    <div v-else-if="appointments.length === 0" class="empty-state fade-up">
-      <div class="empty-icon">📅</div>
-      <p style="color: var(--muted); margin-bottom: 24px;">{{ $t('appointments.empty', 'У вас пока нет активных записей') }}</p>
-      <button class="btn-primary" @click="$router.push('/')">
-        Записаться на услугу
-      </button>
-    </div>
+     <div v-else-if="appointments.length === 0" class="empty-state fade-up">
+       <div class="empty-icon">📅</div>
+       <p style="color: var(--muted); margin-bottom: 24px;">{{ $t('appointments.empty') }}</p>
+       <button class="btn-primary" @click="$router.push('/')">
+         {{ $t('tma.book') }}
+       </button>
+     </div>
 
     <div v-else class="appointments-list fade-up">
       <div v-for="apt in appointments" :key="apt.id" class="card apt-card glass">
         <div class="apt-header">
           <div style="flex: 1">
-            <h3 class="apt-service">{{ apt.service_detail?.name }}</h3>
-            <div class="apt-master">Мастер: {{ apt.master_detail?.first_name }}</div>
-          </div>
+             <h3 class="apt-service">{{ apt.service_detail?.name }}</h3>
+             <div class="apt-master">{{ $t('tma.masters') }}: {{ apt.master_detail?.first_name }}</div>
+           </div>
           <div :class="['status-badge', apt.status.toLowerCase()]">
             {{ formatStatus(apt.status) }}
           </div>
@@ -39,11 +39,11 @@
           <div class="apt-price">{{ apt.service_detail?.total_price }} ₸</div>
         </div>
         
-        <button v-if="['pending', 'confirmed'].includes(apt.status.toLowerCase())" 
-                class="btn-cancel" 
-                @click="cancelApt(apt.id)">
-          Отменить запись
-        </button>
+         <button v-if="['pending', 'confirmed'].includes(apt.status.toLowerCase())" 
+                 class="btn-cancel" 
+                 @click="cancelApt(apt.id)">
+           {{ $t('tma.cancelApt') }}
+         </button>
       </div>
     </div>
   </div>
@@ -53,9 +53,11 @@
 import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAuthStore } from '../stores/auth'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
 const auth = useAuthStore()
+const { t, locale } = useI18n()
 const appointments = ref([])
 const loading = ref(true)
 
@@ -79,7 +81,7 @@ onMounted(() => {
 
 const formatDate = (iso) => {
   const d = new Date(iso)
-  return d.toLocaleString('ru-RU', {
+  return d.toLocaleString(locale.value === 'kz' ? 'kk-KZ' : 'ru-RU', {
     day: 'numeric',
     month: 'long',
     hour: '2-digit',
@@ -89,21 +91,21 @@ const formatDate = (iso) => {
 
 const formatStatus = (s) => {
   const map = {
-    'pending': 'Ожидает',
-    'confirmed': 'Подтверждена',
-    'cancelled': 'Отменена',
-    'done': 'Завершена'
+    'pending': t('appointments.statuses.pending'),
+    'confirmed': t('appointments.statuses.confirmed'),
+    'cancelled': t('appointments.statuses.cancelled'),
+    'done': t('appointments.statuses.done')
   }
   return map[s.toLowerCase()] || s
 }
 
 const cancelApt = async (id) => {
-  if (!confirm('Вы уверены, что хотите отменить запись?')) return
+  if (!confirm(t('tma.cancelConfirm'))) return
   try {
     await api.post(`/appointments/${id}/cancel/`)
     await fetchAppointments()
   } catch (err) {
-    alert('Ошибка при отмене записи')
+    alert(t('tma.error'))
   }
 }
 </script>

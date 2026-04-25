@@ -14,10 +14,30 @@ class EmployeeSerializer(serializers.ModelSerializer):
     color = serializers.SerializerMethodField()
     photo_url = serializers.SerializerMethodField()
     master_id = serializers.SerializerMethodField()
+    today_shift = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'master_id', 'first_name', 'last_name', 'phone', 'role', 'is_active', 'color', 'services_detail', 'photo_url', 'telegram_id']
+        fields = ['id', 'master_id', 'first_name', 'last_name', 'phone', 'role', 'is_active', 'color', 'services_detail', 'photo_url', 'telegram_id', 'today_shift']
+
+    def get_today_shift(self, obj):
+        if obj.role == 'master' and hasattr(obj, 'master_profile'):
+            from django.utils import timezone
+            from apps.masters.models import MasterShift
+            # Using timezone.localtime(timezone.now()).date() to match server time with user local date
+            today = timezone.localtime(timezone.now()).date()
+            shift = MasterShift.objects.filter(
+                master=obj.master_profile, 
+                date=today
+            ).first()
+            if shift:
+                return {
+                    'is_open': shift.is_open,
+                    'opened_by_admin': shift.opened_by_admin,
+                    'actual_start': shift.actual_start.isoformat() if shift.actual_start else None,
+                    'date': str(shift.date)
+                }
+        return None
 
     def get_master_id(self, obj):
         if hasattr(obj, 'master_profile'):

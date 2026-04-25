@@ -72,7 +72,7 @@ async function handleAllow() {
     goNext()
   } catch (err) {
     console.error('handleAllow error:', err)
-    error.value = err.response?.data?.detail || 'Произошла ошибка'
+    error.value = err.response?.data?.detail || t('common.error')
   } finally {
     loading.value = false
   }
@@ -86,7 +86,7 @@ async function handleDecline() {
     await auth.updateProfile({ is_bot_subscribed: false })
     goNext()
   } catch (err) {
-    error.value = err.response?.data?.detail || 'Произошла ошибка'
+    error.value = err.response?.data?.detail || t('common.error')
   } finally {
     loading.value = false
   }

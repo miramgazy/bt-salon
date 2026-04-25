@@ -1,22 +1,22 @@
 <template>
   <div class="admin-report">
     <div class="page-header mb-4">
-      <h1 class="page-title">Отчеты</h1>
+      <h1 class="page-title">{{ $t('admin.reports.title') }}</h1>
     </div>
     
     <div class="date-selector">
       <button 
         :class="['date-pill', { active: activeTab === 'today' }]" 
         @click="setDate('today')"
-      >Сегодня</button>
+      >{{ $t('common.today') }}</button>
       <button 
         :class="['date-pill', { active: activeTab === 'week' }]" 
         @click="setDate('week')"
-      >Неделя</button>
+      >{{ $t('common.week') }}</button>
       <button 
         :class="['date-pill', { active: activeTab === 'month' }]" 
         @click="setDate('month')"
-      >Месяц</button>
+      >{{ $t('common.month') }}</button>
     </div>
 
     <div v-if="loading" class="loading-state">
@@ -27,38 +27,38 @@
       <div class="kpi-grid">
          <div class="kpi-card highlight">
             <div class="kpi-icon">💰</div>
-            <div class="kpi-label">Общая выручка</div>
+            <div class="kpi-label">{{ $t('admin.reports.revenue') }}</div>
             <div class="kpi-value text-gold">{{ Number(summary.total_revenue || 0).toLocaleString() }} ₸</div>
          </div>
          <div class="kpi-card">
             <div class="kpi-icon">✅</div>
-            <div class="kpi-label">Оказано услуг</div>
+            <div class="kpi-label">{{ $t('admin.reports.completed') }}</div>
             <div class="kpi-value">{{ summary.completed_appointments || 0 }}</div>
          </div>
          <div class="kpi-card">
             <div class="kpi-icon">⏳</div>
-            <div class="kpi-label">В ожидании</div>
+            <div class="kpi-label">{{ $t('admin.reports.pending') }}</div>
             <div class="kpi-value">{{ summary.pending_appointments || 0 }}</div>
          </div>
          <div class="kpi-card text-error">
             <div class="kpi-icon">❌</div>
-            <div class="kpi-label">Отменено</div>
+            <div class="kpi-label">{{ $t('admin.reports.cancelled') }}</div>
             <div class="kpi-value">{{ summary.cancelled_appointments || 0 }}</div>
          </div>
       </div>
       
       <div class="mt-6 mb-4">
-         <h2 class="section-subtitle">Конверсия</h2>
+         <h2 class="section-subtitle">{{ $t('admin.reports.conversion') }}</h2>
          <div class="conversion-card">
             <div class="conv-row">
-               <span>Всего записей</span>
+               <span>{{ $t('admin.reports.totalRecords') }}</span>
                <span class="font-bold">{{ summary.total_appointments || 0 }}</span>
             </div>
             <div class="conv-bar-wrap">
                <div class="conv-bar" :style="{ width: conversionRate + '%' }"></div>
             </div>
             <div class="conv-row text-xs mt-1">
-               <span class="text-muted">Процент выполнения</span>
+               <span class="text-muted">{{ $t('admin.reports.completionRate') }}</span>
                <span class="text-success font-bold">{{ conversionRate.toFixed(1) }}%</span>
             </div>
          </div>
