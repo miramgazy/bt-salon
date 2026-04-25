@@ -19,19 +19,19 @@
 
     <!-- Role Switching Actions -->
     <div class="card switch-card">
-       <div class="section-title header-font">Управление ролями</div>
+       <div class="section-title header-font">Управление ролью</div>
        <div class="switch-grid">
-          <button class="btn-switch admin-mode" @click="switchToAdmin">
-            <Icon icon="mdi:shield-crown" width="20" />
-            <span>Режим админа</span>
-          </button>
-          <button class="btn-switch master-mode" @click="switchToMaster" style="color: #6366f1; border-color: #6366f1;">
-            <Icon icon="mdi:shield-account-variant" width="20" />
-            <span>Панель мастера</span>
-          </button>
           <button class="btn-switch client-mode" @click="switchToClient">
             <Icon icon="mdi:account-convert" width="20" />
             <span>Режим клиента</span>
+          </button>
+          <button class="btn-switch admin-mode" @click="switchToAdmin">
+            <Icon icon="mdi:shield-crown" width="20" />
+            <span>Панель админа</span>
+          </button>
+          <button class="btn-switch master-mode" @click="switchToMaster">
+            <Icon icon="mdi:shield-account-variant" width="20" />
+            <span>Панель мастера</span>
           </button>
        </div>
     </div>
@@ -201,7 +201,7 @@ const switchToClient = () => {
   gap: 8px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  color: var(--text);
+  color: var(--gold);
   padding: 16px;
   border-radius: 16px;
   cursor: pointer;
@@ -210,6 +210,7 @@ const switchToClient = () => {
 .btn-switch:active { transform: scale(0.95); }
 .btn-switch span { font-size: 12px; font-weight: 700; }
 .admin-mode { border-color: #22a060; color: #22a060; }
+.master-mode { border-color: var(--gold); color: var(--gold); }
 .client-mode { border-color: var(--gold); color: var(--gold); }
 
 .setting-row, .info-row {

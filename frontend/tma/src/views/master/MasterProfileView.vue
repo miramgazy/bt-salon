@@ -37,20 +37,22 @@
     </div>
 
     <!-- Role Switching Actions -->
-    <div class="card switch-card" style="display: flex; flex-direction: column; gap: 8px;">
-       <button class="btn-switch" @click="switchToClient">
-         <Icon icon="mdi:account-convert" width="20" />
-         <span>Режим клиента</span>
-       </button>
-       <!-- Higher roles return options -->
-       <button v-if="auth.isAdmin" class="btn-switch" @click="switchToAdmin" style="color: #22a060;">
-         <Icon icon="mdi:shield-crown" width="20" />
-         <span>Панель админа</span>
-       </button>
-       <button v-if="auth.isOwner" class="btn-switch" @click="switchToOwner" style="color: var(--gold);">
-         <Icon icon="mdi:shield-account" width="20" />
-         <span>Панель владельца</span>
-       </button>
+    <div class="card switch-card">
+       <div class="section-title header-font">Управление ролью</div>
+       <div class="switch-grid">
+          <button class="btn-switch client-mode" @click="switchToClient">
+            <Icon icon="mdi:account-convert" width="20" />
+            <span>Режим клиента</span>
+          </button>
+          <button v-if="auth.isAdmin" class="btn-switch admin-mode" @click="switchToAdmin">
+            <Icon icon="mdi:shield-crown" width="20" />
+            <span>Панель админа</span>
+          </button>
+          <button v-if="auth.isOwner" class="btn-switch owner-mode" @click="switchToOwner">
+            <Icon icon="mdi:shield-account" width="20" />
+            <span>Панель владельца</span>
+          </button>
+       </div>
     </div>
 
     <div class="card settings-card">
@@ -362,23 +364,40 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   background: var(--bg-secondary); color: var(--text); border: 1px solid var(--border); font-family: inherit;
 }
 
-.switch-card { padding: 12px; margin-top: 16px; border-color: var(--gold-glow); background: var(--gold-glow); }
+.switch-card, .settings-card {
+  margin-top: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.section-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; text-transform: uppercase; color: var(--gold); letter-spacing: 1px; }
+
+.switch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
 .btn-switch {
-  width: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  background: transparent;
-  border: none;
+  gap: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   color: var(--gold);
-  font-weight: 800;
-  font-size: 14px;
-  padding: 12px;
+  padding: 16px;
+  border-radius: 16px;
   cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  transition: all 0.2s;
 }
+.btn-switch:active { transform: scale(0.95); }
+.btn-switch span { font-size: 12px; font-weight: 700; }
+.admin-mode { border-color: #22a060; color: #22a060; }
+.client-mode { border-color: var(--gold); color: var(--gold); }
+.owner-mode { border-color: var(--gold); color: var(--gold); }
 
 .logout-card { padding: 12px; }
 .btn-logout {
