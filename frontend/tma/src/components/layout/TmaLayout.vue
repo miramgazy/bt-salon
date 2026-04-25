@@ -96,6 +96,7 @@ const exitApp = () => {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 .header {
@@ -140,6 +141,7 @@ const exitApp = () => {
 .main-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .bottom-nav {

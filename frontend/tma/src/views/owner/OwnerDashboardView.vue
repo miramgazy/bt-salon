@@ -195,18 +195,18 @@
         </div>
 
         <div class="kpi-grid">
-           <div class="chart-card" style="margin-bottom:0">
-              <div class="chart-label">Типы расходов</div>
-              <apexchart type="donut" height="200" :options="expenseTypeDonutOptions" :series="expenseTypeDonutSeries"></apexchart>
+           <div class="chart-card" style="margin-bottom:0; padding: 8px;">
+              <div class="chart-label" style="margin-bottom:4px">Типы расходов</div>
+              <apexchart type="donut" width="100%" height="180" :options="expenseTypeDonutOptions" :series="expenseTypeDonutSeries"></apexchart>
            </div>
            <div class="flex flex-col gap-3">
-              <div class="kpi crimson">
+              <div class="kpi crimson" style="padding: 12px;">
                 <div class="kpi-label">Постоянные</div>
-                <div class="kpi-val crimson">{{ formatM(totalFixedExp) }} ₸</div>
+                <div class="kpi-val crimson" style="font-size: 18px;">{{ formatM(totalFixedExp) }} ₸</div>
               </div>
-              <div class="kpi">
+              <div class="kpi" style="padding: 12px;">
                 <div class="kpi-label">Переменные</div>
-                <div class="kpi-val" style="color:#e08030">{{ formatM(totalVarExp) }} ₸</div>
+                <div class="kpi-val" style="color:#e08030; font-size: 18px;">{{ formatM(totalVarExp) }} ₸</div>
               </div>
            </div>
         </div>
@@ -697,12 +697,13 @@ onMounted(() => {
   z-index: 90;
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
-.period-controls { display: flex; align-items: center; gap: 10px; }
+.period-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .period-select {
   flex: 1;
+  min-width: 120px;
   background: var(--tg-theme-secondary-bg-color);
   border: 1px solid var(--border);
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: 8px;
   color: var(--tg-theme-text-color);
   font-size: 13px;
@@ -728,19 +729,22 @@ onMounted(() => {
 .gauge-pct { font-size: 12px; width: 45px; text-align: right; font-weight: 600; }
 
 /* Compare Strips */
-.compare-strip { display: flex; background: var(--tg-theme-bg-color); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
-.compare-col { flex: 1; padding: 14px 12px; border-right: 1px solid var(--border); text-align: center; }
+.compare-strip { display: flex; background: var(--tg-theme-bg-color); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 16px; width: 100%; box-sizing: border-box; }
+.compare-col { flex: 1; padding: 12px 8px; border-right: 1px solid var(--border); text-align: center; min-width: 0; }
 .compare-col:last-child { border-right: none; }
-.compare-period { font-size: 10px; color: var(--tg-theme-hint-color); text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
-.compare-val { font-size: 18px; font-weight: 700; }
+.compare-period { font-size: 9px; color: var(--tg-theme-hint-color); text-transform: uppercase; margin-bottom: 4px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.compare-val { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .owner-dashboard {
   min-height: 100vh;
   color: var(--tg-theme-text-color);
   font-family: inherit;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
-.main-content { padding: 16px; }
-.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.main-content { padding: 16px; width: 100%; box-sizing: border-box; overflow-x: hidden; }
+.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; width: 100%; box-sizing: border-box; }
+.kpi-grid > * { min-width: 0; } /* Crucial to prevent grid items from expanding from content */
 .kpi { background: var(--tg-theme-bg-color); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 .kpi-label { font-size: 11px; color: var(--tg-theme-hint-color); text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
 .kpi-val { font-size: 22px; font-weight: 700; color: var(--tg-theme-text-color); }
@@ -752,7 +756,15 @@ onMounted(() => {
 .kpi-sub.up { color: #22a060; }
 .kpi-sub.down { color: #c0392b; }
 .kpi-sub.neutral { color: var(--tg-theme-hint-color); }
-.chart-card { background: var(--tg-theme-bg-color); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.chart-card { 
+  background: var(--tg-theme-bg-color); 
+  border: 1px solid var(--border); 
+  border-radius: 12px; 
+  padding: 16px; 
+  margin-bottom: 12px; 
+  overflow: hidden; /* Contain charts */
+  box-sizing: border-box;
+}
 .chart-label { font-size: 11px; color: var(--tg-theme-hint-color); text-transform: uppercase; font-weight: 600; margin-bottom: 12px; }
 .section { margin-bottom: 24px; }
 .sec-title { font-size: 12px; color: var(--tg-theme-hint-color); text-transform: uppercase; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }

@@ -137,6 +137,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   background-color: var(--tg-theme-secondary-bg-color, #f7f5f0);
+  overflow-x: hidden;
 }
 
 .header {
@@ -172,6 +173,7 @@ onMounted(() => {
 .main-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-bottom: 80px;
 }
 
