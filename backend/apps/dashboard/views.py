@@ -72,7 +72,7 @@ class SummaryView(DashboardBaseView):
 
         status_counts = full_qs.aggregate(
             total=Count('id'),
-            completed=Count('id', filter=Q(status=Appointment.STATUS_COMPLETED)),
+            completed=Count('id', filter=Q(status=Appointment.STATUS_DONE)),
             pending=Count('id', filter=Q(status=Appointment.STATUS_PENDING)),
             cancelled=Count('id', filter=Q(status=Appointment.STATUS_CANCELLED))
         )
