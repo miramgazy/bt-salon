@@ -162,9 +162,13 @@
                 class="w-full rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
             </div>
             <div>
-              <label class="mb-2.5 block font-medium text-black dark:text-white">Телеграм ID</label>
+              <label class="mb-2.5 block font-medium text-black dark:text-white flex items-center gap-1">
+                Телеграм ID
+                <span class="text-[10px] text-success font-normal">(!) Автозаполнение</span>
+              </label>
               <input v-model="form.telegram_id" type="number" placeholder="ID"
-                class="w-full rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+                class="w-full rounded border border-success/30 bg-success/[0.03] py-3 px-5 outline-none transition focus:border-success dark:border-form-strokedark dark:bg-form-input dark:text-white" />
+              <p class="mt-1 text-[10px] text-success/80">Введите ID, чтобы подтянуть имя и телефон из базы клиентов</p>
             </div>
             <div>
               <label class="mb-2.5 block font-medium text-black dark:text-white">Роль</label>

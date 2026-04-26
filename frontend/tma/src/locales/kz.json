@@ -242,6 +242,7 @@
     "lastName": "Тегі",
     "phone": "Телефон",
     "telegramId": "Telegram ID (міндетті емес)",
+    "telegramIdHint": "ID енгізіңіз, клиент деректері автоматты түрде жүктеледі",
     "telegramIdPlaceholder": "Мысалы: 12345678",
     "masterServices": "Шебер қызметтері",
     "noServicesInSalon": "Салонда қолжетімді қызметтер жоқ",

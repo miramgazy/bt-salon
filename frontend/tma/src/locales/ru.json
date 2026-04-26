@@ -242,6 +242,7 @@
     "lastName": "Фамилия",
     "phone": "Телефон",
     "telegramId": "Telegram ID (необязательно)",
+    "telegramIdHint": "Введите ID, данные клиента загрузятся автоматически",
     "telegramIdPlaceholder": "Например: 12345678",
     "masterServices": "Услуги мастера",
     "noServicesInSalon": "Нет доступных услуг в салоне",

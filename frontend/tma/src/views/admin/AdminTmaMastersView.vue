@@ -91,8 +91,15 @@
             <input v-model="form.phone" type="text" class="form-input" placeholder="+7 (___) ___-__-__" required />
           </div>
           <div>
-            <label class="form-label">{{ $t('admin.telegramId') }}</label>
-            <input v-model="form.telegram_id" type="number" class="form-input" :placeholder="$t('admin.telegramIdPlaceholder', 'Например: 12345678')" />
+            <label class="form-label flex gap-1 items-center">
+                {{ $t('admin.telegramId') }}
+                <span class="text-[10px] text-gold uppercase font-bold">(!)</span>
+            </label>
+            <div v-if="!isEditing" class="p-2.5 rounded-xl bg-gold/10 border border-gold/20 mb-2 flex items-start gap-2">
+                <Icon icon="mdi:information-outline" width="16" class="text-gold flex-shrink-0 mt-0.5" />
+                <span class="text-[11px] leading-tight text-gold font-medium">{{ $t('admin.telegramIdHint') }}</span>
+            </div>
+            <input v-model="form.telegram_id" type="number" class="form-input" :class="{ 'border-gold/50 bg-gold/5': !isEditing && !form.telegram_id }" :placeholder="$t('admin.telegramIdPlaceholder')" />
           </div>
           <div>
             <label class="form-label">{{ $t('admin.masterServices') }}</label>
