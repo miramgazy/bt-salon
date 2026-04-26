@@ -16,6 +16,7 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 
 from apps.organization.models import Organization
+from apps.organization.serializers import OrganizationSerializer
 from apps.clients.models import Client
 from apps.masters.models import Master
 from apps.appointments.models import Appointment
@@ -137,16 +138,9 @@ class TmaAuthView(APIView):
                     'master_id': user.master_profile.id if hasattr(user, 'master_profile') else None,
                     'organization_id': org.id,
                     'organization_name': org.name,
-                },
-                'organization_settings': {
-                    'design_color': org.design_color,
-                    'greeting_text': org.greeting_text,
-                    'logo_url': request.build_absolute_uri(org.logo.url) if org.logo else None,
-                    'instagram_link': org.instagram_link,
-                    'whatsapp_number': org.whatsapp_number,
-                    'slot_duration': org.slot_duration,
+                    'organization_settings': OrganizationSerializer(org, context={'request': request}).data
                 }
-            })
+            }, status=status.HTTP_200_OK)
             
         except Exception as e:
             logger.exception("[TMA Auth] Error")
@@ -169,14 +163,7 @@ class TmaMeView(APIView):
             'has_master_profile': hasattr(user, 'master_profile'),
             'master_id': user.master_profile.id if hasattr(user, 'master_profile') else None,
             'organization_id': user.organization_id,
-            'organization_settings': {
-                'greeting_text': user.organization.greeting_text if user.organization else "Добро пожаловать!",
-                'design_color': user.organization.design_color if user.organization else "#c9a84c",
-                'logo_url': request.build_absolute_uri(user.organization.logo.url) if user.organization and user.organization.logo else None,
-                'instagram_link': user.organization.instagram_link if user.organization else None,
-                'whatsapp_number': user.organization.whatsapp_number if user.organization else None,
-                'slot_duration': user.organization.slot_duration if user.organization else 30,
-            }
+            'organization_settings': OrganizationSerializer(user.organization, context={'request': request}).data if user.organization else None
         })
 
     def patch(self, request, *args, **kwargs):

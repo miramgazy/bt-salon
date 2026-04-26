@@ -128,6 +128,16 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async fetchOrganizationSettings() {
+      try {
+        const response = await api.get('/organization/settings/')
+        this.organizationSettings = response.data
+        localStorage.setItem('tma_org_settings', JSON.stringify(response.data))
+        return response.data
+      } catch (err) {
+        console.error('fetchOrganizationSettings error:', err)
+      }
+    },
     async fetchCurrentUser() {
       if (!this.token) return
       try {
