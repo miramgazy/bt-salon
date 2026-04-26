@@ -60,7 +60,10 @@
               <Icon icon="mdi:compare-horizontal" width="22" />
               <span>{{ $t('owner.compare') }}</span>
             </div>
-            <div class="nav-item-btn placeholder"></div>
+            <div class="nav-item-btn" @click="setTab('geolocation')" :class="{ active: activeTab === 'geolocation' }">
+              <Icon icon="mdi:map-marker-radius" width="22" />
+              <span>{{ $t('owner.geolocation') }}</span>
+            </div>
           </div>
         </div>
 

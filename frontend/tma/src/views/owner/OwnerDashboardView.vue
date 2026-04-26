@@ -273,8 +273,55 @@
                   </div>
                </div>
             </div>
+          </div>
+       </div>
+       
+       <!-- ══ GEOLOCATION (ГЕОПОЗИЦИЯ) ══ -->
+       <div v-if="activeTab === 'geolocation'" class="fade-up">
+         <div class="card geo-card">
+           <div class="geo-header">
+              <div class="geo-icon-circle">
+                 <Icon icon="mdi:map-marker-radius" width="28" />
+              </div>
+              <div>
+                 <h3 class="geo-title">{{ $t('owner.geolocation') }}</h3>
+                 <p class="text-hint">{{ $t('owner.logSpent') }}</p>
+              </div>
+           </div>
+ 
+           <div class="geo-form mt-6">
+             <div class="grid grid-cols-2 gap-4 mb-6">
+               <div>
+                 <label class="form-label">{{ $t('owner.latitude') }}</label>
+                 <input v-model="geoData.latitude" type="number" step="0.000001" class="form-input" placeholder="0.000000" />
+               </div>
+               <div>
+                 <label class="form-label">{{ $t('owner.longitude') }}</label>
+                 <input v-model="geoData.longitude" type="number" step="0.000001" class="form-input" placeholder="0.000000" />
+               </div>
+             </div>
+ 
+             <button class="btn-geo-action secondary mb-3" @click="determineCoordinates">
+               <Icon icon="mdi:crosshairs-gps" width="20" />
+               <span>{{ $t('owner.determineCoords') }}</span>
+             </button>
+ 
+             <button class="btn-geo-action primary" @click="saveGeo" :disabled="savingGeo">
+                <Icon v-if="!savingGeo" icon="mdi:content-save-outline" width="20" />
+                <div v-else class="spinner-xs"></div>
+                <span>{{ savingGeo ? $t('common.saving') : $t('owner.saveCoords') }}</span>
+             </button>
+           </div>
          </div>
-      </div>
+ 
+         <!-- Success Toast -->
+         <Transition name="fade">
+           <div v-if="geoSuccessMsg" class="success-toast">
+             <Icon icon="mdi:check-circle" width="24" />
+             <span>{{ geoSuccessMsg }}</span>
+           </div>
+         </Transition>
+       </div>
     </div>
 
     <div v-else class="loading-wrap">
@@ -403,6 +450,10 @@ const expCatForm = ref({
     name: '',
     category_type: 'variable'
 })
+
+const geoData = ref({ latitude: '', longitude: '' })
+const savingGeo = ref(false)
+const geoSuccessMsg = ref('')
 
 const data = ref({
   summary: {},
@@ -680,9 +731,54 @@ const submitExpCat = async () => {
     }
 }
 
-watch(() => route.query.tab, (newTab) => { if (newTab) activeTab.value = newTab })
+const fetchGeo = () => {
+    const org = auth.organizationSettings || {}
+    geoData.value.latitude = org.latitude || ''
+    geoData.value.longitude = org.longitude || ''
+}
+
+const determineCoordinates = () => {
+    if (!navigator.geolocation) {
+        alert(t('owner.geoError'))
+        return
+    }
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            geoData.value.latitude = pos.coords.latitude.toFixed(6)
+            geoData.value.longitude = pos.coords.longitude.toFixed(6)
+        },
+        (err) => {
+            alert(t('owner.geoError'))
+        }
+    )
+}
+
+const saveGeo = async () => {
+    savingGeo.value = true
+    try {
+        await api.put('/organization/settings/', {
+            latitude: geoData.value.latitude,
+            longitude: geoData.value.longitude
+        })
+        await auth.fetchOrganizationSettings() // Refresh local store
+        geoSuccessMsg.value = t('owner.geoSuccess')
+        setTimeout(() => geoSuccessMsg.value = '', 3000)
+    } catch (e) {
+        alert(t('common.error'))
+    } finally {
+        savingGeo.value = false
+    }
+}
+
+watch(() => route.query.tab, (newTab) => { 
+    if (newTab) activeTab.value = newTab 
+    if (newTab === 'geolocation') fetchGeo()
+})
 onMounted(() => {
-  if (route.query.tab) activeTab.value = route.query.tab
+  if (route.query.tab) {
+      activeTab.value = route.query.tab
+      if (activeTab.value === 'geolocation') fetchGeo()
+  }
   fetchData()
 })
 </script>
@@ -798,6 +894,93 @@ onMounted(() => {
 .svc-name { font-size: 14px; font-weight: 600; }
 .svc-count { font-size: 12px; color: var(--tg-theme-hint-color); }
 .svc-amount { font-size: 14px; font-weight: 700; color: var(--gold); }
+
+/* Geolocation Premium Styles */
+.geo-card {
+  padding: 30px 24px;
+  background: var(--tg-theme-bg-color);
+  border-radius: 20px;
+}
+
+.geo-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.geo-icon-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--gold-glow);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--gold);
+}
+
+.geo-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.btn-geo-action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-geo-action.primary {
+  background: var(--gold-gradient);
+  color: #000;
+  box-shadow: 0 4px 15px var(--gold-glow);
+}
+
+.btn-geo-action.secondary {
+  background: var(--tg-theme-secondary-bg-color);
+  color: var(--tg-theme-text-color);
+  border: 1px solid var(--border);
+}
+
+.btn-geo-action:active {
+  transform: scale(0.97);
+}
+
+.spinner-xs {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(0,0,0,0.1);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.success-toast {
+  position: fixed;
+  bottom: 140px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #22a060;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(34, 160, 96, 0.4);
+  z-index: 2000;
+}
 .bar-micro { height: 6px; background: var(--tg-theme-secondary-bg-color); border-radius: 3px; }
 .bar-fill { height: 100%; background: var(--gold); border-radius: 3px; transition: width 0.8s ease; }
 .expense-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); }

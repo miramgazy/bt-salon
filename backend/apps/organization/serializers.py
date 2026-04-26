@@ -9,7 +9,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'address', 'work_start', 'work_end', 'lunch_start',
             'lunch_end', 'instagram_link', 'whatsapp_number', 'greeting_text',
-            'design_color', 'logo', 'logo_url', 'slot_duration'
+            'design_color', 'logo', 'logo_url', 'slot_duration', 'latitude', 'longitude'
         ]
 
     def get_logo_url(self, obj):
