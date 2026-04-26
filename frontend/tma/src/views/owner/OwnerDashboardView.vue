@@ -314,7 +314,7 @@
            </div>
 
            <!-- Yandex Map Widget -->
-           <div class="map-widget mt-6">
+           <div class="map-widget" style="margin-top: 30px;">
               <div id="yandex-map" class="map-box"></div>
            </div>
          </div>
@@ -736,10 +736,19 @@ const submitExpCat = async () => {
     }
 }
 
-const fetchGeo = () => {
+const fetchGeo = async () => {
+    // Explicitly fetch fresh settings from server if none
+    if (!auth.organizationSettings?.id) {
+        await auth.fetchOrganizationSettings()
+    }
     const org = auth.organizationSettings || {}
     geoData.value.latitude = org.latitude || ''
     geoData.value.longitude = org.longitude || ''
+    
+    // If we already have a map, sync it immediately
+    if (ymap && geoData.value.latitude && geoData.value.longitude) {
+        updateMap()
+    }
 }
 
 const determineCoordinates = () => {
@@ -837,18 +846,18 @@ watch(() => [geoData.value.latitude, geoData.value.longitude], () => {
     }
 }, { deep: true })
 
-watch(() => route.query.tab, (newTab) => { 
+watch(() => route.query.tab, async (newTab) => { 
     if (newTab) activeTab.value = newTab 
     if (newTab === 'geolocation') {
-        fetchGeo()
+        await fetchGeo()
         loadYandexMaps()
     }
 })
-onMounted(() => {
+onMounted(async () => {
   if (route.query.tab) {
       activeTab.value = route.query.tab
       if (activeTab.value === 'geolocation') {
-          fetchGeo()
+          await fetchGeo()
           loadYandexMaps()
       }
   }
