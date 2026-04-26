@@ -91,10 +91,10 @@ const formatDate = (iso) => {
 
 const formatStatus = (s) => {
   const map = {
-    'pending': t('appointments.statuses.pending'),
-    'confirmed': t('appointments.statuses.confirmed'),
-    'cancelled': t('appointments.statuses.cancelled'),
-    'done': t('appointments.statuses.done')
+    'pending': t('appointments.status.pending'),
+    'confirmed': t('appointments.status.confirmed'),
+    'cancelled': t('appointments.status.cancelled'),
+    'done': t('appointments.status.done')
   }
   return map[s.toLowerCase()] || s
 }
