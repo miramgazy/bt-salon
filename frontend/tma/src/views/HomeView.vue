@@ -200,7 +200,7 @@
             </div>
             <div class="master-info">
               <div class="master-name">{{ m.first_name }} {{ m.last_name }} <span v-if="isSelf(m)" class="self-badge">({{ $t('tma.itIsYou') }})</span></div>
-              <div class="master-rating">★ 5.0 • {{ $t('tma.availableToday') }}</div>
+              <div class="master-status">{{ $t('tma.availableToday') }}</div>
             </div>
             <div class="flex items-center gap-2">
                 <button class="info-trigger" @click.stop="openProfile(m)">
@@ -306,7 +306,6 @@
                 <div class="profile-header-info">
                    <h2 class="profile-name header-font">{{ state.profileMaster.first_name }} {{ state.profileMaster.last_name }}</h2>
                    <div class="profile-badges">
-                      <span class="badge-gold">★ 5.0</span>
                       <span class="badge-outline">120+ {{ $t('owner.records') }}</span>
                    </div>
                 </div>
@@ -829,7 +828,7 @@ const handleConfirm = async () => {
 .master-photo { width: 60px; height: 60px; border-radius: 50%; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; font-size: 32px; flex-shrink: 0; border: 2px solid var(--border); overflow: hidden; }
 .master-photo img { width: 100%; height: 100%; object-fit: cover; }
 .master-name { font-size: 16px; font-weight: 600; color: var(--text); }
-.master-rating { font-size: 12px; color: var(--gold); font-weight: 700; }
+.master-status { font-size: 12px; color: var(--muted); font-weight: 600; }
 
 .master-card.is-self { 
   opacity: 0.7; cursor: default; background: var(--bg-secondary); border-style: dashed;
@@ -856,6 +855,7 @@ const handleConfirm = async () => {
   background: var(--bg); border-radius: 28px 28px 0 0; width: 100%; max-width: 450px;
   padding: 32px 20px 40px; border-top: 1px solid var(--border);
   box-shadow: 0 -10px 40px rgba(0,0,0,0.3);
+  max-height: 90vh; display: flex; flex-direction: column;
 }
 .modal-title { font-size: 24px; font-weight: 700; margin-bottom: 24px; text-align: center; font-family: var(--font-header); }
 .modal-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
@@ -901,8 +901,8 @@ const handleConfirm = async () => {
 
 .profile-photo-rect {
   width: 100%;
-  max-width: 280px;
-  height: 320px;
+  max-width: 240px;
+  height: 272px;
   margin: 0 auto;
   border-radius: 24px;
   overflow: hidden;
