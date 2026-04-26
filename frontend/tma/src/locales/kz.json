@@ -339,7 +339,9 @@
     "chooseTime": "Жазылу уақыты",
     "shiftNotStarted": "Ауысым әлі ашылмаған",
     "masterNotWorkingYet": "Шебер әлі жұмысқа кіріскен жоқ. Кейінірек көріңіз немесе басқа шеберді таңдаңыз.",
-    "confirmBooking": "Жазылу мәліметтері"
+    "confirmBooking": "Жазылу мәліметтері",
+    "masterProfile": "Шебер профилі",
+    "aboutMaster": "Шебер туралы"
   },
   "profile": {
     "title": "Профиль",

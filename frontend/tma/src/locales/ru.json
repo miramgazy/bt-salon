@@ -338,7 +338,9 @@
     "chooseTime": "Время записи",
     "shiftNotStarted": "Смена еще не открыта",
     "masterNotWorkingYet": "Мастер еще не начал работу. Пожалуйста, загляните позже или выберите другого мастера.",
-    "confirmBooking": "Детали записи"
+    "confirmBooking": "Детали записи",
+    "masterProfile": "Профиль мастера",
+    "aboutMaster": "Общее описание"
   },
   "profile": {
     "title": "Профиль",

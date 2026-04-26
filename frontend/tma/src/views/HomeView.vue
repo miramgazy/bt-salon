@@ -145,7 +145,12 @@
               <div class="master-name">{{ m.first_name }} {{ m.last_name }} <span v-if="isSelf(m)" class="self-badge">({{ $t('tma.itIsYou', 'Это вы') }})</span></div>
               <div class="master-rating">★ 5.0</div>
             </div>
-            <Icon v-if="!isSelf(m)" icon="mdi:chevron-right" width="24" :style="{ color: 'var(--muted)' }" />
+            <div class="flex items-center gap-2">
+                <button class="info-trigger" @click.stop="openProfile(m)">
+                    <Icon icon="mdi:information-outline" width="22" />
+                </button>
+                <Icon v-if="!isSelf(m)" icon="mdi:chevron-right" width="24" :style="{ color: 'var(--muted)' }" />
+            </div>
           </div>
         </div>
       </template>
@@ -193,11 +198,16 @@
                <img v-if="m.photo_url" :src="m.photo_url" />
                <span v-else>👤</span>
             </div>
-          <div class="master-info">
-            <div class="master-name">{{ m.first_name }} {{ m.last_name }} <span v-if="isSelf(m)" class="self-badge">({{ $t('tma.itIsYou') }})</span></div>
-            <div class="master-rating">★ 5.0 • {{ $t('tma.availableToday') }}</div>
-          </div>
-          <button v-if="!isSelf(m)" class="status-badge confirmed" style="border: none; cursor: pointer;">{{ $t('common.select') }}</button>
+            <div class="master-info">
+              <div class="master-name">{{ m.first_name }} {{ m.last_name }} <span v-if="isSelf(m)" class="self-badge">({{ $t('tma.itIsYou') }})</span></div>
+              <div class="master-rating">★ 5.0 • {{ $t('tma.availableToday') }}</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="info-trigger" @click.stop="openProfile(m)">
+                    <Icon icon="mdi:information-outline" width="22" />
+                </button>
+                <button v-if="!isSelf(m)" class="status-badge confirmed" style="border: none; cursor: pointer;">{{ $t('common.select') }}</button>
+            </div>
         </div>
       </div>
     </div>
@@ -275,6 +285,52 @@
          </button>
       </div>
     </div>
+    
+    <!-- ══ MASTER PROFILE MODAL ══ -->
+    <div v-if="state.showProfileModal && state.profileMaster" 
+         class="modal-overlay" @click.self="state.showProfileModal = false">
+       <div class="modal h-80vh">
+          <div class="modal-header-actions">
+            <div class="modal-title header-font">{{ $t('tma.masterProfile') }}</div>
+            <button class="close-modal-btn" @click="state.showProfileModal = false">
+                <Icon icon="mdi:close" width="24" />
+            </button>
+          </div>
+          
+          <div class="modal-scroll-content">
+             <div class="profile-hero">
+                <div class="profile-photo-large">
+                   <img v-if="state.profileMaster.photo_url" :src="state.profileMaster.photo_url" />
+                   <span v-else>👤</span>
+                </div>
+                <div class="profile-basic-info">
+                   <div class="profile-name header-font">{{ state.profileMaster.first_name }} {{ state.profileMaster.last_name }}</div>
+                   <div class="master-rating">★ 5.0 • 120+ записей</div>
+                </div>
+             </div>
+             
+             <div v-if="state.profileMaster.bio" class="profile-section">
+                <div class="section-label">{{ $t('tma.aboutMaster') }}</div>
+                <div class="profile-bio markdown-content" v-html="renderedBio"></div>
+             </div>
+             
+             <div class="profile-section">
+                <div class="section-label">{{ $t('services.title') }}</div>
+                <div class="profile-services-list">
+                   <div v-for="s_id in state.profileMaster.services" :key="s_id" class="mini-service-tag">
+                      {{ services.find(sx => sx.id === s_id)?.name || 'Услуга' }}
+                   </div>
+                </div>
+             </div>
+          </div>
+          
+          <div class="modal-footer">
+             <button class="btn-confirm" @click="selectFromProfile">
+               {{ $t('common.select') }}
+             </button>
+          </div>
+       </div>
+    </div>
 
   </div>
 </template>
@@ -313,7 +369,9 @@ const state = reactive({
   selectedSlot: null,
   masterFilter: null,
   showModal: false,
-  showSuccess: false
+  showSuccess: false,
+  showProfileModal: false,
+  profileMaster: null
 })
 
 const categories = ref([])
@@ -500,6 +558,36 @@ const fetchSlots = async () => {
     slotsLoading.value = false
   }
 }
+
+const openProfile = (m) => {
+  state.profileMaster = m
+  state.showProfileModal = true
+}
+
+const selectFromProfile = () => {
+    const m = state.profileMaster
+    state.showProfileModal = false
+    if (state.selectedService) {
+        handleMasterSelect(m)
+    } else {
+        handleMasterFirstSelect(m)
+    }
+}
+
+const renderedBio = computed(() => {
+  if (!state.profileMaster?.bio) return ''
+  let html = state.profileMaster.bio
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/^### (.+)$/gm, '<h3 style="font-size: 16px; font-weight: 700; margin: 12px 0 6px;">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 style="font-size: 18px; font-weight: 700; margin: 16px 0 8px;">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 style="font-size: 20px; font-weight: 700; margin: 16px 0 8px;">$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^- (.+)$/gm, '<li style="margin-left: 16px;">$1</li>')
+    .replace(/\n\n/g, '</p><p style="margin-bottom: 8px;">')
+    .replace(/\n/g, '<br/>')
+  return `<p>${html}</p>`
+})
 
 watch([() => state.selectedMaster, () => state.selectedService, () => state.selectedDate, () => state.page], () => {
     if (state.selectedMaster && ['slots'].includes(state.page)) {
@@ -784,4 +872,50 @@ const handleConfirm = async () => {
 .success-title { font-size: 28px; font-weight: 700; margin-bottom: 12px; color: var(--gold); font-family: var(--font-header); }
 .success-sub { font-size: 15px; color: var(--muted); line-height: 1.6; }
 
+/* Profile Modal Specifics */
+.info-trigger {
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  color: var(--gold); width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.info-trigger:active { background: var(--gold-glow); transform: scale(0.9); }
+
+.modal-header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.close-modal-btn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; }
+
+.modal-scroll-content { flex: 1; overflow-y: auto; padding-right: 4px; }
+.modal-scroll-content::-webkit-scrollbar { width: 4px; }
+.modal-scroll-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.profile-hero { text-align: center; margin-bottom: 24px; }
+.profile-photo-large {
+  width: 120px; height: 120px; border-radius: 50%;
+  margin: 0 auto 16px; border: 3px solid var(--gold);
+  padding: 4px; background: var(--bg-secondary);
+  overflow: hidden; display: flex; align-items: center; justify-content: center;
+}
+.profile-photo-large img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.profile-photo-large span { font-size: 64px; }
+
+.profile-name { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+
+.profile-section { margin-bottom: 24px; }
+.section-label { 
+  font-size: 11px; font-weight: 800; text-transform: uppercase; 
+  letter-spacing: 1px; color: var(--gold); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); opacity: 0.5; }
+
+.profile-bio { line-height: 1.6; color: var(--text); font-size: 15px; }
+
+.profile-services-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.mini-service-tag { 
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: 20px; font-size: 12px; color: var(--muted);
+  font-weight: 600;
+}
+
+.modal-footer { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border); }
 </style>
