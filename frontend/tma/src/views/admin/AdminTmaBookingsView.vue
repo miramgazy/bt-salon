@@ -38,11 +38,13 @@
 
           <!-- Filter Mode: Compact Controls -->
           <div v-else key="filters" class="active-filters-row">
-            <!-- Compact Date -->
-            <div :class="['compact-btn', { active: activeTab === 'custom' }]">
-              <Icon icon="mdi:calendar-edit" width="20" />
-              <input type="date" v-model="selectedDate" class="date-input-hidden" @change="activeTab = 'custom'" />
-            </div>
+            <!-- Status Filter Toggle -->
+            <button 
+              :class="['compact-btn', { active: activeFilterPanel === 'status' }]"
+              @click="toggleFilterPanel('status')"
+            >
+              <Icon icon="mdi:list-status" width="20" />
+            </button>
 
             <!-- Master/Service Filter Toggle -->
             <button 
@@ -70,6 +72,23 @@
           </div>
         </TransitionGroup>
       </div>
+
+        <!-- Status Filter Panel -->
+      <Transition name="panel-expand">
+        <div v-if="isFilterMode && activeFilterPanel === 'status'" class="expanded-panel">
+          <div class="category-scroll">
+            <button 
+              :class="['date-pill', { active: !filters.status }]" 
+              @click="filters.status = ''"
+            >{{ $t('tma.all') }}</button>
+            <button 
+              v-for="st in ['pending', 'confirmed', 'done', 'cancelled']" :key="st"
+              :class="['date-pill', { active: filters.status === st }]" 
+              @click="filters.status = st"
+            >{{ getStatusText(st) }}</button>
+          </div>
+        </div>
+      </Transition>
 
       <!-- Expandable Filter Panels -->
       <Transition name="panel-expand">
@@ -361,6 +380,7 @@ const mastersList = ref([])
 const isFilterMode = ref(false)
 const activeFilterPanel = ref(null) // 'master-service' or 'search'
 const filters = ref({
+    status: '',
     masterId: '',
     serviceId: '',
     searchQuery: ''
@@ -393,16 +413,19 @@ const toggleFilterPanel = (panel) => {
 }
 
 const resetFilters = () => {
-    filters.value = { masterId: '', serviceId: '', searchQuery: '' }
+    filters.value = { status: '', masterId: '', serviceId: '', searchQuery: '' }
 }
 
 const hasActiveFilters = computed(() => {
-    return filters.value.masterId || filters.value.serviceId || filters.value.searchQuery
+    return filters.value.status || filters.value.masterId || filters.value.serviceId || filters.value.searchQuery
 })
 
 const filteredAppointments = computed(() => {
     let result = appointments.value
     
+    if (filters.value.status) {
+        result = result.filter(a => a.status.toLowerCase() === filters.value.status.toLowerCase())
+    }
     if (filters.value.masterId) {
         result = result.filter(a => String(a.master) === String(filters.value.masterId) || a.master_detail?.id === filters.value.masterId)
     }
