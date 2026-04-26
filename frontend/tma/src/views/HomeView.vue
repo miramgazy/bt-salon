@@ -298,14 +298,17 @@
           </div>
           
           <div class="modal-scroll-content">
-             <div class="profile-hero">
-                <div class="profile-photo-large">
+             <div class="profile-hero-premium">
+                <div class="profile-photo-rect">
                    <img v-if="state.profileMaster.photo_url" :src="state.profileMaster.photo_url" />
-                   <span v-else>👤</span>
+                   <div v-else class="photo-placeholder">👤</div>
                 </div>
-                <div class="profile-basic-info">
-                   <div class="profile-name header-font">{{ state.profileMaster.first_name }} {{ state.profileMaster.last_name }}</div>
-                   <div class="master-rating">★ 5.0 • 120+ записей</div>
+                <div class="profile-header-info">
+                   <h2 class="profile-name header-font">{{ state.profileMaster.first_name }} {{ state.profileMaster.last_name }}</h2>
+                   <div class="profile-badges">
+                      <span class="badge-gold">★ 5.0</span>
+                      <span class="badge-outline">120+ {{ $t('owner.records') }}</span>
+                   </div>
                 </div>
              </div>
              
@@ -887,6 +890,69 @@ const handleConfirm = async () => {
 .modal-scroll-content { flex: 1; overflow-y: auto; padding-right: 4px; }
 .modal-scroll-content::-webkit-scrollbar { width: 4px; }
 .modal-scroll-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* Premium Profile Styles */
+.profile-hero-premium {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.profile-photo-rect {
+  width: 100%;
+  max-width: 280px;
+  height: 320px;
+  margin: 0 auto;
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-photo-rect img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-placeholder {
+  font-size: 80px;
+  opacity: 0.5;
+}
+
+.profile-header-info {
+  text-align: center;
+}
+
+.profile-badges {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.badge-gold {
+  background: var(--gold-gradient);
+  color: #000;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.badge-outline {
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
 
 .profile-hero { text-align: center; margin-bottom: 24px; }
 .profile-photo-large {
