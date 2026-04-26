@@ -2,9 +2,23 @@ from rest_framework import serializers
 from .models import Organization
 
 class OrganizationSerializer(serializers.ModelSerializer):
+    logo_url = serializers.SerializerMethodField()
+    
     class Meta:
         model = Organization
-        fields = '__all__'
+        fields = [
+            'id', 'name', 'address', 'work_start', 'work_end', 'lunch_start',
+            'lunch_end', 'instagram_link', 'whatsapp_number', 'greeting_text',
+            'design_color', 'logo', 'logo_url', 'slot_duration'
+        ]
+
+    def get_logo_url(self, obj):
+        if obj.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo.url)
+            return obj.logo.url
+        return None
 
 from apps.accounts.models import User
 from apps.masters.models import Master

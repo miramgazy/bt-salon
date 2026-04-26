@@ -170,7 +170,7 @@ class MasterViewSet(viewsets.ModelViewSet):
         
         masters = [s.master for s in shifts]
         from .serializers import MasterSerializer
-        return Response(MasterSerializer(masters, many=True).data)
+        return Response(MasterSerializer(masters, many=True, context={'request': request}).data)
 
 class MasterShiftViewSet(viewsets.ModelViewSet):
     queryset = MasterShift.objects.all()

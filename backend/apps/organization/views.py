@@ -12,7 +12,7 @@ class OrganizationView(views.APIView):
         org = request.user.organization
         if not org:
             return Response({'error': 'Organization not found for current user'}, status=status.HTTP_404_NOT_FOUND)
-        return Response(OrganizationSerializer(org).data)
+        return Response(OrganizationSerializer(org, context={'request': request}).data)
 
     def put(self, request):
         org = request.user.organization
