@@ -127,6 +127,7 @@ const exitApp = () => {
 .main-content {
   flex: 1;
   overflow-y: auto;
+  padding-bottom: calc(85px + env(safe-area-inset-bottom));
 }
 
 .bottom-nav {

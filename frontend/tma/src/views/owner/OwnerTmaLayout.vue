@@ -174,7 +174,7 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: 80px;
+  padding-bottom: calc(140px + env(safe-area-inset-bottom));
 }
 
 /* Bottom Nav Logic */
