@@ -285,7 +285,7 @@
               </div>
               <div>
                  <h3 class="geo-title">{{ $t('owner.geolocation') }}</h3>
-                 <p class="text-hint">{{ $t('owner.logSpent') }}</p>
+                 <p class="text-hint">{{ $t('owner.geoHint') }}</p>
               </div>
            </div>
  
@@ -311,6 +311,11 @@
                 <div v-else class="spinner-xs"></div>
                 <span>{{ savingGeo ? $t('common.saving') : $t('owner.saveCoords') }}</span>
              </button>
+           </div>
+
+           <!-- Yandex Map Widget -->
+           <div class="map-widget mt-6">
+              <div id="yandex-map" class="map-box"></div>
            </div>
          </div>
  
@@ -770,14 +775,82 @@ const saveGeo = async () => {
     }
 }
 
+// Yandex Maps Logic
+let ymap = null
+let ymarker = null
+
+const initMap = () => {
+    if (ymap || !window.ymaps) return
+    
+    // eslint-disable-next-line no-undef
+    ymaps.ready(() => {
+        const lat = parseFloat(geoData.value.latitude) || 50.2839
+        const lon = parseFloat(geoData.value.longitude) || 57.1669
+        
+        const mapContainer = document.getElementById('yandex-map')
+        if (!mapContainer) return
+
+        // eslint-disable-next-line no-undef
+        ymap = new ymaps.Map('yandex-map', {
+            center: [lat, lon],
+            zoom: 15,
+            controls: ['zoomControl']
+        })
+        
+        // eslint-disable-next-line no-undef
+        ymarker = new ymaps.Placemark([lat, lon], {}, {
+            preset: 'islands#redDotIcon'
+        })
+        
+        ymap.geoObjects.add(ymarker)
+    })
+}
+
+const updateMap = () => {
+    if (!ymap) {
+        initMap()
+        return
+    }
+    const lat = parseFloat(geoData.value.latitude) || 50.2839
+    const lon = parseFloat(geoData.value.longitude) || 57.1669
+    
+    ymap.setCenter([lat, lon], 15, { duration: 300 })
+    ymarker.geometry.setCoordinates([lat, lon])
+}
+
+const loadYandexMaps = () => {
+    if (window.ymaps) {
+        initMap()
+        return
+    }
+    const script = document.createElement('script')
+    script.src = 'https://api-maps.yandex.ru/2.1/?lang=ru_RU'
+    script.onload = () => {
+        initMap()
+    }
+    document.head.appendChild(script)
+}
+
+watch(() => [geoData.value.latitude, geoData.value.longitude], () => {
+    if (activeTab.value === 'geolocation') {
+        updateMap()
+    }
+}, { deep: true })
+
 watch(() => route.query.tab, (newTab) => { 
     if (newTab) activeTab.value = newTab 
-    if (newTab === 'geolocation') fetchGeo()
+    if (newTab === 'geolocation') {
+        fetchGeo()
+        loadYandexMaps()
+    }
 })
 onMounted(() => {
   if (route.query.tab) {
       activeTab.value = route.query.tab
-      if (activeTab.value === 'geolocation') fetchGeo()
+      if (activeTab.value === 'geolocation') {
+          fetchGeo()
+          loadYandexMaps()
+      }
   }
   fetchData()
 })
@@ -980,6 +1053,15 @@ onMounted(() => {
   font-weight: 600;
   box-shadow: 0 4px 15px rgba(34, 160, 96, 0.4);
   z-index: 2000;
+}
+
+.map-box {
+    width: 100%;
+    height: 300px;
+    border-radius: 16px;
+    background: var(--tg-theme-secondary-bg-color);
+    border: 1px solid var(--border);
+    overflow: hidden;
 }
 .bar-micro { height: 6px; background: var(--tg-theme-secondary-bg-color); border-radius: 3px; }
 .bar-fill { height: 100%; background: var(--gold); border-radius: 3px; transition: width 0.8s ease; }
