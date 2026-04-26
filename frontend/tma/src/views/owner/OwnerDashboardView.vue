@@ -770,7 +770,7 @@ const determineCoordinates = () => {
 const saveGeo = async () => {
     savingGeo.value = true
     try {
-        await api.put('/organization/settings/', {
+        await api.put('/organization/', {
             latitude: geoData.value.latitude,
             longitude: geoData.value.longitude
         })

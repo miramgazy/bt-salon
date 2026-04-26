@@ -130,7 +130,7 @@ export const useAuthStore = defineStore('auth', {
 
     async fetchOrganizationSettings() {
       try {
-        const response = await api.get('/organization/settings/')
+        const response = await api.get('/organization/')
         this.organizationSettings = response.data
         localStorage.setItem('tma_org_settings', JSON.stringify(response.data))
         return response.data
