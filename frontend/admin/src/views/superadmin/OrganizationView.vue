@@ -407,9 +407,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import api from '../../api'
 import { Icon } from '@iconify/vue'
+
+const DEFAULT_TEMPLATE_RU = "Привет, {User_name}! Напоминаем о вашей записи в {Organization_name} в {Start_time}.\n\nУслуга: {Service_name}\nМастер: {Master_name}\n\nВы придете?"
+const DEFAULT_TEMPLATE_KZ = "Сәлем, {User_name}! {Organization_name} салонындағы сағат {Start_time}-дегі жазбаңызды еске саламыз.\n\nҚызмет: {Service_name}\nШебер: {Master_name}\n\nКелесіз бе?"
 
 const loading = ref(true)
 const saving = ref(false)
@@ -437,6 +440,17 @@ const org = ref({
   reminder_template_ru: '',
   reminder_template_kz: '',
   slot_duration: 30
+})
+
+watch(() => org.value.is_reminders_enabled, (newVal) => {
+  if (newVal) {
+    if (!org.value.reminder_template_ru) {
+      org.value.reminder_template_ru = DEFAULT_TEMPLATE_RU
+    }
+    if (!org.value.reminder_template_kz) {
+      org.value.reminder_template_kz = DEFAULT_TEMPLATE_KZ
+    }
+  }
 })
 
 const logoFile = ref(null)
