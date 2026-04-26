@@ -199,10 +199,10 @@
       "profit": "Прибыль"
     },
     "periods": {
-       "thisMonth": "Текущий месяц",
-       "lastMonth": "Прошлый месяц",
-       "thisWeek": "Текущая неделя",
-       "custom": "Произвольный"
+      "thisMonth": "Текущий месяц",
+      "lastMonth": "Прошлый месяц",
+      "thisWeek": "Текущая неделя",
+      "custom": "Произвольный"
     }
   },
   "admin": {
@@ -241,7 +241,7 @@
     "firstName": "Имя",
     "lastName": "Фамилия",
     "phone": "Телефон",
-    "telegramId": "Telegram ID (необязательно)",
+    "telegramId": "Telegram ID",
     "telegramIdHint": "Введите ID, данные клиента загрузятся автоматически",
     "telegramIdPlaceholder": "Например: 12345678",
     "masterServices": "Услуги мастера",

@@ -199,10 +199,10 @@
       "profit": "Пайда"
     },
     "periods": {
-       "thisMonth": "Осы ай",
-       "lastMonth": "Өткен ай",
-       "thisWeek": "Осы апта",
-       "custom": "Басқа кезең"
+      "thisMonth": "Осы ай",
+      "lastMonth": "Өткен ай",
+      "thisWeek": "Осы апта",
+      "custom": "Басқа кезең"
     }
   },
   "admin": {
@@ -241,7 +241,7 @@
     "firstName": "Есімі",
     "lastName": "Тегі",
     "phone": "Телефон",
-    "telegramId": "Telegram ID (міндетті емес)",
+    "telegramId": "Telegram ID",
     "telegramIdHint": "ID енгізіңіз, клиент деректері автоматты түрде жүктеледі",
     "telegramIdPlaceholder": "Мысалы: 12345678",
     "masterServices": "Шебер қызметтері",
