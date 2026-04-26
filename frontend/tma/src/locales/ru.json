@@ -20,7 +20,9 @@
     "today": "Сегодня",
     "week": "Неделя",
     "month": "Месяц",
-    "organization": "Салон"
+    "organization": "Салон",
+    "cancel": "Отмена",
+    "select": "Выбрать"
   },
   "language": {
     "kz": "Қазақша",
@@ -283,6 +285,7 @@
     "bookingSuccess": "Запись успешно создана!",
     "noMastersWorking": "На выбранную дату нет мастеров с открытой сменой! Сначала откройте смену в разделе 'Сотрудники'.",
     "confirmTransfer": "Подтверждение изменений",
+    "serviceDetails": "Детали услуги",
     "confirmTransferText": "Вы уверены, что хотите перенести запись на {time}?",
     "confirmTransferBtn": "Подтвердить перенос",
     "status": {
@@ -298,7 +301,7 @@
     "title": "Мои записи",
     "empty": "У вас пока нет активных записей",
     "book": "Записаться",
-    "statuses": {
+    "status": {
       "pending": "Ожидает",
       "confirmed": "Подтверждена",
       "cancelled": "Отменена",

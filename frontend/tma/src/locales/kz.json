@@ -20,7 +20,9 @@
     "today": "Бүгін",
     "week": "Апта",
     "month": "Ай",
-    "organization": "Салон"
+    "organization": "Салон",
+    "cancel": "Бас тарту",
+    "select": "Таңдау"
   },
   "language": {
     "kz": "Қазақша",
@@ -283,6 +285,7 @@
     "noMastersWorking": "Таңдалған күнге ауысымы ашық шеберлер жоқ! Алдымен 'Қызметкерлер' бөлімінде ауысымды ашыңыз.",
     "createBooking": "Жазба жасау",
     "confirmTransfer": "Өзгерісті растау",
+    "serviceDetails": "Қызмет мәліметтері",
     "confirmTransferText": "Жазбаны {time} уақытына ауыстыруға сенімдісіз бе?",
     "confirmTransferBtn": "Ауыстыруды растау",
     "transferSuccess": "Жазба сәтті ауыстырылды!",
@@ -299,7 +302,7 @@
     "title": "Менің жазбаларым",
     "empty": "Сізде әзірге белсенді жазбалар жоқ",
     "book": "Жазылу",
-    "statuses": {
+    "status": {
       "pending": "Күтілуде",
       "confirmed": "Расталды",
       "cancelled": "Бас тартылды",

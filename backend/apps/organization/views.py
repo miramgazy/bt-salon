@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from .models import Organization
 from .serializers import OrganizationSerializer
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action
 
 class OrganizationView(views.APIView):
     permission_classes = [IsAuthenticated]
@@ -157,9 +158,38 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 master.color = color
                 master.save()
 
-    from rest_framework.decorators import action
-    from rest_framework.response import Response
-    from rest_framework import status
+    @action(detail=False, methods=['get'])
+    def lookup(self, request):
+        telegram_id = request.query_params.get('telegram_id')
+        phone = request.query_params.get('phone')
+        
+        if not telegram_id and not phone:
+            return Response({'error': 'Telegram ID or Phone is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        org = request.user.organization
+        if not org:
+            return Response({'error': 'No organization'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        user = None
+        if telegram_id:
+            user = User.objects.filter(organization=org, telegram_id=telegram_id).first()
+        
+        if not user and phone:
+            clean_phone = ''.join(filter(str.isdigit, phone))
+            if clean_phone:
+                user = User.objects.filter(organization=org, phone__icontains=clean_phone).first()
+                
+        if user:
+            return Response({
+                'id': user.id,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'phone': user.phone,
+                'telegram_id': user.telegram_id,
+                'role': user.role
+            })
+            
+        return Response({'status': 'not_found'}, status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, methods=['post'], url_path='upload-photo')
     def upload_photo(self, request, pk=None):

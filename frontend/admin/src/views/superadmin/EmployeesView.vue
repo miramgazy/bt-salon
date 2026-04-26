@@ -264,7 +264,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive, computed } from 'vue'
+import { ref, onMounted, reactive, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import api from '../../api'
 
@@ -291,6 +291,27 @@ const form = reactive({
     bio: '',
     services: [],
     existing_photo_url: null
+})
+
+let lookupTimeout = null
+watch(() => form.telegram_id, (newID) => {
+    if (isEditing.value || !newID || newID.toString().length < 5) return
+    
+    if (lookupTimeout) clearTimeout(lookupTimeout)
+    lookupTimeout = setTimeout(async () => {
+        try {
+            const res = await api.get('/api/organization/employees/lookup/', {
+                params: { telegram_id: newID }
+            })
+            if (res.data) {
+                if (res.data.first_name) form.first_name = res.data.first_name
+                if (res.data.last_name) form.last_name = res.data.last_name
+                if (res.data.phone) form.phone = res.data.phone
+            }
+        } catch (e) {
+            console.log('User lookup: not found or error')
+        }
+    }, 800)
 })
 
 // Simple markdown renderer (no external deps)

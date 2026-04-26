@@ -127,7 +127,24 @@
           <p class="text-sm font-medium">{{ $t('admin.masterRole') }}: <b>{{ activeMaster?.first_name }}</b></p>
           <div>
             <label class="form-label">{{ $t('shift.date') }} <span class="text-error">*</span></label>
-            <input v-model="shiftForm.date" type="date" class="form-input" required />
+            <div class="date-selector mb-4">
+                <button 
+                   type="button"
+                   :class="['date-pill', { active: isToday(shiftForm.date) }]" 
+                   @click="shiftForm.date = getLocalDateStr()"
+                >{{ $t('master.today') }}</button>
+                <button 
+                   type="button"
+                   :class="['date-pill', { active: isTomorrow(shiftForm.date) }]" 
+                   @click="shiftForm.date = getLocalDateStrTomorrow()"
+                >{{ $t('master.tomorrow') }}</button>
+                <div class="custom-date-wrapper">
+                   <button type="button" :class="['date-pill', { active: isCustomDate(shiftForm.date) }]">
+                       {{ isCustomDate(shiftForm.date) ? formatDateShort(shiftForm.date) : $t('master.selectDate') }}
+                   </button>
+                   <input type="date" class="date-input-hidden" v-model="shiftForm.date" />
+                </div>
+            </div>
           </div>
           
            <button type="submit" class="btn-sheet mt-2" :disabled="creatingShift">
@@ -250,7 +267,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'
@@ -263,6 +280,13 @@ const loading = ref(false)
 const getLocalDateStr = () => {
     const tzOffset = new Date().getTimezoneOffset()
     return new Date(new Date().getTime() - (tzOffset * 60 * 1000)).toISOString().split('T')[0]
+}
+
+const getLocalDateStrTomorrow = () => {
+    const tom = new Date()
+    const tzOffset = tom.getTimezoneOffset()
+    tom.setDate(tom.getDate() + 1)
+    return new Date(tom.getTime() - (tzOffset * 60 * 1000)).toISOString().split('T')[0]
 }
 
 const isToday = (d) => d === getLocalDateStr()
@@ -321,6 +345,27 @@ const form = ref({
     telegram_id: null,
     services: [],
     role: 'master'
+})
+
+let lookupTimeout = null
+watch(() => form.value.telegram_id, (newID) => {
+    if (isEditing.value || !newID || newID.toString().length < 5) return
+    
+    if (lookupTimeout) clearTimeout(lookupTimeout)
+    lookupTimeout = setTimeout(async () => {
+        try {
+            const res = await api.get('/organization/employees/lookup/', {
+                params: { telegram_id: newID }
+            })
+            if (res.data) {
+                if (res.data.first_name) form.value.first_name = res.data.first_name
+                if (res.data.last_name) form.value.last_name = res.data.last_name
+                if (res.data.phone) form.value.phone = res.data.phone
+            }
+        } catch (e) {
+            console.log('User lookup: not found or error')
+        }
+    }, 800)
 })
 
 const setBookingDate = (type) => {
@@ -497,6 +542,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
+* { box-sizing: border-box; }
+
 .admin-masters {
   padding: 20px 16px 100px;
 }

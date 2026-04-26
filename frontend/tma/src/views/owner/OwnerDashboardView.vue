@@ -688,6 +688,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
+* { box-sizing: border-box; }
+
 /* Fixed Period Bar Styles */
 .fixed-period-bar {
   position: fixed;
@@ -742,9 +744,16 @@ onMounted(() => {
   color: var(--tg-theme-text-color);
   font-family: inherit;
   overflow-x: hidden;
+  max-width: 100vw;
   box-sizing: border-box;
 }
-.main-content { padding: 16px; width: 100%; box-sizing: border-box; overflow-x: hidden; }
+.main-content { 
+  padding: 16px; 
+  width: 100%; 
+  box-sizing: border-box; 
+  overflow-x: hidden; 
+  max-width: 100vw;
+}
 .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; width: 100%; box-sizing: border-box; }
 .kpi-grid > * { min-width: 0; } /* Crucial to prevent grid items from expanding from content */
 .kpi { background: var(--tg-theme-bg-color); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
@@ -838,6 +847,8 @@ onMounted(() => {
 .sheet {
   background: var(--tg-theme-bg-color); width: 100%; border-radius: 24px 24px 0 0; padding: 24px;
   box-shadow: 0 -10px 40px rgba(0,0,0,0.2); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  max-width: 100vw;
 }
 .h-80vh { max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
