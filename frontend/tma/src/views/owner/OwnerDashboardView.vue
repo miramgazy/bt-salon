@@ -343,7 +343,7 @@
            <Icon icon="mdi:close" width="24" @click="showExpenseModal = false" class="cursor-pointer" />
         </div>
 
-        <form @submit.prevent="submitExpense" class="mt-4 flex flex-col gap-4 overflow-y-auto pb-10">
+        <form @submit.prevent="submitExpense" class="mt-4 flex flex-col gap-4 overflow-y-auto overflow-x-hidden pb-10">
           <div>
             <label class="form-label">{{ $t('owner.whatBought') }} <span class="text-error">*</span></label>
             <input v-model="expForm.name" type="text" class="form-input" required :placeholder="$t('owner.rentMayExample')" />
@@ -1118,13 +1118,15 @@ onMounted(async () => {
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
   display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px);
+  overflow-x: hidden;
 }
 .sheet {
-  background: var(--tg-theme-bg-color); width: 100%; border-radius: 24px 24px 0 0; padding: 24px;
+  background: var(--tg-theme-bg-color); width: 100%; border-radius: 24px 24px 0 0; padding: 20px;
   box-shadow: 0 -10px 40px rgba(0,0,0,0.2); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   box-sizing: border-box;
   max-width: 100vw;
   overflow-x: hidden;
+  position: relative;
 }
 .h-80vh { max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
