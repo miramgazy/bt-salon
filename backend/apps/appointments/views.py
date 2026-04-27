@@ -6,6 +6,7 @@ from .serializers import AppointmentSerializer
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from apps.accounts.models import User
+from django.db import models
 
 class AppointmentViewSet(viewsets.ModelViewSet):
     queryset = Appointment.objects.all()
@@ -52,22 +53,29 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         org = user.organization
         
         client = None
-        # Handle Admin creating appointment
-        if hasattr(user, 'role') and user.role == User.ROLE_ADMIN:
+        # Handle non-client roles (Admin, Owner, Master) creating appointment for a client
+        if hasattr(user, 'role') and user.role != User.ROLE_CLIENT:
             # Check if there's an offline client data provided via context or frontend
             client_id = self.request.data.get('client_id')
             client_name = self.request.data.get('client_name')
             client_phone = self.request.data.get('client_phone')
-            
+
             if client_id:
                 client = Client.objects.filter(id=client_id, organization=org).first()
             elif client_phone:
-                client = Client.objects.filter(phone=client_phone, organization=org).first()
+                # Clean phone number for consistent lookup
+                clean_phone = ''.join(filter(str.isdigit, str(client_phone)))
+                
+                # Try to find by cleaned phone OR original phone
+                client = Client.objects.filter(organization=org).filter(
+                    models.Q(phone=client_phone) | models.Q(phone=clean_phone)
+                ).first()
+                
                 if not client:
                     client = Client.objects.create(
                         organization=org,
                         full_name=client_name or client_phone,
-                        phone=client_phone
+                        phone=clean_phone or client_phone
                     )
                 elif client_name:
                     # Update name if provided explicitly by admin
@@ -76,6 +84,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             else:
                 from rest_framework.exceptions import ValidationError
                 raise ValidationError({'client_phone': 'Phone number is required for offline clients.'})
+        
         else:
             # 1. Get or create Client profile for the regular user
             client, _ = Client.objects.get_or_create(
@@ -111,7 +120,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             organization=org,
             client=client,
             shift=shift,
-            created_by_admin=(user.role == User.ROLE_ADMIN)
+            created_by_admin=(user.role != User.ROLE_CLIENT)
         )
 
     def perform_update(self, serializer):
