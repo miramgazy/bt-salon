@@ -134,6 +134,8 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 role=role,
                 username=username
             )
+            user.set_unusable_password()
+            user.save()
 
         if role == User.ROLE_MASTER:
             # Ensure master profile exists

@@ -867,6 +867,7 @@ onMounted(async () => {
 
 <style scoped>
 * { box-sizing: border-box; }
+.owner-dashboard { overflow-x: hidden; width: 100%; position: relative; }
 
 /* Fixed Period Bar Styles */
 .fixed-period-bar {
@@ -1123,6 +1124,7 @@ onMounted(async () => {
   box-shadow: 0 -10px 40px rgba(0,0,0,0.2); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   box-sizing: border-box;
   max-width: 100vw;
+  overflow-x: hidden;
 }
 .h-80vh { max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }

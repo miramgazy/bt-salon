@@ -303,6 +303,7 @@
       "done": "Завершено",
       "cancelled": "Отменено"
     },
+    "date": "Дата",
     "searchPlaceholder": "Имя или телефон клиента...",
     "noMastersForService": "На выбранную услугу нет доступных мастеров."
   },
@@ -349,6 +350,9 @@
     "confirmBooking": "Детали записи",
     "masterProfile": "Профиль мастера",
     "aboutMaster": "О мастере"
+  },
+  "shift": {
+    "date": "Дата смены"
   },
   "profile": {
     "title": "Профиль",

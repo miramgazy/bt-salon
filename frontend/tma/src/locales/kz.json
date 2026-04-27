@@ -304,6 +304,7 @@
       "done": "Аяқталды",
       "cancelled": "Бас тартылды"
     },
+    "date": "Күні",
     "searchPlaceholder": "Клиенттің аты немесе телефоны...",
     "noMastersForService": "Таңдалған қызметке қолжетімді шеберлер жоқ."
   },
@@ -350,6 +351,9 @@
     "confirmBooking": "Жазылу мәліметтері",
     "masterProfile": "Шебер профилі",
     "aboutMaster": "Шебер туралы"
+  },
+  "shift": {
+    "date": "Ауысым күні"
   },
   "profile": {
     "title": "Профиль",

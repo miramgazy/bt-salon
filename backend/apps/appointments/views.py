@@ -69,6 +69,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                         full_name=client_name or client_phone,
                         phone=client_phone
                     )
+                elif client_name:
+                    # Update name if provided explicitly by admin
+                    client.full_name = client_name
+                    client.save()
             else:
                 from rest_framework.exceptions import ValidationError
                 raise ValidationError({'client_phone': 'Phone number is required for offline clients.'})

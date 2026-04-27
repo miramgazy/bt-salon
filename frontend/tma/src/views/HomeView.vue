@@ -221,10 +221,15 @@
         <div class="page-title header-font">{{ $t('tma.chooseTime') }}</div>
       </div>
 
-      <div class="page-header" style="margin-bottom: 24px;">
-        <div class="date-chip" :class="{ active: state.selectedDate === todayStr }" @click="state.selectedDate = todayStr">{{ $t('tma.today') }}</div>
-        <div class="date-chip" :class="{ active: state.selectedDate === tomorrowStr }" @click="state.selectedDate = tomorrowStr">{{ $t('tma.tomorrow') }}</div>
-        <input type="date" class="date-input" v-model="state.selectedDate" :min="todayStr" />
+      <div class="page-header" style="margin-bottom: 24px; gap: 8px; overflow-x: auto; padding-bottom: 4px;">
+        <div class="date-pill" :class="{ active: state.selectedDate === todayStr }" @click="state.selectedDate = todayStr">{{ $t('tma.today') }}</div>
+        <div class="date-pill" :class="{ active: state.selectedDate === tomorrowStr }" @click="state.selectedDate = tomorrowStr">{{ $t('tma.tomorrow') }}</div>
+        <div class="custom-date-wrapper">
+           <div :class="['date-pill', { active: state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr }]">
+              {{ (state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr) ? formatDateShort(state.selectedDate) : $t('master.date') }}
+           </div>
+           <input type="date" class="date-input-hidden" v-model="state.selectedDate" :min="todayStr" />
+        </div>
       </div>
 
       <div v-if="slotsLoading" style="text-align:center; padding: 40px;">
@@ -685,9 +690,9 @@ const handleConfirm = async () => {
 
 .date-pill {
   white-space: nowrap;
-  padding: 6px 12px;
-  border-radius: 12px;
-  background: var(--tg-bg);
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: var(--bg-secondary, var(--card-bg));
   border: 1px solid var(--border);
   color: var(--muted);
   font-size: 13px;
@@ -696,9 +701,10 @@ const handleConfirm = async () => {
   transition: all 0.2s;
 }
 .date-pill.active {
-  background: var(--gold);
+  background: var(--gold-gradient);
   color: #000;
   border-color: var(--gold);
+  box-shadow: 0 4px 10px var(--gold-glow);
 }
 
 .active-filters-row {
