@@ -257,8 +257,15 @@
                      <label class="form-label">{{ $t('admin.clientPhone') }} *</label>
                      <input v-model="bookingForm.client_phone" type="text" class="form-input" required placeholder="+7 (___) ___-__-__" />
                   </div>
-                  <div class="p-3 bg-secondary rounded-xl text-sm mb-2 opacity-80">
-                     <div><b>{{ $t('common.time') }}:</b> {{ formatDateShort(bookingDate) }}, {{ bookingForm.time }}</div>
+                  <div class="summary-card">
+                     <div class="summary-item">
+                        <span class="summary-label">{{ $t('common.service') }}</span>
+                        <span class="summary-value">{{ selectedService?.name }} ({{ selectedService?.duration_minutes }} {{ $t('common.min') }})</span>
+                     </div>
+                     <div class="summary-item">
+                        <span class="summary-label">{{ $t('common.time') }}</span>
+                        <span class="summary-value">{{ formatDateShort(bookingDate) }}, {{ bookingForm.time }}</span>
+                     </div>
                   </div>
                   <button type="submit" class="btn-sheet mt-2" :disabled="bookingLoading">
                      {{ bookingLoading ? $t('common.saving') : $t('admin.createBooking') }}
@@ -709,4 +716,31 @@ onMounted(() => {
 .slots-grid::-webkit-scrollbar { width: 4px; }
 .slots-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 .btn-sheet-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); margin-top: 8px; }
+.opacity-80 { opacity: 0.8; }
+
+.summary-card {
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.summary-label {
+  font-size: 13px;
+  color: var(--muted, #888);
+  font-weight: 500;
+}
+.summary-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
 </style>

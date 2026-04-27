@@ -265,12 +265,12 @@
                  <div v-for="srv in filteredServicesList" :key="srv.id" 
                       class="service-card"
                       :class="{ selected: form.service_id === srv.id }"
-                      @click="form.service_id = srv.id; currentServiceDuration = srv.duration; creationStep = 2">
+                      @click="form.service_id = srv.id; currentServiceDuration = srv.duration_minutes; currentServiceName = srv.name; creationStep = 2">
                     <div>
-                        <div class="font-medium">{{ srv.name }}</div>
-                        <div class="text-xs text-muted">{{ srv.duration }} {{ $t('common.min') }}</div>
+                        <div class="font-bold text-base">{{ srv.name }}</div>
+                        <div class="text-sm text-muted">{{ srv.duration_minutes }} {{ $t('common.min') }}</div>
                     </div>
-                    <div class="font-bold text-gold">{{ srv.price }} ₸</div>
+                    <div class="font-bold text-gold text-lg">{{ srv.total_price }} ₸</div>
                  </div>
              </div>
           </div>
@@ -330,10 +330,16 @@
                     <label class="form-label">{{ $t('admin.clientNotes') }}</label>
                     <textarea v-model="form.notes" class="form-input" rows="2"></textarea>
                  </div>
-                 <div class="p-3 bg-secondary rounded-xl text-sm mb-2 opacity-80">
-                    <div><b>{{ $t('common.service') }}:</b> {{ currentServiceDuration }} {{ $t('common.min') }}</div>
-                    <div><b>{{ $t('common.time') }}:</b> {{ formatDateShort(selectedDate) }}, {{ form.time }}</div>
-                 </div>
+                  <div class="summary-card">
+                     <div class="summary-item">
+                        <span class="summary-label">{{ $t('common.service') }}</span>
+                        <span class="summary-value">{{ currentServiceName }} ({{ currentServiceDuration }} {{ $t('common.min') }})</span>
+                     </div>
+                     <div class="summary-item">
+                        <span class="summary-label">{{ $t('common.time') }}</span>
+                        <span class="summary-value">{{ formatDateShort(selectedDate) }}, {{ form.time }}</span>
+                     </div>
+                  </div>
                  <button type="submit" class="btn-sheet mt-2" :disabled="creating">
                     {{ creating ? $t('admin.creating') : $t('admin.createBtn') }}
                  </button>
@@ -374,6 +380,7 @@ const selectedCategory = ref('all')
 const slots = ref([])
 const slotsLoading = ref(false)
 const currentServiceDuration = ref(0)
+const currentServiceName = ref('')
 const mastersList = ref([])
 
 // Filters states
@@ -1021,7 +1028,7 @@ onMounted(() => {
     background: var(--border);
     border-radius: 4px;
 }
-</style>
+
 .edit-apt-btn {
     background: var(--bg);
     border: 1px solid var(--border);
@@ -1059,3 +1066,32 @@ onMounted(() => {
 
 .flex-col { flex-direction: column; }
 .items-end { align-items: flex-end; }
+.flex-shrink-0 { flex-shrink: 0; }
+.opacity-80 { opacity: 0.8; }
+
+.summary-card {
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.summary-label {
+  font-size: 13px;
+  color: var(--muted, #888);
+  font-weight: 500;
+}
+.summary-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+</style>
