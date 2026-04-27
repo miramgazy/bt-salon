@@ -8,8 +8,11 @@ class OrganizationSerializer(serializers.ModelSerializer):
         model = Organization
         fields = [
             'id', 'name', 'address', 'work_start', 'work_end', 'lunch_start',
-            'lunch_end', 'instagram_link', 'whatsapp_number', 'greeting_text',
-            'design_color', 'logo', 'logo_url', 'slot_duration', 'latitude', 'longitude'
+            'lunch_end', 'bot_token', 'bot_username', 'tma_name', 
+            'instagram_link', 'whatsapp_number', 'greeting_text',
+            'design_color', 'logo', 'logo_url', 'slot_duration', 
+            'latitude', 'longitude', 'is_reminders_enabled', 
+            'reminder_hours_before', 'reminder_template_ru', 'reminder_template_kz'
         ]
 
     def get_logo_url(self, obj):
