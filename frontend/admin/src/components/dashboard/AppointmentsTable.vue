@@ -31,7 +31,10 @@
             v-for="appt in data" 
             :key="appt.id" 
             class="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4/10"
-            :class="{ 'opacity-50 !bg-gray-50 dark:!bg-meta-4/20': appt.status === 'cancelled' }"
+            :class="{ 
+              'opacity-50 !bg-gray-50 dark:!bg-meta-4/20': appt.status === 'cancelled',
+              'bg-primary/[0.03] dark:bg-primary/[0.05]': appt.appointment_type !== 'single'
+            }"
           >
             <td class="py-4 px-4 pl-9 xl:pl-11">
               <p class="text-sm font-medium text-black dark:text-white">{{ formatDate(appt.datetime) }}</p>
@@ -44,9 +47,23 @@
               <p class="text-sm text-black dark:text-white">{{ appt.master_name }}</p>
             </td>
             <td class="py-4 px-4">
-              <p class="text-xs text-black dark:text-white truncate max-w-[150px]" :title="appt.services.join(', ')">
-                {{ appt.services.join(', ') }}
-              </p>
+              <div class="flex items-center gap-2">
+                <Icon 
+                  v-if="appt.appointment_type === 'combo_sub'" 
+                  icon="mdi:subdirectory-arrow-right" 
+                  class="text-primary/60 shrink-0" 
+                  width="14" 
+                />
+                <Icon 
+                  v-else-if="appt.appointment_type === 'combo_master'" 
+                  icon="mdi:layers-outline" 
+                  class="text-primary shrink-0" 
+                  width="16" 
+                />
+                <p class="text-xs text-black dark:text-white truncate max-w-[150px]" :title="appt.services.join(', ')">
+                  {{ appt.services.join(', ') }}
+                </p>
+              </div>
             </td>
             <td class="py-4 px-4">
               <p class="text-sm font-bold text-black dark:text-white">{{ formatCurrency(appt.total_cost) }}</p>

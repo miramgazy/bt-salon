@@ -14,6 +14,13 @@
           Категории
         </button>
         <button 
+          @click="openComboModal"
+          class="inline-flex items-center justify-center gap-2.5 rounded-md bg-warning py-2 px-6 text-center font-medium text-white hover:bg-opacity-90 transition-all shadow-md active:scale-95"
+        >
+          <Icon icon="mdi:link-variant" width="20" />
+          Создать комбо
+        </button>
+        <button 
           @click="openCreateModal"
           class="inline-flex items-center justify-center gap-2.5 rounded-md bg-primary py-2 px-6 text-center font-medium text-white hover:bg-opacity-90 transition-all shadow-md active:scale-95"
         >
@@ -56,9 +63,15 @@
           </thead>
           <tbody>
             <tr v-for="service in services" :key="service.id" :class="{'opacity-50': !service.is_active}">
-              <td class="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
-                <h5 class="font-medium text-black dark:text-white">{{ service.name }}</h5>
-                <p class="text-xs text-body dark:text-bodydark">{{ service.base_price }} ₸ (база)</p>
+              <td class="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11" :class="{'bg-warning/5': service.is_combo}">
+                <div class="flex items-center gap-2">
+                  <h5 class="font-medium text-black dark:text-white">{{ service.name }}</h5>
+                  <span v-if="service.is_combo" class="inline-flex items-center gap-1 rounded bg-warning/10 px-2 py-1 text-[10px] font-bold text-warning uppercase">
+                    <Icon icon="mdi:link-variant" width="10" /> Комбо
+                  </span>
+                </div>
+                <p v-if="!service.is_combo" class="text-xs text-body dark:text-bodydark">{{ service.base_price }} ₸ (база)</p>
+                <p v-else class="text-[10px] text-body dark:text-bodydark">Состоит из {{ service.combo_items?.length || 0 }} услуг</p>
               </td>
               <td class="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                 <p class="text-black dark:text-white">{{ getCategoryName(service.category) }}</p>
@@ -77,9 +90,9 @@
                   {{ service.is_active ? 'Активна' : 'Неактивна' }}
                 </span>
               </td>
-              <td class="border-b border-[#eee] py-5 px-4 dark:border-strokedark text-right">
+              <td class="border-b border-[#eee] py-5 px-4 dark:border-strokedark text-right" :class="{'bg-warning/5': service.is_combo}">
                 <div class="flex items-center justify-end gap-3.5">
-                  <button @click="openEditModal(service)" class="hover:text-primary transition-colors" title="Редактировать">
+                  <button @click="service.is_combo ? openEditCombo(service) : openEditModal(service)" class="hover:text-primary transition-colors" title="Редактировать">
                     <Icon icon="mdi:pencil" width="18" />
                   </button>
                   <button @click="confirmDelete(service)" class="hover:text-danger transition-colors" :title="service.is_active ? 'Деактивировать' : 'Восстановить'">
@@ -264,6 +277,18 @@
             </div>
         </div>
     </div>
+    <!-- Confirmation Modal -->
+    ...
+    <!-- Table End -->
+
+    <ComboCreateModal 
+      :show="showComboModal"
+      :combo="editingCombo"
+      :categories="categories"
+      :services="services"
+      @close="closeComboModal"
+      @success="fetchData"
+    />
   </div>
 </template>
 
@@ -271,6 +296,7 @@
 import { ref, computed, onMounted } from 'vue'
 import api from '../../api'
 import { Icon } from '@iconify/vue'
+import ComboCreateModal from '../../components/modals/ComboCreateModal.vue'
 
 const services = ref([])
 const categories = ref([])
@@ -283,6 +309,24 @@ const isEditing = ref(false)
 const showDeleteConfirm = ref(false)
 const serviceToDelete = ref(null)
 const newCategoryName = ref('')
+
+const showComboModal = ref(false)
+const editingCombo = ref(null)
+
+const openComboModal = () => {
+  editingCombo.value = null
+  showComboModal.value = true
+}
+
+const openEditCombo = (service) => {
+  editingCombo.value = service
+  showComboModal.value = true
+}
+
+const closeComboModal = () => {
+  showComboModal.value = false
+  editingCombo.value = null
+}
 
 const openCategoryModal = () => {
   showCategoryModal.value = true

@@ -153,6 +153,37 @@
                 </div>
             </div>
           </div>
+
+          <div class="grid grid-cols-2 gap-3">
+             <div>
+                <label class="form-label">{{ $t('common.start') }}</label>
+                <input v-model="shiftForm.work_start" type="time" class="form-input" />
+             </div>
+             <div>
+                <label class="form-label">{{ $t('common.end') }}</label>
+                <input v-model="shiftForm.work_end" type="time" class="form-input" />
+             </div>
+          </div>
+
+          <div v-if="auth.organizationSettings?.has_lunch_break">
+            <div class="flex items-center justify-between mb-2">
+                <label class="form-label m-0">{{ $t('master.lunchBreak') }}</label>
+                <label class="toggle-switch small">
+                    <input type="checkbox" v-model="shiftForm.has_lunch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div v-if="shiftForm.has_lunch" class="grid grid-cols-2 gap-3 animate-fade-in">
+                <div>
+                    <label class="text-[10px] uppercase font-bold text-muted block mb-1">С</label>
+                    <input v-model="shiftForm.lunch_start" type="time" class="form-input" />
+                </div>
+                <div>
+                    <label class="text-[10px] uppercase font-bold text-muted block mb-1">До</label>
+                    <input v-model="shiftForm.lunch_end" type="time" class="form-input" />
+                </div>
+            </div>
+          </div>
           
            <button type="submit" class="btn-sheet mt-2" :disabled="creatingShift">
               {{ creatingShift ? $t('common.saving') : $t('common.continue') }}
@@ -392,7 +423,12 @@ const setBookingDate = (type) => {
 }
 
 const shiftForm = ref({
-    date: getLocalDateStr()
+    date: getLocalDateStr(),
+    work_start: '09:00',
+    work_end: '20:00',
+    has_lunch: true,
+    lunch_start: '13:00',
+    lunch_end: '14:00'
 })
 
 const fetchData = async () => {
@@ -428,7 +464,7 @@ const openEditModal = (emp) => {
         last_name: emp.last_name, 
         phone: emp.phone || '', 
         telegram_id: emp.telegram_id || null, 
-        services: emp.services_detail?.map(s => s.id) || [], 
+        services: emp.services || [], 
         role: emp.role
     }
     showCreateModal.value = true
@@ -465,7 +501,15 @@ const handleZapisClick = (emp) => {
 
 const promptOpenShift = (emp) => {
     activeMaster.value = emp
-    shiftForm.value.date = getLocalDateStr()
+    const org = auth.organizationSettings
+    shiftForm.value = {
+        date: getLocalDateStr(),
+        work_start: org?.work_start?.slice(0, 5) || '09:00',
+        work_end: org?.work_end?.slice(0, 5) || '20:00',
+        has_lunch: !!org?.has_lunch_break,
+        lunch_start: org?.lunch_start?.slice(0, 5) || '13:00',
+        lunch_end: org?.lunch_end?.slice(0, 5) || '14:00'
+    }
     showShiftModal.value = true
 }
 
@@ -473,13 +517,21 @@ const submitShift = async () => {
     if (!activeMaster.value) return
     creatingShift.value = true
     try {
-        await api.post('/masters/shifts/', {
+        const payload = {
             master: activeMaster.value.master_id,
             date: shiftForm.value.date,
-            work_start: "09:00:00",
-            work_end: "20:00:00",
+            work_start: shiftForm.value.work_start,
+            work_end: shiftForm.value.work_end,
             is_open: true
-        })
+        }
+        if (shiftForm.value.has_lunch) {
+            payload.lunch_start = shiftForm.value.lunch_start
+            payload.lunch_end = shiftForm.value.lunch_end
+        } else {
+            payload.lunch_start = null
+            payload.lunch_end = null
+        }
+        await api.post('/masters/shifts/', payload)
         const d = new Date(shiftForm.value.date).toLocaleDateString()
         alert(t('admin.shiftOpened', { name: activeMaster.value.first_name, date: d }))
         showShiftModal.value = false

@@ -33,12 +33,15 @@ class DashboardBaseView(APIView):
             
         return date_from, date_to
 
-    def get_filtered_appointments(self, request, date_from, date_to):
+    def get_filtered_appointments(self, request, date_from, date_to, include_cancelled=False):
         org = request.user.organization
         qs = Appointment.objects.filter(
             organization=org,
             start_time__date__range=[date_from, date_to]
-        ).exclude(status=Appointment.STATUS_CANCELLED)
+        )
+        
+        if not include_cancelled:
+            qs = qs.exclude(status=Appointment.STATUS_CANCELLED)
         
         master_ids = request.query_params.getlist('master_ids[]') or request.query_params.getlist('master_ids')
         if master_ids:
@@ -70,7 +73,10 @@ class SummaryView(DashboardBaseView):
         if service_ids:
             full_qs = full_qs.filter(service_id__in=service_ids)
 
-        status_counts = full_qs.aggregate(
+        # Count unique visits: count only Single and Combo Master records
+        # This prevents combo parts from inflating the visit count
+        visit_filter = ~Q(appointment_type=Appointment.TYPE_COMBO_SUB)
+        status_counts = full_qs.filter(visit_filter).aggregate(
             total=Count('id'),
             completed=Count('id', filter=Q(status=Appointment.STATUS_DONE)),
             pending=Count('id', filter=Q(status=Appointment.STATUS_PENDING)),
@@ -79,15 +85,17 @@ class SummaryView(DashboardBaseView):
 
         # Current Period Stats (Revenue uses non-cancelled)
         stats = qs.aggregate(
-            revenue=Sum('service__total_price'),
-            master_share=Sum('service__base_price'),
-            appointments_count=Count('id'),
+            revenue=Sum('total_price'),
+            master_share=Sum('master_net_income'),
+            salon_share=Sum('salon_net_income'),
+            # Visit count (Single + Combo Master)
+            appointments_count=Count('id', filter=~Q(appointment_type=Appointment.TYPE_COMBO_SUB)),
             unique_clients_count=Count('client', distinct=True)
         )
         
         revenue = stats['revenue'] or 0
         master_share = stats['master_share'] or 0
-        owner_margin = revenue - master_share
+        owner_margin = stats['salon_share'] or 0
         
         # Expenses and Net Profit
         expenses_qs = Expense.objects.filter(
@@ -112,15 +120,17 @@ class SummaryView(DashboardBaseView):
         
         prev_qs = self.get_filtered_appointments(request, prev_date_from, prev_date_to)
         prev_stats = prev_qs.aggregate(
-            revenue=Sum('service__total_price'),
-            master_share=Sum('service__base_price'),
-            appointments_count=Count('id'),
+            revenue=Sum('total_price'),
+            master_share=Sum('master_net_income'),
+            salon_share=Sum('salon_net_income'),
+            # Count only visits in previous period too
+            appointments_count=Count('id', filter=~Q(appointment_type=Appointment.TYPE_COMBO_SUB)),
             unique_clients_count=Count('client', distinct=True)
         )
         
         prev_revenue = prev_stats['revenue'] or 0
         prev_master_share = prev_stats['master_share'] or 0
-        prev_net_profit = prev_revenue - prev_master_share
+        prev_net_profit = (prev_stats['salon_share'] or 0)
  
         return Response({
             "revenue": float(revenue),
@@ -161,18 +171,19 @@ class TimelineView(DashboardBaseView):
             trunc_fn = TruncDay('start_time')
             
         timeline = qs.annotate(date=trunc_fn).values('date').annotate(
-            revenue=Sum('service__total_price'),
-            master_share=Sum('service__base_price')
+            revenue=Sum('total_price'),
+            master_share=Sum('master_net_income'),
+            salon_share=Sum('salon_net_income')
         ).order_by('date')
         
         results = []
         for item in timeline:
             rev = item['revenue'] or 0
-            share = item['master_share'] or 0
+            margin = item['salon_share'] or 0
             results.append({
                 "date": item['date'].strftime('%Y-%m-%d'),
                 "revenue": float(rev),
-                "owner_margin": float(rev - share)
+                "owner_margin": float(margin)
             })
             
         return Response({"timeline": results})
@@ -186,8 +197,9 @@ class MasterStatsView(DashboardBaseView):
         qs = self.get_filtered_appointments(request, date_from, date_to)
         master_stats = qs.values('master_id', 'master__user__first_name', 'master__user__last_name').annotate(
             appointments_count=Count('id'),
-            revenue=Sum('service__total_price'),
-            master_share=Sum('service__base_price')
+            revenue=Sum('total_price'),
+            master_share=Sum('master_net_income'),
+            owner_margin=Sum('salon_net_income')
         )
         
         # Organization work hours for utilization
@@ -205,6 +217,7 @@ class MasterStatsView(DashboardBaseView):
         for item in master_stats:
             rev = item['revenue'] or 0
             share = item['master_share'] or 0
+            margin = item['owner_margin'] or 0
             
             # Simple utilization: 1 appointment = 1 hour (as fallback if service duration not used)
             # Better utilization: sum of service.duration_minutes / 60
@@ -219,7 +232,7 @@ class MasterStatsView(DashboardBaseView):
                 "appointments_count": item['appointments_count'],
                 "revenue": float(rev),
                 "master_share": float(share),
-                "owner_margin": float(rev - share),
+                "owner_margin": float(margin),
                 "utilization_percent": round(utilization, 1)
             })
             
@@ -230,34 +243,64 @@ class ServiceStatsView(DashboardBaseView):
         date_from, date_to = self.get_date_range(request)
         qs = self.get_filtered_appointments(request, date_from, date_to)
         
-        service_stats = qs.values('service_id', 'service__name').annotate(
-            appointments_count=Count('id'),
-            revenue=Sum('service__total_price')
-        ).order_by('-revenue')
+        from collections import defaultdict
+        # Grouping by Service + Master combination for combos
+        visits = qs.filter(
+            ~Q(appointment_type=Appointment.TYPE_COMBO_SUB)
+        ).select_related('service', 'master__user').prefetch_related('children__master__user')
         
+        svc_summary = defaultdict(lambda: {'revenue': 0, 'count': 0})
+        
+        for appt in visits:
+            if appt.appointment_type == Appointment.TYPE_COMBO_MASTER:
+                masters_involved = [appt.master.user.first_name]
+                for child in appt.children.all():
+                    masters_involved.append(child.master.user.first_name)
+                
+                unique_masters = sorted(list(set(masters_involved)))
+                masters_str = " + ".join(unique_masters)
+                display_name = f"{appt.service.name} ({masters_str})"
+                
+                total_rev = float(appt.total_price or 0)
+                for child in appt.children.all():
+                    total_rev += float(child.total_price or 0)
+            else:
+                display_name = appt.service.name
+                total_rev = float(appt.total_price or 0)
+                
+            svc_summary[display_name]['revenue'] += total_rev
+            svc_summary[display_name]['count'] += 1
+            
         results = []
-        for item in service_stats:
+        for name, stats in svc_summary.items():
             results.append({
-                "service_id": item['service_id'],
-                "service_name": item['service__name'],
-                "appointments_count": item['appointments_count'],
-                "revenue": float(item['revenue'] or 0)
+                "service_id": None, 
+                "service_name": name,
+                "appointments_count": stats['count'],
+                "revenue": stats['revenue']
             })
+        
+        results.sort(key=lambda x: x['revenue'], reverse=True)
             
         return Response({"services": results})
 
 class DashboardAppointmentsView(DashboardBaseView):
     def get(self, request):
         date_from, date_to = self.get_date_range(request)
-        qs = self.get_filtered_appointments(request, date_from, date_to)
+        qs = self.get_filtered_appointments(request, date_from, date_to, include_cancelled=True)
+        qs = qs.select_related('client', 'master__user', 'service', 'parent__service').prefetch_related('children__master__user')
         
         # Sort
         sort_by = request.query_params.get('sort_by', 'start_time')
         sort_order = request.query_params.get('sort_order', 'desc')
         prefix = '-' if sort_order == 'desc' else ''
         
-        # Mapping sort fields to valid ORM fields if needed
-        qs = qs.order_by(f"{prefix}{sort_by}")
+        # To keep combo parts together, we sort by start_time, then parent_id
+        # We handle sort_by for datetime/master/client if provided
+        if sort_by == 'start_time':
+            qs = qs.order_by(f"{prefix}start_time", 'parent_id', 'id')
+        else:
+            qs = qs.order_by(f"{prefix}{sort_by}")
         
         # Pagination
         from django.core.paginator import Paginator
@@ -268,18 +311,31 @@ class DashboardAppointmentsView(DashboardBaseView):
         
         results = []
         for appt in page_obj:
-            rev = appt.service.total_price
-            share = appt.service.base_price
+            rev = appt.total_price or 0
+            share = appt.master_net_income or 0
+            margin = appt.salon_net_income or 0
+            
+            # Get display title (e.g. "Combo: Service")
+            from apps.appointments.serializers import AppointmentSerializer
+            display_title = AppointmentSerializer().get_display_title(appt)
+            
+            # Safe user names
+            m_name = "—"
+            if appt.master and appt.master.user:
+                m_name = f"{appt.master.user.first_name} {appt.master.user.last_name}".strip()
+            
             results.append({
                 "id": appt.id,
                 "datetime": appt.start_time.isoformat(),
-                "client_name": appt.client.full_name,
-                "master_name": f"{appt.master.user.first_name} {appt.master.user.last_name}".strip(),
-                "services": [appt.service.name],
+                "client_name": appt.client.full_name if appt.client else "Оффлайн",
+                "master_name": m_name,
+                "services": [display_title],
                 "total_cost": float(rev),
                 "master_share": float(share),
-                "owner_margin": float(rev - share),
-                "status": appt.status
+                "owner_margin": float(margin),
+                "status": appt.status,
+                "appointment_type": appt.appointment_type,
+                "parent_id": appt.parent_id
             })
             
         return Response({
@@ -303,19 +359,29 @@ class DashboardAppointmentsExportView(DashboardBaseView):
         headers = ['Дата', 'Время', 'Клиент', 'Мастер', 'Услуги', 'Стоимость', 'Доля мастера', 'Маржа', 'Статус']
         ws.append(headers)
         
-        # Data
+        from apps.appointments.serializers import AppointmentSerializer
+        serializer = AppointmentSerializer()
+        qs = qs.select_related('client', 'master__user', 'service', 'parent__service')
+        
         for appt in qs:
-            rev = appt.service.total_price
-            share = appt.service.base_price
+            rev = appt.total_price or 0
+            share = appt.master_net_income or 0
+            margin = appt.salon_net_income or 0
+            display_title = serializer.get_display_title(appt)
+            
+            m_name = "—"
+            if appt.master and appt.master.user:
+                m_name = f"{appt.master.user.first_name} {appt.master.user.last_name}".strip()
+                
             ws.append([
                 appt.start_time.strftime('%Y-%m-%d'),
                 appt.start_time.strftime('%H:%M'),
-                appt.client.full_name,
-                f"{appt.master.user.first_name} {appt.master.user.last_name}".strip(),
-                appt.service.name,
+                appt.client.full_name if appt.client else "Оффлайн",
+                m_name,
+                display_title,
                 float(rev),
                 float(share),
-                float(rev - share),
+                float(margin),
                 appt.get_status_display()
             ])
             

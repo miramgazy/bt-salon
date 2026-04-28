@@ -42,12 +42,19 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             elif hasattr(self.request.user, 'telegram_id') and self.request.user.telegram_id:
                 # For TMA requests, further filter by client
                 qs = qs.filter(client__telegram_id=self.request.user.telegram_id)
+
+        exclude_sub = self.request.query_params.get('exclude_sub')
+        if exclude_sub == 'true':
+            qs = qs.exclude(appointment_type=Appointment.TYPE_COMBO_SUB)
             
-        return qs.order_by('start_time')
+        return qs.order_by('start_time', 'parent_id', 'id')
 
     def perform_create(self, serializer):
         from apps.clients.models import Client
-        from apps.masters.models import MasterShift
+        from apps.masters.models import MasterShift, Master
+        from apps.services.models import Service, ComboItem
+        from django.db import transaction
+        from datetime import timedelta
         
         user = self.request.user
         org = user.organization
@@ -55,7 +62,6 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         client = None
         # Handle non-client roles (Admin, Owner, Master) creating appointment for a client
         if hasattr(user, 'role') and user.role != User.ROLE_CLIENT:
-            # Check if there's an offline client data provided via context or frontend
             client_id = self.request.data.get('client_id')
             client_name = self.request.data.get('client_name')
             client_phone = self.request.data.get('client_phone')
@@ -63,10 +69,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             if client_id:
                 client = Client.objects.filter(id=client_id, organization=org).first()
             elif client_phone:
-                # Clean phone number for consistent lookup
                 clean_phone = ''.join(filter(str.isdigit, str(client_phone)))
-                
-                # Try to find by cleaned phone OR original phone
                 client = Client.objects.filter(organization=org).filter(
                     models.Q(phone=client_phone) | models.Q(phone=clean_phone)
                 ).first()
@@ -78,15 +81,12 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                         phone=clean_phone or client_phone
                     )
                 elif client_name:
-                    # Update name if provided explicitly by admin
                     client.full_name = client_name
                     client.save()
             else:
                 from rest_framework.exceptions import ValidationError
                 raise ValidationError({'client_phone': 'Phone number is required for offline clients.'})
-        
         else:
-            # 1. Get or create Client profile for the regular user
             client, _ = Client.objects.get_or_create(
                 user=user,
                 organization=org,
@@ -97,10 +97,11 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 }
             )
         
-        # 2. Find the appropriate Shift for the master and date
         master = serializer.validated_data.get('master')
+        service = serializer.validated_data.get('service')
         start_time = serializer.validated_data.get('start_time')
         
+        # 2. Find the appropriate Shift for the master and date
         shift = MasterShift.objects.filter(
             organization=org,
             master=master,
@@ -108,7 +109,6 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         ).first()
 
         if not shift:
-            # Try to auto-create a shift
             shift, _ = MasterShift.objects.get_or_create(
                 organization=org,
                 master=master,
@@ -116,17 +116,24 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 defaults={'is_open': False}
             )
             
-        serializer.save(
-            organization=org,
-            client=client,
-            shift=shift,
-            created_by_admin=(user.role != User.ROLE_CLIENT)
-        )
+        with transaction.atomic():
+            master_appt = serializer.save(
+                organization=org,
+                client=client,
+                shift=shift,
+                discount_strategy=service.discount_strategy,
+                created_by_admin=(user.role != User.ROLE_CLIENT)
+            )
+            
+            # Note: Child creation and initial financials are now handled in Appointment.save()
 
     def perform_update(self, serializer):
         from apps.masters.models import MasterShift
+        
         start_time = serializer.validated_data.get('start_time')
         master = serializer.validated_data.get('master', serializer.instance.master)
+        
+        extra_kwargs = {}
         
         if start_time:
             shift = MasterShift.objects.filter(
@@ -142,9 +149,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                     date=start_time.date(),
                     defaults={'is_open': False}
                 )
-            serializer.save(shift=shift)
-        else:
-            serializer.save()
+            extra_kwargs['shift'] = shift
+            
+        instance = serializer.save(**extra_kwargs)
 
     @action(detail=True, methods=['post'])
     def confirm(self, request, pk=None):
@@ -305,8 +312,13 @@ class MasterStatsView(views.APIView):
             start_time__date__lte=date_to,
         ).exclude(status=Appointment.STATUS_CANCELLED).select_related('service')
         
-        total_income = sum(appt.service.total_price for appt in appointments)
-        total_clients = appointments.count()
+        total_income = sum(appt.total_price for appt in appointments)
+        # If we want to show Master's personal earnings, we should use master_net_income
+        # But usually 'total_income' in this view refers to Revenue generated by master.
+        # Let's add master_earnings for clarity if needed, or stick to requested total_price.
+        master_earnings = sum(appt.master_net_income or 0 for appt in appointments)
+        # Count unique visits (exclude combo_sub)
+        total_clients = appointments.exclude(appointment_type=Appointment.TYPE_COMBO_SUB).count()
         
         # Breakdown by day for chart
         # Using a dictionary to ensure all days are represented even if no appointments
@@ -319,22 +331,31 @@ class MasterStatsView(views.APIView):
         for appt in appointments:
             d_str = appt.start_time.date().isoformat()
             if d_str in daily_map:
-                daily_map[d_str]['income'] += appt.service.total_price
-                daily_map[d_str]['clients'] += 1
+                daily_map[d_str]['income'] += appt.total_price
+                if appt.appointment_type != 'combo_sub':
+                    daily_map[d_str]['clients'] += 1
                 
         # Popular services breakdown
         services_map = {}
         for appt in appointments:
-            s_name = appt.service.name
+            # Group by effective name (Combo name if applicable)
+            if appt.appointment_type == Appointment.TYPE_COMBO_SUB and appt.parent:
+                s_name = appt.parent.service.name
+            else:
+                s_name = appt.service.name
+                
             if s_name not in services_map:
                 services_map[s_name] = {'name': s_name, 'count': 0, 'income': 0}
-            services_map[s_name]['count'] += 1
-            services_map[s_name]['income'] += appt.service.total_price
+            
+            if appt.appointment_type != 'combo_sub':
+                services_map[s_name]['count'] += 1
+            services_map[s_name]['income'] += appt.total_price
             
         popular_services = sorted(services_map.values(), key=lambda x: x['count'], reverse=True)[:5]
                 
         return Response({
-            'total_income': total_income,
+            'total_income': float(total_income),
+            'master_earnings': float(master_earnings),
             'total_clients': total_clients,
             'avg_check': round(total_income / total_clients, 2) if total_clients > 0 else 0,
             'daily': sorted(daily_map.values(), key=lambda x: x['date']),

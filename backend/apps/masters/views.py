@@ -118,26 +118,45 @@ class MasterViewSet(viewsets.ModelViewSet):
         
         while current_dt + service_duration <= end_dt:
             slot_end_dt = current_dt + service_duration
-            
-            # Use status codes for the frontend
             status_code = 'available'
             
-            # Check lunch intersection (only if START time is during lunch)
-            if shift.lunch_start and shift.lunch_end:
+            # 1. Lunch Check
+            if org.has_lunch_break and shift.lunch_start and shift.lunch_end:
                 lunch_start_dt = datetime.combine(target_date, shift.lunch_start)
                 lunch_end_dt = datetime.combine(target_date, shift.lunch_end)
                 if lunch_start_dt <= current_dt < lunch_end_dt:
                     status_code = 'lunch'
             
-            # Check existing appointments
+            # 2. Selected Master Busy Check
             if status_code == 'available':
                 for appt in appointments:
                     appt_start_naive = timezone.make_naive(appt.start_time) if timezone.is_aware(appt.start_time) else appt.start_time
                     appt_end_naive = timezone.make_naive(appt.end_time) if timezone.is_aware(appt.end_time) else appt.end_time
-                    
                     if current_dt < appt_end_naive and slot_end_dt > appt_start_naive:
                         status_code = 'busy'
                         break
+
+            # 3. Combo Capacity Check
+            if status_code == 'available' and service_id:
+                svc = Service.objects.filter(id=service_id).first()
+                if svc and svc.is_combo:
+                    # For combo services, we need both the selected master AND the virtual master
+                    # (which acts as a queue/buffer for sub-services) to be available.
+                    virtual_master = Master.objects.filter(organization=org, is_virtual=True).first()
+                    if not virtual_master:
+                        status_code = 'no_virtual_master'
+                    else:
+                        v_shift = MasterShift.objects.filter(master=virtual_master, date=target_date, is_open=True).first()
+                        if not v_shift:
+                            status_code = 'no_capacity'
+                        else:
+                            # Check if virtual master is working at this time
+                            v_start = datetime.combine(target_date, v_shift.work_start)
+                            v_end = datetime.combine(target_date, v_shift.work_end)
+                            if not (v_start <= current_dt and current_dt + service_duration <= v_end):
+                                status_code = 'no_capacity'
+                            # Note: We don't check if Virtual Master is 'busy' because 
+                            # it represents a queue with parallel capacity.
             
             slots.append({
                 'time': current_dt.strftime('%H:%M'),
@@ -224,11 +243,31 @@ class MasterShiftViewSet(viewsets.ModelViewSet):
         return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        # When created via standard ViewSet (usually Admin Desktop), it's by admin
-        serializer.save(
-            organization=self.request.user.organization,
-            opened_by_admin=True
-        )
+        org = self.request.user.organization
+        # Set defaults from organization if not provided
+        defaults = {
+            'organization': org,
+            'opened_by_admin': True
+        }
+        
+        # If work times not in request, take from org
+        if 'work_start' not in self.request.data:
+            defaults['work_start'] = org.work_start
+        if 'work_end' not in self.request.data:
+            defaults['work_end'] = org.work_end
+            
+        # Lunch times: only set if organization has lunch break
+        if org.has_lunch_break:
+            if 'lunch_start' not in self.request.data:
+                defaults['lunch_start'] = org.lunch_start
+            if 'lunch_end' not in self.request.data:
+                defaults['lunch_end'] = org.lunch_end
+        else:
+            # Force None if disabled in org
+            defaults['lunch_start'] = None
+            defaults['lunch_end'] = None
+            
+        serializer.save(**defaults)
 
     @action(detail=False, methods=['post'], url_path='open')
     def open_shifts(self, request):
@@ -256,8 +295,8 @@ class MasterShiftViewSet(viewsets.ModelViewSet):
                 defaults={
                     'work_start': s_data.get('work_start', org.work_start),
                     'work_end': s_data.get('work_end', org.work_end),
-                    'lunch_start': s_data.get('lunch_start', org.lunch_start),
-                    'lunch_end': s_data.get('lunch_end', org.lunch_end),
+                    'lunch_start': s_data.get('lunch_start', org.lunch_start) if org.has_lunch_break else None,
+                    'lunch_end': s_data.get('lunch_end', org.lunch_end) if org.has_lunch_break else None,
                     'comment': s_data.get('comment'),
                     'is_open': True,
                     'opened_by_admin': True
@@ -326,8 +365,8 @@ class MasterShiftViewSet(viewsets.ModelViewSet):
                 organization=org,
                 work_start=org.work_start,
                 work_end=org.work_end,
-                lunch_start=org.lunch_start,
-                lunch_end=org.lunch_end,
+                lunch_start=org.lunch_start if org.has_lunch_break else None,
+                lunch_end=org.lunch_end if org.has_lunch_break else None,
                 is_open=True,
                 actual_start=timezone.now(),
                 opened_by_admin=False

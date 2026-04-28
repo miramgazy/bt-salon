@@ -273,8 +273,19 @@
               </div>
 
               <div class="mb-5.5">
-                <h4 class="mb-4 text-sm font-medium text-black dark:text-white">Обеденный перерыв</h4>
-                <div class="flex flex-col gap-5.5 sm:flex-row">
+                <div class="flex items-center justify-between mb-4">
+                  <h4 class="text-sm font-medium text-black dark:text-white">Обеденный перерыв</h4>
+                  <label class="flex items-center cursor-pointer">
+                    <div class="relative">
+                      <input type="checkbox" v-model="org.has_lunch_break" class="sr-only" />
+                      <div :class="org.has_lunch_break ? 'bg-primary' : 'bg-gray-400'" class="block h-6 w-10 rounded-full transition"></div>
+                      <div :class="org.has_lunch_break ? 'translate-x-full' : ''" class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition shadow-sm"></div>
+                    </div>
+                    <span class="ml-3 text-xs text-body">Включен</span>
+                  </label>
+                </div>
+                
+                <div v-if="org.has_lunch_break" class="flex flex-col gap-5.5 sm:flex-row transition-all duration-300">
                   <div class="w-full sm:w-1/2">
                     <label class="mb-3 block text-sm font-medium text-black dark:text-white">Начало</label>
                     <input v-model="org.lunch_start" type="time" class="w-full rounded border border-stroke bg-gray-50 py-2.5 px-4.5 text-black focus:border-primary focus-visible:outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white dark:focus:border-primary" required />
@@ -283,6 +294,9 @@
                     <label class="mb-3 block text-sm font-medium text-black dark:text-white">Конец</label>
                     <input v-model="org.lunch_end" type="time" class="w-full rounded border border-stroke bg-gray-50 py-2.5 px-4.5 text-black focus:border-primary focus-visible:outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white dark:focus:border-primary" required />
                   </div>
+                </div>
+                <div v-else class="p-4 bg-gray-50 dark:bg-bg-dark border border-dashed border-stroke dark:border-strokedark rounded-md text-center text-xs text-body italic">
+                  Обеденный перерыв отключен. Мастера будут доступны для записи без перерывов.
                 </div>
               </div>
 
@@ -439,7 +453,8 @@ const org = ref({
   reminder_hours_before: 1,
   reminder_template_ru: '',
   reminder_template_kz: '',
-  slot_duration: 30
+  slot_duration: 30,
+  has_lunch_break: true
 })
 
 watch(() => org.value.is_reminders_enabled, (newVal) => {
@@ -450,6 +465,16 @@ watch(() => org.value.is_reminders_enabled, (newVal) => {
     if (!org.value.reminder_template_kz) {
       org.value.reminder_template_kz = DEFAULT_TEMPLATE_KZ
     }
+  }
+})
+
+watch(() => org.value.has_lunch_break, (newVal) => {
+  if (!newVal) {
+    org.value.lunch_start = null
+    org.value.lunch_end = null
+  } else if (!org.value.lunch_start) {
+    org.value.lunch_start = '13:00'
+    org.value.lunch_end = '14:00'
   }
 })
 

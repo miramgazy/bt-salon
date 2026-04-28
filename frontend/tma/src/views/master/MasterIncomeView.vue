@@ -36,8 +36,8 @@
         <div class="kpi-value text-gold">{{ Number(stats.total_income || 0).toLocaleString() }} ₸</div>
       </div>
       <div class="kpi-card glass">
-        <div class="kpi-label">{{ $t('master.clients') }}</div>
-        <div class="kpi-value">{{ stats.total_clients || 0 }}</div>
+        <div class="kpi-label">{{ $t('master.earnings') }}</div>
+        <div class="kpi-value text-success">{{ Number(stats.master_earnings || 0).toLocaleString() }} ₸</div>
       </div>
       <div class="kpi-card glass">
         <div class="kpi-label">{{ $t('master.avgCheck') }}</div>
@@ -113,6 +113,7 @@ const setPeriod = (id) => {
 
 const stats = reactive({
   total_income: 0,
+  master_earnings: 0,
   total_clients: 0,
   avg_check: 0,
   daily: [],

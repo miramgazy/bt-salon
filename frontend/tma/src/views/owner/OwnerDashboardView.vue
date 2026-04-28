@@ -124,8 +124,8 @@
           <div class="sec-title">{{ $t('owner.master_rating') }}</div>
           <div class="master-table">
             <div class="table-head">
-               <div class="th">{{ $t('common.master') }}</div>
-               <div class="th">{{ $t('owner.revenue') }}</div>
+            <div class="th">{{ $t('common.master') }}</div>
+            <div class="th">{{ $t('owner.earnings') }}</div>
             </div>
             <div v-for="(m, i) in data.masters" :key="m.id" class="table-row">
                <div class="master-cell">
@@ -136,7 +136,7 @@
                     <div class="text-hint">{{ m.sessions || 0 }} {{ $t('owner.sessions') }}</div>
                  </div>
                </div>
-               <div class="td gold">{{ formatM(m.revenue) }}</div>
+               <div class="td gold">{{ formatM(m.commission) }}</div>
             </div>
           </div>
         </div>
@@ -563,13 +563,13 @@ const revenuePieOptions = computed(() => ({
    dataLabels: { enabled: false }
 }))
 
-// Master Revenue
-const masterBarSeries = computed(() => [{ name: t('owner.revenue'), data: data.value.masters.map(m => m.revenue) }])
+// Master Earnings (renamed from revenue)
+const masterBarSeries = computed(() => [{ name: t('owner.earnings'), data: data.value.masters.map(m => m.commission) }])
 const masterBarOptions = computed(() => ({
   chart: { type: 'bar', toolbar: { show: false }, fontFamily: 'inherit' },
   theme: { mode: window.Telegram?.WebApp?.colorScheme || 'light' },
   plotOptions: { bar: { horizontal: true, borderRadius: 4 } },
-  colors: ['var(--gold)'],
+  colors: ['#22a060'],
   xaxis: { categories: data.value.masters.map(m => m.name.split(' ')[0]), labels: { style: { colors: 'var(--tg-theme-hint-color)' } } },
   yaxis: { labels: { style: { colors: 'var(--tg-theme-text-color)' } } },
   grid: { show: false }

@@ -40,7 +40,28 @@
           </div>
           <div class="booking-info">
              <div class="client-name">{{ apt.client_detail?.full_name || $t('common.client') }}</div>
-             <div class="service-name text-gold">{{ apt.service_detail?.name || $t('services.title') }}</div>
+              <div class="service-name text-gold flex items-start gap-1">
+                 <Icon 
+                   v-if="apt.appointment_type === 'combo_sub'" 
+                   icon="mdi:subdirectory-arrow-right" 
+                   width="14" 
+                   class="text-primary/60 mt-1" 
+                 />
+                 <Icon 
+                   v-else-if="apt.appointment_type === 'combo_master'" 
+                   icon="mdi:layers-outline" 
+                   width="14" 
+                   class="text-primary mt-1" 
+                 />
+                 <div>
+                    <div class="flex items-center gap-1">
+                       <span class="font-bold">{{ apt.display_title?.split(':')[0] || apt.display_title || apt.service_detail?.name || $t('services.title') }}</span>
+                    </div>
+                    <div v-if="apt.display_title?.includes(':')" class="text-xs opacity-80">
+                       {{ apt.display_title.split(':')[1].trim() }}
+                    </div>
+                 </div>
+              </div>
              <div v-if="apt.notes" class="booking-notes">
                 <Icon icon="mdi:note-text-outline" width="14" />
                 <span>{{ apt.notes }}</span>

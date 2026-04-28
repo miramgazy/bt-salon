@@ -23,7 +23,13 @@
        <div class="spinner"></div>
     </div>
 
-    <div v-else>
+    <div v-if="error" class="error-state p-6 text-center">
+       <div class="text-error mb-2">⚠️</div>
+       <div class="text-sm opacity-70">{{ error }}</div>
+       <button class="btn-sheet mt-4" @click="fetchReport">{{ $t('master.retry') }}</button>
+    </div>
+    
+    <div v-else-if="!loading">
       <div class="kpi-grid">
          <div class="kpi-card highlight">
             <div class="kpi-icon">💰</div>
@@ -88,25 +94,34 @@ const conversionRate = computed(() => {
 
 const setDate = (type) => {
     activeTab.value = type
-    const tzOffset = (new Date()).getTimezoneOffset() * 60000 
-    const today = new Date(Date.now() - tzOffset)
+    const now = new Date()
+    const getISO = (d) => {
+        const offset = d.getTimezoneOffset()
+        const local = new Date(d.getTime() - (offset * 60 * 1000))
+        return local.toISOString().split('T')[0]
+    }
+    
+    const todayStr = getISO(now)
     
     if (type === 'today') {
-        dateFrom.value = today.toISOString().split('T')[0]
-        dateTo.value = today.toISOString().split('T')[0]
+        dateFrom.value = todayStr
+        dateTo.value = todayStr
     } else if (type === 'week') {
-        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-        dateFrom.value = weekAgo.toISOString().split('T')[0]
-        dateTo.value = today.toISOString().split('T')[0]
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        dateFrom.value = getISO(weekAgo)
+        dateTo.value = todayStr
     } else if (type === 'month') {
-        const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate())
-        dateFrom.value = monthAgo.toISOString().split('T')[0]
-        dateTo.value = today.toISOString().split('T')[0]
+        const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+        dateFrom.value = getISO(monthAgo)
+        dateTo.value = todayStr
     }
 }
 
+const error = ref('')
+
 const fetchReport = async () => {
     loading.value = true
+    error.value = ''
     try {
         const res = await api.get('/dashboard/summary/', {
             params: {
@@ -116,7 +131,8 @@ const fetchReport = async () => {
         })
         summary.value = res.data
     } catch (e) {
-        console.error(e)
+        console.error('Fetch report error', e)
+        error.value = e.response?.data?.error || e.message || 'Ошибка загрузки данных'
     } finally {
         loading.value = false
     }

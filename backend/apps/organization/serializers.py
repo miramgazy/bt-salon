@@ -8,7 +8,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
         model = Organization
         fields = [
             'id', 'name', 'address', 'work_start', 'work_end', 'lunch_start',
-            'lunch_end', 'bot_token', 'bot_username', 'tma_name', 
+            'lunch_end', 'has_lunch_break', 'bot_token', 'bot_username', 'tma_name', 
             'instagram_link', 'whatsapp_number', 'greeting_text',
             'design_color', 'logo', 'logo_url', 'slot_duration', 
             'latitude', 'longitude', 'is_reminders_enabled', 
@@ -27,6 +27,7 @@ from apps.accounts.models import User
 from apps.masters.models import Master
 
 class EmployeeSerializer(serializers.ModelSerializer):
+    services = serializers.SerializerMethodField()
     services_detail = serializers.SerializerMethodField()
     color = serializers.SerializerMethodField()
     photo_url = serializers.SerializerMethodField()
@@ -35,7 +36,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'master_id', 'first_name', 'last_name', 'phone', 'role', 'is_active', 'color', 'services_detail', 'photo_url', 'telegram_id', 'today_shift']
+        fields = ['id', 'master_id', 'first_name', 'last_name', 'phone', 'role', 'is_active', 'color', 'services', 'services_detail', 'photo_url', 'telegram_id', 'today_shift']
 
     def get_today_shift(self, obj):
         if obj.role == 'master' and hasattr(obj, 'master_profile'):
@@ -60,6 +61,11 @@ class EmployeeSerializer(serializers.ModelSerializer):
         if hasattr(obj, 'master_profile'):
             return obj.master_profile.id
         return None
+
+    def get_services(self, obj):
+        if hasattr(obj, 'master_profile'):
+            return list(obj.master_profile.services.values_list('id', flat=True))
+        return []
 
     def get_services_detail(self, obj):
         if hasattr(obj, 'master_profile'):

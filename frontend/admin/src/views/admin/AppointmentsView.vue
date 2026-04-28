@@ -121,7 +121,10 @@
                 <p class="text-black dark:text-white">{{ formatTimeSlot(appt.start_time) }}</p>
               </td>
               <td class="py-5 px-4">
-                <p class="text-black dark:text-white">{{ appt.service_detail?.name || '---' }}</p>
+                <div class="flex items-center gap-2">
+                  <Icon v-if="appt.is_combo" icon="mdi:link-variant" class="text-primary" width="16" />
+                  <p class="text-black dark:text-white">{{ appt.display_title || appt.service_detail?.name || '---' }}</p>
+                </div>
                 <p class="text-xs text-body">{{ appt.master_detail?.first_name }}</p>
               </td>
               <td class="py-5 px-4">

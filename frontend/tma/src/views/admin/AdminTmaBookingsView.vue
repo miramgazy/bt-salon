@@ -143,7 +143,32 @@
           </div>
           <div class="booking-info">
              <div class="client-name">{{ apt.client_detail?.full_name || $t('common.offlineClient') }} <span v-if="apt.client_detail?.phone" class="client-phone">{{ apt.client_detail.phone }}</span></div>
-             <div class="service-name text-gold">{{ apt.service_detail?.name || $t('admin.selectService') }} ({{ apt.master_detail?.first_name || $t('admin.masterRole') }})</div>
+             <div class="service-name text-gold flex items-start gap-1">
+                 <Icon 
+                   v-if="apt.appointment_type === 'combo_sub'" 
+                   icon="mdi:subdirectory-arrow-right" 
+                   width="14" 
+                   class="text-primary/60 mt-1" 
+                 />
+                 <Icon 
+                   v-else-if="apt.appointment_type === 'combo_master'" 
+                   icon="mdi:layers-outline" 
+                   width="14" 
+                   class="text-primary mt-1" 
+                 />
+                 <div>
+                    <div class="flex items-center gap-1">
+                       <span class="font-bold">{{ apt.display_title?.split(':')[0] || apt.display_title || apt.service_detail?.name || $t('admin.selectService') }}</span>
+                       <span v-if="apt.appointment_type !== 'single'" class="text-[10px] bg-primary/10 text-primary px-1 rounded">
+                          {{ apt.appointment_type === 'combo_master' ? $t('admin.main') : $t('admin.sub') }}
+                       </span>
+                    </div>
+                    <div v-if="apt.display_title?.includes(':')" class="text-xs opacity-80">
+                       {{ apt.display_title.split(':')[1].trim() }}
+                    </div>
+                    <div class="text-muted text-[10px] mt-0.5">({{ apt.master_detail?.first_name || $t('admin.masterRole') }})</div>
+                 </div>
+             </div>
              <div v-if="apt.notes" class="booking-notes">
                 <Icon icon="mdi:note-text-outline" width="14" />
                 <span>{{ apt.notes }}</span>
@@ -190,9 +215,20 @@
         </div>
         
         <div class="mt-4 flex flex-col gap-4 overflow-y-auto pb-6" style="flex: 1">
-          <div class="p-4 bg-secondary rounded-2xl">
-            <div class="text-sm text-muted mb-1">{{ $t('admin.currentTime') }}:</div>
-            <div class="font-bold">{{ formatDateShort(editForm.date) }}, {{ editForm.oldTime }}</div>
+          <div class="p-4 bg-secondary rounded-2xl flex flex-col gap-2">
+            <div class="flex justify-between items-center">
+               <div class="text-sm text-muted">{{ $t('admin.currentTime') }}:</div>
+               <div class="font-bold">{{ formatDateShort(editForm.date) }}, {{ editForm.oldTime }}</div>
+            </div>
+            
+            <div class="mt-2">
+              <label class="form-label text-xs mb-1">{{ $t('admin.masterRole') }}</label>
+              <select v-model="editForm.master_id" class="filter-select bg-white" @change="refreshSlots">
+                <option v-for="m in availableMasters" :key="m.id" :value="m.id">
+                   {{ m.first_name }} {{ m.last_name }}
+                </option>
+              </select>
+            </div>
           </div>
 
           <label class="form-label mt-2">{{ $t('admin.selectTime', { date: formatDateShort(editForm.date) }) }}</label>
@@ -640,18 +676,15 @@ const createAppointment = async () => {
     }
 }
 
-const openEditMode = async (apt) => {
-    editForm.value = {
-        id: apt.id,
-        master_id: apt.master || apt.master_detail?.id,
-        service_id: apt.service || apt.service_detail?.id,
-        date: apt.start_time.split('T')[0],
-        time: formatStartTime(apt.start_time),
-        oldTime: formatStartTime(apt.start_time)
-    }
-    showEditModal.value = true
-    
-    // Fetch Slots for this master and date
+const availableMasters = computed(() => {
+    const sId = editForm.value.service_id
+    if (!sId) return mastersList.value
+    return mastersList.value.filter(m => 
+        m.is_virtual || (m.services && m.services.includes(sId))
+    )
+})
+
+const refreshSlots = async () => {
     slotsLoading.value = true
     slots.value = []
     try {
@@ -666,6 +699,19 @@ const openEditMode = async (apt) => {
     finally { slotsLoading.value = false }
 }
 
+const openEditMode = async (apt) => {
+    editForm.value = {
+        id: apt.id,
+        master_id: apt.master || apt.master_detail?.id,
+        service_id: apt.service || apt.service_detail?.id,
+        date: apt.start_time.split('T')[0],
+        time: formatStartTime(apt.start_time),
+        oldTime: formatStartTime(apt.start_time)
+    }
+    showEditModal.value = true
+    refreshSlots()
+}
+
 const saveAptChanges = async () => {
     saving.value = true
     try {
@@ -675,6 +721,7 @@ const saveAptChanges = async () => {
         const end_time = new Date(new Date(start_time).getTime() + duration * 60000).toISOString()
 
         await api.patch(`/appointments/${editForm.value.id}/`, {
+            master: editForm.value.master_id,
             start_time,
             end_time
         })

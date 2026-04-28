@@ -19,22 +19,63 @@
          <!-- Service Info -->
          <div class="mb-6">
             <label class="text-xs text-body mb-1 block">Услуга</label>
-            <p class="font-medium text-black dark:text-white">{{ appointment?.service_detail?.name || 'Не указана' }}</p>
+            <p class="font-medium text-black dark:text-white">{{ appointment?.display_title || appointment?.service_detail?.name || 'Не указана' }}</p>
             <p class="text-sm text-body">Длительность: {{ appointment?.service_detail?.duration_minutes }} мин.</p>
          </div>
 
-         <!-- Time Edit -->
-         <div class="mb-4 bg-gray-50 dark:bg-meta-4 p-4 rounded-lg">
-            <label class="text-sm font-medium text-black dark:text-white mb-2 block">Время начала</label>
-            <input 
-              type="time" 
-              v-model="editedTime"
-              class="w-full rounded border border-stroke bg-white py-2 px-3 text-black outline-none focus:border-primary dark:border-strokedark dark:bg-bg-dark-2 dark:text-white"
-            />
-            <p class="text-xs text-body mt-2">
-              Окончание (автоматически): <span class="font-bold text-black dark:text-white">{{ calculatedEndTime }}</span>
-            </p>
-         </div>
+          <!-- Financial Info (Show only if calculated or finished) -->
+          <div v-if="appointment?.master_net_income !== null" class="mb-6 p-4 rounded-lg border-2" 
+               :class="appointment?.is_overflow ? 'border-warning/50 bg-warning/5' : 'border-stroke dark:border-strokedark bg-gray-50 dark:bg-meta-4'">
+            <label class="text-xs font-bold uppercase tracking-wider text-body mb-3 block">Распределение дохода</label>
+            
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm text-body">Итого к оплате:</span>
+              <span class="font-bold text-black dark:text-white">{{ appointment?.service_detail?.total_price }} ₸</span>
+            </div>
+            
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm text-body">Мастеру:</span>
+              <span class="font-bold text-success">{{ appointment?.master_net_income }} ₸</span>
+            </div>
+
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-body">Чистая маржа:</span>
+              <span class="font-bold text-primary">{{ appointment?.salon_net_income }} ₸</span>
+            </div>
+
+            <!-- Overflow Warning -->
+            <div v-if="appointment?.is_overflow" class="mt-3 flex items-start gap-2 text-[10px] text-warning-700 bg-warning/10 p-2 rounded border border-warning/20">
+              <Icon icon="mdi:alert-circle" class="shrink-0 mt-0.5" width="14" />
+              <p>Внимание: Скидка превысила маржу салона. Доход мастера был частично использован для покрытия скидки.</p>
+            </div>
+          </div>
+
+          <!-- Master & Time Edit -->
+          <div class="mb-4 bg-gray-50 dark:bg-meta-4 p-4 rounded-lg space-y-4">
+             <div>
+                <label class="text-sm font-medium text-black dark:text-white mb-2 block">Сотрудник</label>
+                <select 
+                  v-model="editedMasterId"
+                  class="w-full rounded border border-stroke bg-white py-2 px-3 text-black outline-none focus:border-primary dark:border-strokedark dark:bg-bg-dark-2 dark:text-white"
+                >
+                  <option v-for="m in filteredMasters" :key="m.id" :value="m.id">
+                    {{ m.first_name }} {{ m.last_name }}
+                  </option>
+                </select>
+             </div>
+
+             <div>
+                <label class="text-sm font-medium text-black dark:text-white mb-2 block">Время начала</label>
+                <input 
+                  type="time" 
+                  v-model="editedTime"
+                  class="w-full rounded border border-stroke bg-white py-2 px-3 text-black outline-none focus:border-primary dark:border-strokedark dark:bg-bg-dark-2 dark:text-white"
+                />
+                <p class="text-xs text-body mt-2">
+                  Окончание (автоматически): <span class="font-bold text-black dark:text-white">{{ calculatedEndTime }}</span>
+                </p>
+             </div>
+          </div>
        </div>
 
        <!-- Footer -->
@@ -62,15 +103,38 @@ const emit = defineEmits(['close', 'success'])
 
 const loading = ref(false)
 const editedTime = ref('')
+const editedMasterId = ref(null)
+const masters = ref([])
+
+const filteredMasters = computed(() => {
+  const serviceId = props.appointment?.service || props.appointment?.service_detail?.id
+  if (!serviceId) return masters.value
+  return masters.value.filter(m => 
+    m.is_virtual || (m.services && m.services.includes(serviceId))
+  )
+})
+
+const fetchMasters = async () => {
+  try {
+    const res = await api.get('/api/masters/')
+    masters.value = res.data.results || res.data
+  } catch (err) {
+    console.error('Failed to fetch masters:', err)
+  }
+}
 
 // Initialize local time when opened
 watch(() => props.show, (val) => {
-  if (val && props.appointment?.start_time) {
-    if (props.appointment.start_time.includes('T')) {
-      editedTime.value = props.appointment.start_time.split('T')[1].substring(0, 5)
-    } else {
-      editedTime.value = props.appointment.start_time.substring(0, 5)
+  if (val) {
+    fetchMasters()
+    if (props.appointment?.start_time) {
+      if (props.appointment.start_time.includes('T')) {
+        editedTime.value = props.appointment.start_time.split('T')[1].substring(0, 5)
+      } else {
+        editedTime.value = props.appointment.start_time.substring(0, 5)
+      }
     }
+    editedMasterId.value = props.appointment?.master || props.appointment?.master_detail?.id
   }
 })
 
@@ -96,7 +160,7 @@ const save = async () => {
     const newEnd = `${datePart}T${calculatedEndTime.value}:00`
 
     await api.patch(`/api/appointments/${props.appointment.id}/`, {
-      master: props.appointment.master, // the new master ID if it was dropped on another master's row
+      master: editedMasterId.value,
       start_time: newStart,
       end_time: newEnd
     })

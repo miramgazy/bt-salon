@@ -150,18 +150,21 @@
                 class="flex flex-col md:flex-row gap-4 bg-white dark:bg-bg-dark-2 rounded-xl border border-stroke dark:border-strokedark p-4 shadow-sm"
               >
                 <!-- Master Info -->
-                <div class="w-full md:w-[180px] shrink-0 border-b md:border-b-0 md:border-r border-stroke dark:border-strokedark pb-4 md:pb-0 pr-0 md:pr-4 flex items-center md:items-start justify-between md:flex-col">
+                <div class="w-full md:w-[180px] shrink-0 border-b md:border-b-0 md:border-r border-stroke dark:border-strokedark pb-4 md:pb-0 pr-0 md:pr-4 flex items-center md:items-start justify-between md:flex-col"
+                  :class="{'bg-warning/5': ms.master.is_virtual}">
                   <div class="flex items-center gap-3">
                     <div class="h-12 w-12 rounded-full flex items-center justify-center text-white text-lg font-bold shrink-0 shadow-sm"
-                      :style="{ backgroundColor: ms.master.color }">
-                      {{ ms.master.first_name[0] }}
+                      :style="{ backgroundColor: ms.master.is_virtual ? '#FF9C00' : ms.master.color }">
+                      <Icon v-if="ms.master.is_virtual" icon="mdi:account-group" width="24" />
+                      <span v-else>{{ ms.master.first_name[0] }}</span>
                     </div>
                     <div>
                       <h4 class="font-bold text-black dark:text-white">{{ ms.master.first_name }}</h4>
                       <p v-if="ms.shift" class="text-xs text-body mt-0.5">
                         <Icon icon="mdi:clock-outline" class="inline" /> {{ ms.shift.work_start?.slice(0,5) }} - {{ ms.shift.work_end?.slice(0,5) }}
                       </p>
-                      <p v-else class="text-xs text-warning mt-0.5">Смена закрыта</p>
+                      <p v-else-if="!ms.master.is_virtual" class="text-xs text-warning mt-0.5">Смена закрыта</p>
+                      <p v-if="ms.master.is_virtual" class="text-[10px] uppercase font-bold text-warning-600 mt-0.5">Виртуальный</p>
                     </div>
                   </div>
                 </div>
@@ -195,11 +198,20 @@
                       <!-- Appointment Card (if any starts in this slot) -->
                       <div 
                         v-if="hasAppt(ms.appointments, slot.time)"
-                        :style="{ borderColor: ms.master.color + '90', backgroundColor: ms.master.color + '20' }"
-                        class="absolute inset-0 z-10 rounded-lg p-1 shadow-sm text-xs cursor-grab active:cursor-grabbing overflow-hidden border hover:shadow-md flex flex-col justify-center group/card"
+                        :style="{ 
+                          borderColor: getApptAt(ms.appointments, slot.time).appointment_type === 'combo_sub' ? '#FF9C00' : ms.master.color + '90', 
+                          backgroundColor: getApptAt(ms.appointments, slot.time).appointment_type === 'combo_sub' ? '#FF9C0020' : ms.master.color + '20' 
+                        }"
+                        class="absolute inset-0 z-10 rounded-lg p-1 shadow-sm text-xs cursor-grab active:cursor-grabbing overflow-hidden border transition-all duration-200 hover:shadow-md flex flex-col justify-center group/card"
+                        :class="[
+                          isRelated(getApptAt(ms.appointments, slot.time)) ? 'ring-2 ring-primary ring-offset-1 z-20 shadow-lg scale-[1.02] !bg-primary/20' : '',
+                          isForgotten(getApptAt(ms.appointments, slot.time), ms.master) ? 'animate-wobble border-danger border-2' : ''
+                        ]"
                         draggable="true"
                         @dragstart="onDragStart($event, getApptAt(ms.appointments, slot.time), ms.master.id)"
                         @click.stop="openEditModal(getApptAt(ms.appointments, slot.time))"
+                        @mouseenter="handleApptMouseEnter(getApptAt(ms.appointments, slot.time))"
+                        @mouseleave="activeComboParentId = null"
                       >
                         <!-- Delete button -->
                         <button
@@ -209,9 +221,19 @@
                         >
                           <Icon icon="mdi:trash-can-outline" width="11" />
                         </button>
-                        <p class="font-bold text-black dark:text-white truncate text-[9px] leading-tight">{{ formatTime(getApptAt(ms.appointments, slot.time).start_time) }}</p>
+                        
+                        <div class="flex items-center gap-1 mb-0.5">
+                          <Icon v-if="getApptAt(ms.appointments, slot.time).is_combo" 
+                                icon="mdi:link-variant" 
+                                :class="getApptAt(ms.appointments, slot.time).appointment_type === 'combo_sub' ? 'text-warning' : 'text-primary'"
+                                width="10" />
+                          <p class="font-bold text-black dark:text-white truncate text-[9px] leading-tight">{{ formatTime(getApptAt(ms.appointments, slot.time).start_time) }}</p>
+                        </div>
                         <p class="font-medium truncate text-[9px] text-body leading-tight" v-if="getApptAt(ms.appointments, slot.time).client_detail?.full_name">
                           {{ getApptAt(ms.appointments, slot.time).client_detail.full_name }}
+                        </p>
+                        <p class="truncate text-[8px] opacity-70 leading-tight">
+                          {{ getApptAt(ms.appointments, slot.time).display_title }}
                         </p>
                       </div>
  
@@ -287,6 +309,27 @@ const showEditModal = ref(false)
 const editModalAppt = ref(null)
 const draggedAppt = ref(null)
 const draggedOverSlot = ref(null)
+const activeComboParentId = ref(null)
+
+const isRelated = (appt) => {
+  if (!activeComboParentId.value) return false
+  const pid = appt.parent || appt.id
+  return pid === activeComboParentId.value || appt.id === activeComboParentId.value
+}
+
+const handleApptMouseEnter = (appt) => {
+  if (appt.appointment_type === 'single') return
+  activeComboParentId.value = appt.parent || appt.id
+}
+
+const isForgotten = (appt, master) => {
+  if (!appt || appt.appointment_type !== 'combo_sub' || !master.is_virtual) return false
+  if (appt.status === 'done' || appt.status === 'cancelled') return false
+  const start = new Date(appt.start_time)
+  const now = new Date()
+  // If appointment started more than 10 minutes ago and still on virtual master
+  return start < new Date(now.getTime() - 10 * 60 * 1000)
+}
 
 // Shift modal state
 const showShiftModal = ref(false)
@@ -538,7 +581,12 @@ const calendarDays = computed(() => {
       }
 
       return { master, appointments: appts, shift, slots, utilization: calcUtilization(appts, shift) }
-    }).filter(Boolean).sort((a, b) => a.master.first_name.localeCompare(b.master.first_name))
+    }).filter(Boolean).sort((a, b) => {
+      // Virtual masters always last
+      if (a.master.is_virtual && !b.master.is_virtual) return 1
+      if (!a.master.is_virtual && b.master.is_virtual) return -1
+      return a.master.first_name.localeCompare(b.master.first_name)
+    })
 
     return {
       date,
@@ -644,4 +692,13 @@ onMounted(fetchAll)
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
+
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-1deg); }
+  75% { transform: rotate(1deg); }
+}
+.animate-wobble {
+  animation: wobble 0.3s ease-in-out infinite;
+}
 </style>

@@ -12,6 +12,7 @@ class Master(models.Model):
     color = models.CharField(max_length=7, default='#3C50E0', help_text="Hex color code for calendar appointments")
     
     is_active = models.BooleanField(default=True)
+    is_virtual = models.BooleanField(default=False)
     services = models.ManyToManyField('services.Service', blank=True)
 
     def __str__(self):

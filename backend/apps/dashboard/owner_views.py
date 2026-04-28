@@ -53,21 +53,25 @@ class OwnerDashboardAPIView(APIView):
             start_time__date__range=[date_from, date_to]
         ).exclude(status=Appointment.STATUS_CANCELLED)
 
-        # Use base_price as master share (following existing logic in dashboard views)
+        # Use distributed financial fields
+        # Count visits: Single + Combo Master
+        visit_filter = ~Q(appointment_type=Appointment.TYPE_COMBO_SUB)
         metrics = appointments.aggregate(
-            revenue=Sum('service__total_price'),
-            master_share=Sum('service__base_price'),
-            count=Count('id'),
+            revenue=Sum('total_price'),
+            master_share=Sum('master_net_income'),
+            salon_share=Sum('salon_net_income'),
+            count=Count('id', filter=visit_filter),
             clients=Count('client', distinct=True)
         )
         
         revenue = float(metrics['revenue'] or 0)
         master_share = float(metrics['master_share'] or 0)
+        owner_margin_val = float(metrics['salon_share'] or 0)
         
         expenses_qs = Expense.objects.filter(organization=org, date__range=[date_from, date_to])
         total_expenses = float(expenses_qs.aggregate(total=Sum('amount'))['total'] or 0)
         
-        profit = revenue - master_share - total_expenses
+        profit = owner_margin_val - total_expenses
         margin = (profit / revenue * 100) if revenue > 0 else 0
         avg_check = (revenue / metrics['count']) if metrics['count'] > 0 else 0
         
@@ -80,7 +84,7 @@ class OwnerDashboardAPIView(APIView):
             curr += timedelta(days=1)
             
         # Fill revenue
-        rev_by_day = appointments.values('start_time__date').annotate(rev=Sum('service__total_price'))
+        rev_by_day = appointments.values('start_time__date').annotate(rev=Sum('total_price'))
         for entry in rev_by_day:
             dt_str = entry['start_time__date'].strftime('%Y-%m-%d')
             if dt_str in timeline_data:
@@ -101,10 +105,11 @@ class OwnerDashboardAPIView(APIView):
             final_timeline.append(vals)
 
         # 3. Master Stats
+        # Sessions should represent unique visits served by the master
         master_stats = appointments.values('master_id', 'master__user__first_name', 'master__user__last_name').annotate(
-            rev=Sum('service__total_price'),
-            share=Sum('service__base_price'),
-            sessions=Count('id')
+            rev=Sum('total_price'),
+            share=Sum('master_net_income'),
+            sessions=Count('id', filter=~Q(appointment_type=Appointment.TYPE_COMBO_SUB))
         ).order_by('-rev')
         
         masters = []
@@ -117,19 +122,51 @@ class OwnerDashboardAPIView(APIView):
                 'sessions': m['sessions']
             })
 
-        # 4. Service Stats
-        service_stats = appointments.values('service__name').annotate(
-            rev=Sum('service__total_price'),
-            count=Count('id')
-        ).order_by('-rev')[:10]
+        # 4. Detailed Service Stats
+        # Grouping by Service + Master combination for combos
+        from collections import defaultdict
         
+        # Fetch visits (Single and Combo Master)
+        visits = appointments.filter(
+            ~Q(appointment_type=Appointment.TYPE_COMBO_SUB)
+        ).select_related('service', 'master__user').prefetch_related('children__master__user')
+        
+        svc_summary = defaultdict(lambda: {'revenue': 0, 'count': 0})
+        
+        for appt in visits:
+            # Construct composite name if combo
+            if appt.appointment_type == Appointment.TYPE_COMBO_MASTER:
+                # Collect all masters involved
+                masters_involved = [appt.master.user.first_name]
+                for child in appt.children.all():
+                    masters_involved.append(child.master.user.first_name)
+                
+                # Unique and sorted to keep grouping consistent
+                unique_masters = sorted(list(set(masters_involved)))
+                masters_str = " + ".join(unique_masters)
+                display_name = f"{appt.service.name} ({masters_str})"
+                
+                # Revenue for combo = parent.total_price + children.total_price
+                total_rev = float(appt.total_price or 0)
+                for child in appt.children.all():
+                    total_rev += float(child.total_price or 0)
+            else:
+                display_name = appt.service.name
+                total_rev = float(appt.total_price or 0)
+                
+            svc_summary[display_name]['revenue'] += total_rev
+            svc_summary[display_name]['count'] += 1
+            
+        # Convert to list and sort by revenue
         services = []
-        for s in service_stats:
+        for name, stats in svc_summary.items():
             services.append({
-                'name': s['service__name'],
-                'revenue': float(s['rev'] or 0),
-                'count': s['count']
+                'name': name,
+                'revenue': stats['revenue'],
+                'count': stats['count']
             })
+        services.sort(key=lambda x: x['revenue'], reverse=True)
+        services = services[:10]
 
         # 5. Expenses Breakdown
         # Group by category_type (fixed/variable)
@@ -160,8 +197,9 @@ class OwnerDashboardAPIView(APIView):
             organization=org,
             start_time__date__range=[prev_date_from, prev_date_to]
         ).exclude(status=Appointment.STATUS_CANCELLED).aggregate(
-            rev=Sum('service__total_price'),
-            share=Sum('service__base_price')
+            rev=Sum('total_price'),
+            share=Sum('master_net_income'),
+            salon_share=Sum('salon_net_income')
         )
         
         prev_exp = float(Expense.objects.filter(
@@ -170,8 +208,8 @@ class OwnerDashboardAPIView(APIView):
         ).aggregate(total=Sum('amount'))['total'] or 0)
         
         prev_rev = float(prev_appts['rev'] or 0)
-        prev_share = float(prev_appts['share'] or 0)
-        prev_profit = prev_rev - prev_share - prev_exp
+        prev_salon_margin = float(prev_appts['salon_share'] or 0)
+        prev_profit = prev_salon_margin - prev_exp
         
         return Response({
             'summary': {

@@ -44,7 +44,7 @@
               </div>
             </div>
 
-            <div v-if="selections[master.id].selected" class="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
+            <div v-if="selections[master.id].selected && orgSettings?.has_lunch_break" class="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn mt-4">
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="text-[10px] uppercase font-bold text-body block mb-1">Начало</label>
@@ -65,6 +65,16 @@
                   <input v-model="selections[master.id].lunch_end" type="time" class="w-full rounded border border-stroke bg-gray-50 py-1.5 px-3 text-sm text-black focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white" />
                 </div>
               </div>
+            </div>
+            <div v-else-if="selections[master.id].selected" class="grid grid-cols-2 gap-4 animate-fadeIn mt-4">
+                <div>
+                  <label class="text-[10px] uppercase font-bold text-body block mb-1">Начало</label>
+                  <input v-model="selections[master.id].work_start" type="time" class="w-full rounded border border-stroke bg-gray-50 py-1.5 px-3 text-sm text-black focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white" />
+                </div>
+                <div>
+                  <label class="text-[10px] uppercase font-bold text-body block mb-1">Конец</label>
+                  <input v-model="selections[master.id].work_end" type="time" class="w-full rounded border border-stroke bg-gray-50 py-1.5 px-3 text-sm text-black focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white" />
+                </div>
             </div>
           </div>
         </div>

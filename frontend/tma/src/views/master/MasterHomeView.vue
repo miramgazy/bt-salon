@@ -206,7 +206,14 @@ const fetchBookingsCount = async () => {
     const offset = now.getTimezoneOffset()
     const localNow = new Date(now.getTime() - (offset * 60 * 1000))
     const today = localNow.toISOString().split('T')[0]
-    const res = await api.get('/appointments/', { params: { my: 'true', date_from: today, date_to: today } })
+    const res = await api.get('/appointments/', { 
+      params: { 
+        my: 'true', 
+        date_from: today, 
+        date_to: today,
+        exclude_sub: 'true'
+      } 
+    })
     appointmentsToday.value = res.data.count !== undefined ? res.data.count : (res.data.length || 0)
   } catch (e) {
     console.error('Fetch bookings error', e)

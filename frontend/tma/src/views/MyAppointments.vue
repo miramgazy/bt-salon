@@ -23,7 +23,7 @@
       <div v-for="apt in appointments" :key="apt.id" class="card apt-card glass">
         <div class="apt-header">
           <div style="flex: 1">
-             <h3 class="apt-service">{{ apt.service_detail?.name }}</h3>
+             <h3 class="apt-service">{{ apt.display_title || apt.service_detail?.name }}</h3>
              <div class="apt-master">{{ $t('tma.masters') }}: {{ apt.master_detail?.first_name }}</div>
            </div>
           <div :class="['status-badge', apt.status.toLowerCase()]">

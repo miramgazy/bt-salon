@@ -167,10 +167,16 @@
       <div class="service-list">
         <div v-for="svc in catServices" :key="svc.id" class="service-card" @click="handleServiceSelect(svc)">
           <div class="service-info">
-            <div class="service-name">{{ svc.name }}</div>
+            <div class="service-name">
+              {{ svc.name }}
+              <span v-if="svc.is_combo" class="combo-badge">Combo</span>
+            </div>
             <div class="service-meta">⏱ {{ svc.duration_minutes }} {{ $t('tma.minutes') }}</div>
           </div>
-          <div class="service-price">{{ svc.total_price }} ₸</div>
+          <div class="service-price-wrapper">
+            <div v-if="getOldPrice(svc)" class="old-price">~~{{ getOldPrice(svc) }} ₸~~</div>
+            <div class="service-price">{{ svc.total_price }} ₸</div>
+          </div>
         </div>
       </div>
     </div>
@@ -268,10 +274,15 @@
                <span class="modal-label">{{ $t('services.title') }}</span>
                <span class="modal-value">{{ state.selectedService.name }}</span>
              </div>
-             <div class="modal-row">
-               <span class="modal-label">{{ $t('tma.masters') }}</span>
-               <span class="modal-value">{{ state.selectedMaster.first_name }} {{ state.selectedMaster.last_name }}</span>
-             </div>
+              <div class="modal-row">
+                <span class="modal-label">{{ $t('tma.masters') }}</span>
+                <span class="modal-value">
+                  {{ state.selectedMaster.first_name }} {{ state.selectedMaster.last_name }}
+                  <span v-if="state.selectedService.is_combo" style="color: var(--gold); font-size: 11px; display: block; text-align: right;">
+                    (+1 {{ $t('tma.freeMaster', 'свободный мастер') }})
+                  </span>
+                </span>
+              </div>
              <div class="modal-row">
                <span class="modal-label">{{ $t('common.time') }}</span>
                <span class="modal-value">{{ state.selectedDate }}, {{ state.selectedSlot }}</span>
@@ -471,12 +482,12 @@ const catServices = computed(() => {
 })
 
 const masterOptions = computed(() => {
-    if (!state.selectedService) return masters.value
-    return masters.value.filter(m => m.services?.includes(state.selectedService.id))
+    if (!state.selectedService) return masters.value.filter(m => !m.is_virtual)
+    return masters.value.filter(m => !m.is_virtual && m.services?.includes(state.selectedService.id))
 })
 
 const filteredMasters = computed(() => {
-  let result = masters.value
+  let result = masters.value.filter(m => !m.is_virtual)
   
   if (state.masterFilter) {
     result = result.filter(m => m.services?.some(s => {
@@ -603,6 +614,12 @@ watch([() => state.selectedMaster, () => state.selectedService, () => state.sele
 })
 
 const { t } = useI18n()
+
+const getOldPrice = (svc) => {
+  if (!svc.is_combo || !svc.combo_items) return null
+  const sum = svc.combo_items.reduce((acc, item) => acc + (parseFloat(item.sub_service_price || 0) * item.quantity), 0)
+  return sum > parseFloat(svc.total_price) ? sum : null
+}
 
 const handleConfirm = async () => {
   try {
@@ -821,9 +838,15 @@ const handleConfirm = async () => {
   background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
   padding: 18px; cursor: pointer; transition: all .2s; display: flex; justify-content: space-between; align-items: center;
 }
-.service-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.service-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.combo-badge { 
+  background: var(--gold-gradient); color: #000; font-size: 10px; 
+  padding: 2px 6px; border-radius: 4px; font-weight: 800; text-transform: uppercase;
+}
 .service-meta { font-size: 12px; color: var(--muted); font-weight: 500; }
 .service-price { font-size: 18px; font-weight: 700; color: var(--gold); font-family: var(--font-header); }
+.service-price-wrapper { text-align: right; }
+.old-price { font-size: 11px; color: var(--muted); text-decoration: line-through; margin-bottom: -2px; }
 
 /* Master grid */
 .master-grid { display: flex; flex-direction: column; gap: 10px; }

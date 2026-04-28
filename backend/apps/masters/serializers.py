@@ -18,9 +18,9 @@ class MasterSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'organization', 'user', 'first_name', 'last_name', 'phone', 
             'photo', 'photo_url', 'bio', 'color', 'telegram_id', 
-            'is_active', 'services', 'services_detail'
+            'is_active', 'is_virtual', 'services', 'services_detail'
         ]
-        read_only_fields = ['user', 'photo_url']
+        read_only_fields = ['user', 'photo_url', 'is_virtual']
 
     def get_photo_url(self, obj):
         if not obj.photo: return None

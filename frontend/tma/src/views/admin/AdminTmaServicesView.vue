@@ -8,7 +8,7 @@
     </Transition>
     <div class="page-header flex-between mb-4">
       <h1 class="page-title">{{ $t('services.title') }}</h1>
-      <button class="add-btn" @click="openCreateModal">
+      <button class="add-btn" @click="showTypeSelector = true">
         <Icon icon="mdi:plus" width="24" />
       </button>
     </div>
@@ -39,12 +39,15 @@
        <div v-for="srv in filteredServices" :key="srv.id" class="service-card">
           <div class="service-card-content">
              <div class="service-top-row">
-                <div class="service-name">{{ srv.name }}</div>
-                <div class="service-actions">
-                   <button class="edit-icon-btn" @click.stop="openEditModal(srv)">
-                      <Icon icon="mdi:pencil-outline" width="22" />
-                   </button>
-                </div>
+                 <div class="service-actions flex items-center gap-2">
+                    <span v-if="srv.is_combo" class="combo-badge-mini">
+                       <Icon icon="mdi:link-variant" width="10" />
+                    </span>
+                    <button class="edit-icon-btn" @click.stop="openEditModal(srv)">
+                       <Icon icon="mdi:pencil-outline" width="22" />
+                    </button>
+                 </div>
+                 <div class="service-name">{{ srv.name }}</div>
              </div>
              <div class="service-details-row">
                  <div class="service-meta">
@@ -117,6 +120,113 @@
           <div class="total-price-box mt-2">
             <span class="text-muted">{{ $t('admin.totalForClient') }}:</span>
             <span class="text-gold bold text-lg">{{ computedTotal }} ₸</span>
+          </div>
+
+          <button type="submit" class="btn-sheet mt-2" :disabled="creating">
+             {{ creating ? $t('common.saving') : $t('common.save') }}
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Service Type Selector -->
+    <div v-if="showTypeSelector" class="overlay" @click="showTypeSelector = false">
+       <div class="sheet" @click.stop>
+          <div class="sheet-title mb-6 text-center">{{ $t('admin.selectServiceType') || 'Выберите тип услуги' }}</div>
+          <div class="type-grid">
+             <button class="type-btn" @click="openCreateModal(); showTypeSelector = false">
+                <div class="type-icon-box">
+                   <Icon icon="mdi:content-cut" width="32" />
+                </div>
+                <span>{{ $t('admin.singleService') || 'Обычная' }}</span>
+             </button>
+             <button class="type-btn type-btn-combo" @click="openComboModal(); showTypeSelector = false">
+                <div class="type-icon-box">
+                   <Icon icon="mdi:link-variant" width="32" />
+                </div>
+                <span>{{ $t('admin.comboService') || 'Комбо' }}</span>
+             </button>
+          </div>
+          <button class="btn-sheet btn-sheet-ghost mt-6" @click="showTypeSelector = false">{{ $t('common.close') }}</button>
+       </div>
+    </div>
+
+    <!-- Combo Service Modal (Bottom Sheet) -->
+    <div v-if="showComboModal" class="overlay" @click="showComboModal = false">
+      <div class="sheet h-80vh" @click.stop>
+         <div class="sheet-title flex justify-between">
+            <span>{{ isEditing ? $t('common.change') : 'Создание комбо' }}</span>
+            <Icon icon="mdi:close" width="24" @click="showComboModal = false" class="cursor-pointer" />
+        </div>
+        
+        <form @submit.prevent="submitCombo" class="mt-4 flex flex-col gap-4 overflow-y-auto pb-6">
+          <div>
+            <label class="form-label">Название комбо <span class="text-error">*</span></label>
+            <input v-model="comboForm.name" type="text" class="form-input" required />
+          </div>
+          <div>
+            <label class="form-label">{{ $t('admin.category') }} <span class="text-error">*</span></label>
+            <select v-model="comboForm.category" class="form-input" required>
+              <option value="" disabled>{{ $t('admin.selectCategory') }}</option>
+              <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+            </select>
+          </div>
+
+          <div class="combo-items-section">
+            <label class="form-label flex-between mb-2">
+               Состав комбо
+               <span class="text-xs text-gold bold" @click="addComboItem">+ Добавить</span>
+            </label>
+            <div class="space-y-3">
+               <div v-for="(item, idx) in selectedSubServices" :key="idx" class="combo-item-row flex items-center gap-2">
+                  <select v-model="item.id" class="form-input flex-1">
+                     <option value="" disabled>Услуга...</option>
+                     <option v-for="s in services.filter(x => !x.is_combo)" :key="s.id" :value="s.id">{{ s.name }}</option>
+                  </select>
+                  <div class="flex items-center">
+                     <label :class="['main-star-btn', { active: mainIndex === idx }]">
+                        <input type="radio" :value="idx" v-model="mainIndex" class="sr-only" />
+                        <Icon :icon="mainIndex === idx ? 'mdi:star' : 'mdi:star-outline'" 
+                              :class="mainIndex === idx ? 'text-gold' : 'text-muted'" 
+                              width="24" />
+                     </label>
+                  </div>
+                  <button type="button" @click="removeComboItem(idx)" class="remove-btn">
+                     <Icon icon="mdi:close" width="18" />
+                  </button>
+               </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 bg-secondary p-3 rounded-xl text-xs">
+             <div>
+                <div class="text-muted mb-1">Сумма услуг:</div>
+                <div class="bold">{{ comboSumPrice }} ₸</div>
+             </div>
+             <div>
+                <div class="text-muted mb-1">Длительность:</div>
+                <div class="bold">{{ comboSumDuration }} мин</div>
+             </div>
+          </div>
+
+          <div>
+            <label class="form-label">Цена комбо (₸)</label>
+            <input v-model="comboForm.total_price" type="number" class="form-input text-lg bold text-gold" required />
+          </div>
+
+          <div v-if="comboDiscount > 0">
+             <label class="form-label mb-2">Стратегия скидки</label>
+             <div class="flex gap-2">
+                <button 
+                  v-for="s in ['owner_only', 'master_only', 'equal_split']" :key="s"
+                  type="button"
+                  class="strat-pill"
+                  :class="{ active: comboForm.discount_strategy === s }"
+                  @click="comboForm.discount_strategy = s"
+                >
+                  {{ s === 'owner_only' ? 'Салон' : s === 'master_only' ? 'Мастер' : '50/50' }}
+                </button>
+             </div>
           </div>
 
           <button type="submit" class="btn-sheet mt-2" :disabled="creating">
@@ -279,10 +389,34 @@ const isEditing = ref(false)
 const editingId = ref(null)
 
 const showCategoryModal = ref(false)
+const showTypeSelector = ref(false)
+const showComboModal = ref(false)
 const newCategory = ref('')
 const creating = ref(false)
 const savingCat = ref(false)
 const successMsg = ref('')
+
+const comboForm = ref({
+    name: '', category: '', total_price: 0, discount_strategy: 'owner_only'
+})
+const selectedSubServices = ref([{ id: '', quantity: 1 }])
+const mainIndex = ref(0)
+
+const comboSumPrice = computed(() => {
+    return selectedSubServices.value.reduce((acc, item) => {
+        const s = services.value.find(x => x.id === item.id)
+        return acc + (s ? parseFloat(s.total_price) : 0)
+    }, 0)
+})
+
+const comboSumDuration = computed(() => {
+    return selectedSubServices.value.reduce((acc, item) => {
+        const s = services.value.find(x => x.id === item.id)
+        return acc + (s ? s.duration_minutes : 0)
+    }, 0)
+})
+
+const comboDiscount = computed(() => comboSumPrice.value - comboForm.value.total_price)
 
 const form = ref({
     name: '',
@@ -380,23 +514,87 @@ const openCreateModal = () => {
     editingId.value = null
     form.value = {
         name: '', category: categories.value[0]?.id || '', duration_minutes: 60,
-        base_price: 1000, margin_type: 'fixed', margin_value: 0
+        base_price: 1000, margin_type: 'fixed', margin_value: 0, is_combo: false
     }
     showCreateModal.value = true
 }
 
+const openComboModal = () => {
+    isEditing.value = false
+    editingId.value = null
+    comboForm.value = {
+        name: '', category: categories.value[0]?.id || '', total_price: 0, discount_strategy: 'owner_only'
+    }
+    selectedSubServices.value = [{ id: '', quantity: 1 }]
+    mainIndex.value = 0
+    showComboModal.value = true
+}
+
+const addComboItem = () => selectedSubServices.value.push({ id: '', quantity: 1 })
+const removeComboItem = (idx) => selectedSubServices.value.splice(idx, 1)
+
 const openEditModal = (srv) => {
     isEditing.value = true
     editingId.value = srv.id
-    form.value = {
-        name: srv.name,
-        category: srv.category,
-        duration_minutes: srv.duration_minutes,
-        base_price: srv.base_price,
-        margin_type: srv.margin_type,
-        margin_value: srv.margin_value
+    if (srv.is_combo) {
+        comboForm.value = {
+            name: srv.name,
+            category: srv.category,
+            total_price: srv.total_price,
+            discount_strategy: srv.discount_strategy
+        }
+        selectedSubServices.value = srv.combo_items.map(i => ({ id: i.sub_service, quantity: i.quantity }))
+        mainIndex.value = srv.combo_items.findIndex(i => i.is_main)
+        if (mainIndex.value === -1) mainIndex.value = 0
+        showComboModal.value = true
+    } else {
+        form.value = {
+            name: srv.name,
+            category: srv.category,
+            duration_minutes: srv.duration_minutes,
+            base_price: srv.base_price,
+            margin_type: srv.margin_type,
+            margin_value: srv.margin_value,
+            is_combo: false
+        }
+        showCreateModal.value = true
     }
-    showCreateModal.value = true
+}
+
+const submitCombo = async () => {
+    if (selectedSubServices.value.some(i => !i.id)) {
+        alert('Выберите все услуги в комбо')
+        return
+    }
+    creating.value = true
+    try {
+        const payload = {
+            ...comboForm.value,
+            is_combo: true,
+            duration_minutes: comboSumDuration.value,
+            base_price: 0,
+            margin_type: 'fixed',
+            margin_value: 0,
+            sub_services: selectedSubServices.value.map((s, idx) => ({
+                sub_service: s.id,
+                quantity: s.quantity || 1,
+                is_main: mainIndex.value === idx
+            }))
+        }
+        if (isEditing.value) {
+            await api.patch(`/services/${editingId.value}/`, payload)
+        } else {
+            await api.post('/services/', payload)
+        }
+        await fetchData()
+        showComboModal.value = false
+        successMsg.value = t('common.save')
+        setTimeout(() => successMsg.value = '', 3000)
+    } catch (e) {
+        alert(t('common.error'))
+    } finally {
+        creating.value = false
+    }
 }
 
 const submitService = async () => {
@@ -568,16 +766,6 @@ onMounted(() => {
 .custom-date-wrapper { position: relative; }
 .date-input-hidden { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
-.date-pill {
-  white-space: nowrap; padding: 8px 16px; border-radius: 20px;
-  background: var(--bg-secondary); border: 1px solid var(--border);
-  color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
-}
-.date-pill.active {
-  background: var(--gold-gradient); color: #000; border-color: var(--gold);
-  box-shadow: 0 4px 10px var(--gold-glow);
-}
-
 .service-meta { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
 .service-price { font-weight: 800; font-size: 17px; color: var(--gold); }
 
@@ -669,5 +857,68 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.type-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+.type-btn {
+    background: var(--bg-secondary); border: 2px solid var(--border); border-radius: 24px;
+    padding: 20px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--text); font-weight: 700; transition: all 0.2s;
+    aspect-ratio: 1 / 1;
+}
+.type-btn:active { transform: scale(0.95); background: var(--border); }
+.type-btn-combo { border-color: var(--gold); color: var(--gold); }
+.type-icon-box {
+    width: 56px; height: 56px; border-radius: 16px;
+    background: var(--bg); display: flex; align-items: center; justify-content: center;
+    margin-bottom: 12px;
+}
+.type-btn-combo .type-icon-box { background: var(--gold-glow); }
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.main-star-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+}
+.main-star-btn.active {
+    border-color: var(--gold);
+    background: var(--gold-glow);
+}
+
+.combo-item-row { display: flex; gap: 8px; align-items: center; }
+.remove-btn { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; color: var(--danger); }
+
+.strat-pill {
+    flex: 1; padding: 10px 4px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg-secondary); color: var(--muted); font-size: 11px; font-weight: 700;
+    transition: all 0.2s; text-align: center;
+}
+.strat-pill.active { background: var(--gold-gradient); color: #000; border-color: var(--gold); }
+
+.combo-badge-mini {
+    background: var(--gold-glow); color: var(--gold); border: 1px solid var(--gold);
+    width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
 }
 </style>

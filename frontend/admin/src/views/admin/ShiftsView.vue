@@ -62,7 +62,7 @@
               <tr class="bg-gray-2 dark:bg-meta-4">
                 <th class="py-4 px-4 font-medium text-black dark:text-white xl:pl-11">Мастер</th>
                 <th class="py-4 px-4 font-medium text-black dark:text-white">Рабочее время</th>
-                <th class="py-4 px-4 font-medium text-black dark:text-white">Обед</th>
+                <th v-if="organization?.has_lunch_break" class="py-4 px-4 font-medium text-black dark:text-white">Обед</th>
                 <th class="py-4 px-4 font-medium text-black dark:text-white">Комментарий</th>
                 <th class="py-4 px-4 font-medium text-black dark:text-white">Статус</th>
                 <th class="py-4 px-4 font-medium text-black dark:text-white">Действие</th>
@@ -76,7 +76,7 @@
                 <td class="py-5 px-4 text-black dark:text-white">
                   {{ formatTime(shift.work_start) }} — {{ formatTime(shift.work_end) }}
                 </td>
-                <td class="py-5 px-4 text-black dark:text-white">
+                <td v-if="organization?.has_lunch_break" class="py-5 px-4 text-black dark:text-white">
                   {{ formatTime(shift.lunch_start) }} — {{ formatTime(shift.lunch_end) }}
                 </td>
                 <td class="py-5 px-4 text-black dark:text-white">
@@ -151,7 +151,7 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4 mb-6">
+        <div v-if="organization?.has_lunch_break" class="grid grid-cols-2 gap-4 mb-6">
             <div>
                 <label class="mb-2.5 block text-sm font-medium text-black dark:text-white">Обед (с)</label>
                 <input v-model="editForm.lunch_start" type="time" class="w-full rounded border border-stroke bg-gray-50 py-3 px-5 outline-none text-black focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white" />
