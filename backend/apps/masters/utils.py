@@ -9,13 +9,21 @@ def get_or_create_virtual_master(organization):
     """
     virtual_master = Master.objects.filter(organization=organization, is_virtual=True).first()
     
+    if virtual_master:
+        # Rename if it has the old name
+        if virtual_master.user.first_name == "Виртуальный":
+            virtual_master.user.first_name = "Очередь"
+            virtual_master.user.last_name = ""
+            virtual_master.user.save()
+        return virtual_master
+    
     if not virtual_master:
         # Create the virtual master on the fly
         username = f"v_{organization.id}_{''.join(random.choices(string.ascii_lowercase, k=4))}"
         v_user = AppUser.objects.create(
             username=username, 
-            first_name="Виртуальный", 
-            last_name="Мастер", 
+            first_name="Очередь", 
+            last_name="", 
             organization=organization, 
             role=AppUser.ROLE_MASTER
         )

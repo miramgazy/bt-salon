@@ -170,24 +170,8 @@ class Appointment(models.Model):
             with transaction.atomic():
                 if is_new:
                     # CREATE CHILDREN
-                    virtual_master = Master.objects.filter(organization=self.organization, is_virtual=True).first()
-                    if not virtual_master:
-                        from apps.accounts.models import User as AppUser
-                        import random, string
-                        username = f"v_{self.organization.id}_{''.join(random.choices(string.ascii_lowercase, k=4))}"
-                        v_user = AppUser.objects.create(
-                            username=username, 
-                            first_name="Виртуальный", 
-                            last_name="Мастер", 
-                            organization=self.organization, 
-                            role=AppUser.ROLE_MASTER
-                        )
-                        virtual_master = Master.objects.create(
-                            organization=self.organization, 
-                            user=v_user, 
-                            is_virtual=True, 
-                            color="#FF9C00"
-                        )
+                    from apps.masters.utils import get_or_create_virtual_master
+                    virtual_master = get_or_create_virtual_master(self.organization)
                     
                     v_shift, _ = MasterShift.objects.get_or_create(
                         organization=self.organization,

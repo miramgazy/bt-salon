@@ -164,7 +164,7 @@
                         <Icon icon="mdi:clock-outline" class="inline" /> {{ ms.shift.work_start?.slice(0,5) }} - {{ ms.shift.work_end?.slice(0,5) }}
                       </p>
                       <p v-else-if="!ms.master.is_virtual" class="text-xs text-warning mt-0.5">Смена закрыта</p>
-                      <p v-if="ms.master.is_virtual" class="text-[10px] uppercase font-bold text-warning-600 mt-0.5">Виртуальный</p>
+                      <p v-if="ms.master.is_virtual" class="text-[10px] uppercase font-bold text-warning-600 mt-0.5">Очередь</p>
                     </div>
                   </div>
                 </div>
