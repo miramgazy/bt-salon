@@ -245,10 +245,13 @@ const sumPrice = computed(() => {
 })
 
 const sumDuration = computed(() => {
-  return selectedSubServices.value.reduce((acc, item) => {
-    const s = availableServices.value.find(svc => svc.id === item.id)
-    return acc + (s ? s.duration_minutes * item.quantity : 0)
-  }, 0)
+  if (mainIndex.value === null || mainIndex.value === undefined) return 0
+  const mainItem = selectedSubServices.value[mainIndex.value]
+  if (mainItem && mainItem.id) {
+    const s = availableServices.value.find(svc => svc.id === mainItem.id)
+    return s ? s.duration_minutes : 0
+  }
+  return 0
 })
 
 const discount = computed(() => {

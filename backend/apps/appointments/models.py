@@ -187,6 +187,12 @@ class Appointment(models.Model):
                         v_shift.is_open = True
                         v_shift.save(update_fields=['is_open'])
                         
+                    # DURATION SYNC: Force parent duration to match main service
+                    main_item = self.service.combo_items.filter(is_main=True).first()
+                    if main_item:
+                        self.end_time = self.start_time + timedelta(minutes=main_item.sub_service.duration_minutes)
+                        super().save(update_fields=['end_time'])
+                    
                     children_list = []
                     for item in self.service.combo_items.all():
                         # If main item has quantity > 1, the first one is this appointment,
@@ -238,6 +244,11 @@ class Appointment(models.Model):
                 else:
                     # SYNC UPDATES TO CHILDREN
                     if old_status != self.status or old_start != self.start_time or old_reason != self.cancellation_reason:
+                        main_item = self.service.combo_items.filter(is_main=True).first()
+                        if main_item:
+                            self.end_time = self.start_time + timedelta(minutes=main_item.sub_service.duration_minutes)
+                            # update_fields will be added to the final save below
+                        
                         for child in self.children.all():
                             child.status = self.status
                             child.start_time = self.start_time
@@ -246,4 +257,4 @@ class Appointment(models.Model):
                             child.save()
                         
                         self.calculate_financials()
-                        super().save(update_fields=['master_net_income', 'salon_net_income', 'is_overflow'])
+                        super().save(update_fields=['end_time', 'master_net_income', 'salon_net_income', 'is_overflow'])
