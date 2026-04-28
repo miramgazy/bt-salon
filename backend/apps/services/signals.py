@@ -7,15 +7,14 @@ from apps.masters.models import Master
 def assign_service_to_virtual_master(sender, instance, created, **kwargs):
     """
     Automatically assign new services to the Virtual Master of the same organization.
+    Ensures Virtual Master exists.
     """
     if created and instance.organization:
-        virtual_master = Master.objects.filter(
-            organization=instance.organization, 
-            is_virtual=True
-        ).first()
+        org = instance.organization
+        from apps.masters.utils import get_or_create_virtual_master
+        virtual_master = get_or_create_virtual_master(org)
         
-        if virtual_master:
-            virtual_master.services.add(instance)
+        virtual_master.services.add(instance)
 
 @receiver(post_save, sender=Master)
 def assign_all_services_to_new_virtual_master(sender, instance, created, **kwargs):

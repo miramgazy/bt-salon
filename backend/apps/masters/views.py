@@ -16,10 +16,15 @@ class MasterViewSet(viewsets.ModelViewSet):
     serializer_class = MasterSerializer
 
     def get_queryset(self):
-        if not self.request.user.is_authenticated or not self.request.user.organization:
+        org = self.request.user.organization
+        if not org:
             return Master.objects.none()
             
-        qs = Master.objects.filter(organization=self.request.user.organization).select_related('user')
+        # Lazy ensure virtual master exists for organizations that had services/shifts before update
+        from .utils import get_or_create_virtual_master
+        get_or_create_virtual_master(org)
+
+        qs = Master.objects.filter(organization=org).select_related('user')
         shifts_open_today = self.request.query_params.get('shifts_open_today')
         if shifts_open_today == 'true':
             qs = qs.filter(mastershift__date=timezone.now().date(), mastershift__is_open=True)

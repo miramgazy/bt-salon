@@ -96,6 +96,11 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         org = self.request.user.organization
         if not org:
             return User.objects.none()
+        
+        # Lazy ensure virtual master exists
+        from apps.masters.utils import get_or_create_virtual_master
+        get_or_create_virtual_master(org)
+
         return User.objects.filter(organization=org, role__in=[User.ROLE_ADMIN, User.ROLE_MASTER])
 
     def perform_create(self, serializer):
