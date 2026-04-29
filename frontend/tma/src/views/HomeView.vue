@@ -635,7 +635,7 @@ const handleConfirm = async () => {
       end_time: state.selectedSlot.end_iso
     })
     
-    state.showModal = false
+     state.showModal = false
     state.showSuccess = true
   } catch (error) {
     console.error('Booking error detail:', error.response?.data)
