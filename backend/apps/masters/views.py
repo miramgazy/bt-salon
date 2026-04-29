@@ -120,8 +120,8 @@ class MasterViewSet(viewsets.ModelViewSet):
         slots = []
         
         # We step by organization slot duration
-        current_dt = datetime.combine(target_date, shift.work_start)
-        end_dt = datetime.combine(target_date, shift.work_end)
+        current_dt = timezone.make_aware(datetime.combine(target_date, shift.work_start))
+        end_dt = timezone.make_aware(datetime.combine(target_date, shift.work_end))
         
         service_duration = timedelta(minutes=duration_minutes)
         step = timedelta(minutes=org.slot_duration)
@@ -147,9 +147,7 @@ class MasterViewSet(viewsets.ModelViewSet):
             # 2. Selected Master Busy Check
             if status_code == 'available':
                 for appt in appointments:
-                    appt_start_naive = timezone.make_naive(appt.start_time) if timezone.is_aware(appt.start_time) else appt.start_time
-                    appt_end_naive = timezone.make_naive(appt.end_time) if timezone.is_aware(appt.end_time) else appt.end_time
-                    if current_dt < appt_end_naive and slot_end_dt > appt_start_naive:
+                    if current_dt < appt.end_time and slot_end_dt > appt.start_time:
                         status_code = 'busy'
                         break
             
