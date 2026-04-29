@@ -10,7 +10,6 @@ from apps.accounts.models import User
 from django.utils import timezone
 from datetime import datetime, time, timedelta
 import math
-import zoneinfo
 
 class MasterViewSet(viewsets.ModelViewSet):
     queryset = Master.objects.all()
@@ -98,8 +97,6 @@ class MasterViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Invalid date format'}, status=status.HTTP_400_BAD_REQUEST)
 
         org = master.organization
-        from django.conf import settings
-        tz = zoneinfo.ZoneInfo(settings.TIME_ZONE)
         duration_minutes = org.slot_duration
         if service_id:
             try:
@@ -111,25 +108,8 @@ class MasterViewSet(viewsets.ModelViewSet):
             except Service.DoesNotExist:
                 return Response({'error': 'Service not found'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Try to find an open shift; if not found — use org defaults as fallback
-        # (clients can always book, shift is auto-created on appointment save)
         shift = MasterShift.objects.filter(master=master, date=target_date, is_open=True).first()
-        any_shift = shift or MasterShift.objects.filter(master=master, date=target_date).first()
-
-        # Determine working hours
-        if any_shift:
-            work_start = any_shift.work_start
-            work_end = any_shift.work_end
-            lunch_start = any_shift.lunch_start if any_shift.lunch_start else (org.lunch_start if org.has_lunch_break else None)
-            lunch_end = any_shift.lunch_end if any_shift.lunch_end else (org.lunch_end if org.has_lunch_break else None)
-        else:
-            # Fallback to organization working hours
-            work_start = org.work_start
-            work_end = org.work_end
-            lunch_start = org.lunch_start if org.has_lunch_break else None
-            lunch_end = org.lunch_end if org.has_lunch_break else None
-
-        if not work_start or not work_end:
+        if not shift:
             return Response({'error': 'shift_closed'}, status=status.HTTP_400_BAD_REQUEST)
 
         appointments = Appointment.objects.filter(
@@ -140,8 +120,8 @@ class MasterViewSet(viewsets.ModelViewSet):
         slots = []
         
         # We step by organization slot duration
-        current_dt = datetime.combine(target_date, work_start)
-        end_dt = datetime.combine(target_date, work_end)
+        current_dt = datetime.combine(target_date, shift.work_start)
+        end_dt = datetime.combine(target_date, shift.work_end)
         
         service_duration = timedelta(minutes=duration_minutes)
         step = timedelta(minutes=org.slot_duration)
@@ -156,9 +136,9 @@ class MasterViewSet(viewsets.ModelViewSet):
             
             # 1. Lunch Check
             if status_code == 'available':
-                if org.has_lunch_break and lunch_start and lunch_end:
-                    lunch_start_dt = datetime.combine(target_date, lunch_start)
-                    lunch_end_dt = datetime.combine(target_date, lunch_end)
+                if org.has_lunch_break and shift.lunch_start and shift.lunch_end:
+                    lunch_start_dt = datetime.combine(target_date, shift.lunch_start)
+                    lunch_end_dt = datetime.combine(target_date, shift.lunch_end)
                     if lunch_start_dt <= current_dt < lunch_end_dt:
                         status_code = 'lunch'
                     elif current_dt < lunch_end_dt and slot_end_dt > lunch_start_dt:
@@ -192,8 +172,8 @@ class MasterViewSet(viewsets.ModelViewSet):
             
             slots.append({
                 'time': current_dt.strftime('%H:%M'),
-                'start_iso': timezone.make_aware(current_dt, tz).isoformat(),
-                'end_iso': timezone.make_aware(slot_end_dt, tz).isoformat(),
+                'start_iso': current_dt.isoformat(),
+                'end_iso': slot_end_dt.isoformat(),
                 'status': status_code,
                 'is_available': status_code == 'available'
             })

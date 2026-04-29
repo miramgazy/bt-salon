@@ -46,7 +46,7 @@
               >{{ $t('tma.tomorrow') }}</button>
               <div :class="['date-pill custom-date-wrapper', { active: state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr }]">
                  <Icon icon="mdi:calendar-month-outline" width="16" />
-                 <input type="date" v-model="state.selectedDate" class="date-input-hidden" />
+                 <input type="date" v-model="state.selectedDate" class="date-input-hidden" :min="todayStr" />
                  <span>{{ (state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr) ? formatDateShort(state.selectedDate) : $t('master.date') }}</span>
               </div>
             </div>
@@ -56,7 +56,7 @@
               <!-- Compact Date -->
               <div :class="['compact-btn', { active: state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr }]">
                 <Icon icon="mdi:calendar-edit" width="20" />
-                <input type="date" v-model="state.selectedDate" class="date-input-hidden" />
+                <input type="date" v-model="state.selectedDate" class="date-input-hidden" :min="todayStr" />
               </div>
 
               <!-- Categories Toggle -->
@@ -234,7 +234,7 @@
            <div :class="['date-pill', { active: state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr }]">
               {{ (state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr) ? formatDateShort(state.selectedDate) : $t('master.date') }}
            </div>
-           <input type="date" class="date-input-hidden" v-model="state.selectedDate" />
+           <input type="date" class="date-input-hidden" v-model="state.selectedDate" :min="todayStr" />
         </div>
       </div>
 
@@ -262,7 +262,7 @@
                 lunch: s.status === 'lunch',
                 limit: s.status === 'limit'
              }" 
-             @click="s.is_available ? handleSlotSelect(s) : null">
+             @click="s.is_available ? handleSlotSelect(s.time) : null">
           {{ s.time }}
         </div>
       </div>
@@ -290,7 +290,7 @@
               </div>
              <div class="modal-row">
                <span class="modal-label">{{ $t('common.time') }}</span>
-               <span class="modal-value">{{ state.selectedDate }}, {{ state.selectedSlot?.time }}</span>
+               <span class="modal-value">{{ state.selectedDate }}, {{ state.selectedSlot }}</span>
              </div>
              <div class="modal-row" style="border-bottom: none; margin-top: 12px;">
                <span class="modal-label" style="font-size: 16px; color: var(--text); font-weight: 700;">{{ $t('tma.total') }}</span>
