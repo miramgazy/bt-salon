@@ -239,7 +239,13 @@
           <div v-else class="slots-grid">
               <div v-for="slot in slots" :key="slot.time"
                    class="slot-item"
-                   :class="{ disabled: !slot.is_available, selected: editForm.time === slot.time }"
+                   :class="{ 
+                      disabled: !slot.is_available, 
+                      selected: editForm.time === slot.time,
+                      busy: slot.status === 'busy',
+                      lunch: slot.status === 'lunch',
+                      limit: slot.status === 'limit'
+                   }"
                    @click="if (slot.is_available) { editForm.time = slot.time; showConfirmModal = true }">
                   {{ slot.time }}
               </div>
@@ -343,7 +349,13 @@
              <div v-else class="slots-grid">
                  <div v-for="slot in slots" :key="slot.time"
                       class="slot-item"
-                      :class="{ disabled: !slot.is_available, selected: form.time === slot.time }"
+                      :class="{ 
+                         disabled: !slot.is_available, 
+                         selected: form.time === slot.time,
+                         busy: slot.status === 'busy',
+                         lunch: slot.status === 'lunch',
+                         limit: slot.status === 'limit'
+                      }"
                       @click="if (slot.is_available) { form.time = slot.time; creationStep = 4 }">
                      {{ slot.time }}
                  </div>
@@ -1141,4 +1153,9 @@ onMounted(() => {
   font-weight: 700;
   color: var(--text);
 }
+.slot-item.disabled { opacity: 0.6; cursor: not-allowed; }
+.slot-item.busy { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #ef4444; text-decoration: line-through; }
+.slot-item.lunch { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); color: #f59e0b; }
+.slot-item.limit { opacity: 0.3; background: var(--bg-primary); border-style: dashed; }
+.slot-item.selected { background: var(--gold-gradient) !important; color: #000 !important; border-color: var(--gold) !important; opacity: 1 !important; text-decoration: none !important; }
 </style>

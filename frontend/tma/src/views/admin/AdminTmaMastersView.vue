@@ -7,6 +7,27 @@
       </button>
     </div>
     
+    <!-- Top Date Selector -->
+    <div class="date-selector-container mb-4">
+        <div class="date-selector">
+            <button 
+                :class="['date-pill', { active: activeTab === 'today' }]" 
+                @click="setDate('today')"
+            >{{ $t('master.today') }}</button>
+            <button 
+                :class="['date-pill', { active: activeTab === 'tomorrow' }]" 
+                @click="setDate('tomorrow')"
+            >{{ $t('master.tomorrow') }}</button>
+            <div class="custom-date-wrapper">
+                <button :class="['date-pill', { active: activeTab === 'custom' }]">
+                    <Icon icon="mdi:calendar-month-outline" width="16" />
+                    {{ activeTab === 'custom' ? formatDateShort(selectedDate) : $t('master.selectDate') }}
+                </button>
+                <input type="date" class="date-input-hidden" @change="onMainDateChange" />
+            </div>
+        </div>
+    </div>
+
     <div v-if="loading" class="loading-state">
        <div class="spinner"></div>
     </div>
@@ -129,66 +150,76 @@
             <span>{{ $t('admin.openShift') }}</span>
             <Icon icon="mdi:close" width="24" @click="showShiftModal = false" class="cursor-pointer" />
          </div>
-        
-        <form @submit.prevent="submitShift" class="mt-4 flex flex-col gap-4 pb-6">
-          <p class="text-sm font-medium">{{ $t('admin.masterRole') }}: <b>{{ activeMaster?.first_name }}</b></p>
-          <div>
-            <label class="form-label">{{ $t('shift.date') }} <span class="text-error">*</span></label>
-            <div class="date-selector mb-4">
-                <button 
-                   type="button"
-                   :class="['date-pill', { active: isToday(shiftForm.date) }]" 
-                   @click="shiftForm.date = getLocalDateStr()"
-                >{{ $t('master.today') }}</button>
-                <button 
-                   type="button"
-                   :class="['date-pill', { active: isTomorrow(shiftForm.date) }]" 
-                   @click="shiftForm.date = getLocalDateStrTomorrow()"
-                >{{ $t('master.tomorrow') }}</button>
-                <div class="custom-date-wrapper">
-                   <button type="button" :class="['date-pill', { active: isCustomDate(shiftForm.date) }]">
-                       {{ isCustomDate(shiftForm.date) ? formatDateShort(shiftForm.date) : $t('master.selectDate') }}
-                   </button>
-                   <input type="date" class="date-input-hidden" v-model="shiftForm.date" />
-                </div>
-            </div>
-          </div>
+         <div class="mt-4 flex flex-col gap-4 pb-6">
+           <p class="text-sm font-medium">{{ $t('admin.masterRole') }}: <b>{{ activeMaster?.first_name }}</b></p>
+           
+           <!-- Step 1: Date -->
+           <div v-if="shiftStep === 1">
+              <label class="form-label mb-2">{{ $t('shift.date') }}</label>
+              <div class="date-selector mb-4">
+                  <button 
+                     type="button"
+                     :class="['date-pill', { active: isToday(shiftForm.date) }]" 
+                     @click="shiftForm.date = getLocalDateStr(); shiftStep = 2"
+                  >{{ $t('master.today') }}</button>
+                  <button 
+                     type="button"
+                     :class="['date-pill', { active: isTomorrow(shiftForm.date) }]" 
+                     @click="shiftForm.date = getLocalDateStrTomorrow(); shiftStep = 2"
+                  >{{ $t('master.tomorrow') }}</button>
+                  <div class="custom-date-wrapper">
+                     <button type="button" :class="['date-pill', { active: isCustomDate(shiftForm.date) }]">
+                         <Icon icon="mdi:calendar-month-outline" width="16" />
+                         {{ isCustomDate(shiftForm.date) ? formatDateShort(shiftForm.date) : $t('master.selectDate') }}
+                     </button>
+                     <input type="date" class="date-input-hidden" v-model="shiftForm.date" @change="shiftStep = 2" />
+                  </div>
+              </div>
+              <button class="btn-sheet" @click="shiftStep = 2">{{ $t('common.continue') }}</button>
+           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-             <div>
-                <label class="form-label">{{ $t('common.start') }}</label>
-                <input v-model="shiftForm.work_start" type="time" class="form-input" />
-             </div>
-             <div>
-                <label class="form-label">{{ $t('common.end') }}</label>
-                <input v-model="shiftForm.work_end" type="time" class="form-input" />
-             </div>
-          </div>
+           <!-- Step 2: Details -->
+           <form v-if="shiftStep === 2" @submit.prevent="submitShift" class="flex flex-col gap-4">
+              <div class="p-3 mb-2 bg-[var(--gold-glow)] border border-[var(--gold)] rounded-xl text-sm flex justify-between items-center">
+                 <span><b>{{ $t('shift.date') }}:</b> {{ formatDateShort(shiftForm.date) }}</span>
+                 <span class="text-gold cursor-pointer font-bold" @click="shiftStep = 1">{{ $t('common.change') }}</span>
+              </div>
 
-          <div v-if="auth.organizationSettings?.has_lunch_break">
-            <div class="flex items-center justify-between mb-2">
-                <label class="form-label m-0">{{ $t('master.lunchBreak') }}</label>
-                <label class="toggle-switch small">
-                    <input type="checkbox" v-model="shiftForm.has_lunch">
-                    <span class="slider"></span>
+              <div class="grid grid-cols-2 gap-3">
+                 <div>
+                    <label class="form-label">{{ $t('common.start') }}</label>
+                    <input v-model="shiftForm.work_start" type="time" class="form-input" />
+                 </div>
+                 <div>
+                    <label class="form-label">{{ $t('common.end') }}</label>
+                    <input v-model="shiftForm.work_end" type="time" class="form-input" />
+                 </div>
+              </div>
+
+              <div class="bg-secondary p-4 rounded-2xl border border-[var(--border)]">
+                <label class="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" v-model="shiftForm.has_lunch" class="w-5 h-5 accent-gold" />
+                    <span class="text-sm font-semibold">{{ $t('organization.hasLunch') }}</span>
                 </label>
-            </div>
-            <div v-if="shiftForm.has_lunch" class="grid grid-cols-2 gap-3 animate-fade-in">
-                <div>
-                    <label class="text-[10px] uppercase font-bold text-muted block mb-1">С</label>
-                    <input v-model="shiftForm.lunch_start" type="time" class="form-input" />
+                
+                <div v-if="shiftForm.has_lunch" class="grid grid-cols-2 gap-3 mt-4 animate-fade-in">
+                    <div>
+                        <label class="form-label">{{ $t('organization.lunchStart') }}</label>
+                        <input v-model="shiftForm.lunch_start" type="time" class="form-input" />
+                    </div>
+                    <div>
+                        <label class="form-label">{{ $t('organization.lunchEnd') }}</label>
+                        <input v-model="shiftForm.lunch_end" type="time" class="form-input" />
+                    </div>
                 </div>
-                <div>
-                    <label class="text-[10px] uppercase font-bold text-muted block mb-1">До</label>
-                    <input v-model="shiftForm.lunch_end" type="time" class="form-input" />
-                </div>
-            </div>
-          </div>
-          
-           <button type="submit" class="btn-sheet mt-2" :disabled="creatingShift">
-              {{ creatingShift ? $t('common.saving') : $t('common.continue') }}
-           </button>
-        </form>
+              </div>
+              
+               <button type="submit" class="btn-sheet mt-2" :disabled="creatingShift">
+                  {{ creatingShift ? $t('common.saving') : $t('admin.openShift') }}
+               </button>
+               <button type="button" class="btn-sheet btn-sheet-ghost" @click="shiftStep = 1">{{ $t('common.back') }}</button>
+           </form>
+         </div>
       </div>
     </div>
 
@@ -270,7 +301,13 @@
              <div v-else class="slots-grid">
                  <div v-for="slot in slots" :key="slot.time"
                       class="slot-item"
-                      :class="{ disabled: !slot.is_available, selected: bookingForm.time === slot.time }"
+                      :class="{ 
+                         disabled: !slot.is_available, 
+                         selected: bookingForm.time === slot.time,
+                         busy: slot.status === 'busy',
+                         lunch: slot.status === 'lunch',
+                         limit: slot.status === 'limit'
+                      }"
                       @click="if (slot.is_available) { bookingForm.time = slot.time; bookingStep = 4 }">
                      {{ slot.time }}
                  </div>
@@ -318,8 +355,10 @@ import { useI18n } from 'vue-i18n'
 import api from '@/api'
 
 const { t, locale } = useI18n()
-const employees = ref([])
 const loading = ref(false)
+const selectedDate = ref(getLocalDateStr())
+const activeTab = ref('today')
+const employees = ref([])
 
 // Helper functions (defined before use)
 const getLocalDateStr = () => {
@@ -354,6 +393,7 @@ const isEditing = ref(false)
 const editingId = ref(null)
 
 const showShiftModal = ref(false)
+const shiftStep = ref(1)
 const creatingShift = ref(false)
 const activeMaster = ref(null)
 
@@ -422,20 +462,24 @@ const setBookingDate = (type) => {
     }
 }
 
-const shiftForm = ref({
-    date: getLocalDateStr(),
-    work_start: '09:00',
-    work_end: '20:00',
-    has_lunch: true,
-    lunch_start: '13:00',
-    lunch_end: '14:00'
-})
+const setDate = (type) => {
+    activeTab.value = type
+    if (type === 'today') selectedDate.value = getLocalDateStr()
+    else if (type === 'tomorrow') selectedDate.value = getLocalDateStrTomorrow()
+    fetchData()
+}
+
+const onMainDateChange = (e) => {
+    activeTab.value = 'custom'
+    selectedDate.value = e.target.value
+    fetchData()
+}
 
 const fetchData = async () => {
     loading.value = true
     try {
         const [empRes, srvRes] = await Promise.all([
-            api.get('/organization/employees/'),
+            api.get('/organization/employees/', { params: { date: selectedDate.value } }),
             api.get('/services/')
         ])
         employees.value = empRes.data.results || empRes.data
@@ -499,11 +543,21 @@ const handleZapisClick = (emp) => {
     startBooking(emp)
 }
 
+const shiftForm = ref({
+    date: getLocalDateStr(),
+    work_start: '09:00',
+    work_end: '20:00',
+    has_lunch: true,
+    lunch_start: '13:00',
+    lunch_end: '14:00'
+})
+
 const promptOpenShift = (emp) => {
     activeMaster.value = emp
+    shiftStep.value = 1
     const org = auth.organizationSettings
     shiftForm.value = {
-        date: getLocalDateStr(),
+        date: selectedDate.value,
         work_start: org?.work_start?.slice(0, 5) || '09:00',
         work_end: org?.work_end?.slice(0, 5) || '20:00',
         has_lunch: !!org?.has_lunch_break,
@@ -758,8 +812,11 @@ onMounted(() => {
   text-align: center; font-size: 14px; font-weight: 600; cursor: pointer;
   background: var(--bg-secondary); transition: all 0.2s;
 }
-.slot-item.disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
-.slot-item.selected { background: var(--gold-gradient); color: #000; border-color: var(--gold); }
+.slot-item.disabled { opacity: 0.6; cursor: not-allowed; }
+.slot-item.busy { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #ef4444; text-decoration: line-through; }
+.slot-item.lunch { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); color: #f59e0b; }
+.slot-item.limit { opacity: 0.3; background: var(--bg-primary); border-style: dashed; }
+.slot-item.selected { background: var(--gold-gradient) !important; color: #000 !important; border-color: var(--gold) !important; opacity: 1 !important; text-decoration: none !important; }
 
 .slots-grid {
     display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;

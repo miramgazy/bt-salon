@@ -42,11 +42,25 @@ class EmployeeSerializer(serializers.ModelSerializer):
         if obj.role == 'master' and hasattr(obj, 'master_profile'):
             from django.utils import timezone
             from apps.masters.models import MasterShift
-            # Using timezone.localtime(timezone.now()).date() to match server time with user local date
-            today = timezone.localtime(timezone.now()).date()
+            
+            # Use date from context if provided, otherwise default to today
+            request = self.context.get('request')
+            shift_date_str = None
+            if request:
+                shift_date_str = request.query_params.get('date')
+            
+            if shift_date_str:
+                from django.utils.dateparse import parse_date
+                shift_date = parse_date(shift_date_str)
+            else:
+                shift_date = timezone.localtime(timezone.now()).date()
+            
+            if not shift_date:
+                shift_date = timezone.localtime(timezone.now()).date()
+
             shift = MasterShift.objects.filter(
                 master=obj.master_profile, 
-                date=today
+                date=shift_date
             ).first()
             if shift:
                 return {

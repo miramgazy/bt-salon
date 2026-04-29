@@ -121,16 +121,23 @@ class MasterViewSet(viewsets.ModelViewSet):
         service_duration = timedelta(minutes=duration_minutes)
         step = timedelta(minutes=org.slot_duration)
         
-        while current_dt + service_duration <= end_dt:
+        while current_dt < end_dt:
             slot_end_dt = current_dt + service_duration
             status_code = 'available'
             
+            # 0. Check if service ends after shift
+            if slot_end_dt > end_dt:
+                status_code = 'limit'
+            
             # 1. Lunch Check
-            if org.has_lunch_break and shift.lunch_start and shift.lunch_end:
-                lunch_start_dt = datetime.combine(target_date, shift.lunch_start)
-                lunch_end_dt = datetime.combine(target_date, shift.lunch_end)
-                if lunch_start_dt <= current_dt < lunch_end_dt:
-                    status_code = 'lunch'
+            if status_code == 'available':
+                if org.has_lunch_break and shift.lunch_start and shift.lunch_end:
+                    lunch_start_dt = datetime.combine(target_date, shift.lunch_start)
+                    lunch_end_dt = datetime.combine(target_date, shift.lunch_end)
+                    if lunch_start_dt <= current_dt < lunch_end_dt:
+                        status_code = 'lunch'
+                    elif current_dt < lunch_end_dt and slot_end_dt > lunch_start_dt:
+                        status_code = 'lunch'
             
             # 2. Selected Master Busy Check
             if status_code == 'available':
@@ -140,13 +147,11 @@ class MasterViewSet(viewsets.ModelViewSet):
                     if current_dt < appt_end_naive and slot_end_dt > appt_start_naive:
                         status_code = 'busy'
                         break
-
+            
             # 3. Combo Capacity Check
             if status_code == 'available' and service_id:
                 svc = Service.objects.filter(id=service_id).first()
                 if svc and svc.is_combo:
-                    # For combo services, we need both the selected master AND the virtual master
-                    # (which acts as a queue/buffer for sub-services) to be available.
                     virtual_master = Master.objects.filter(organization=org, is_virtual=True).first()
                     if not virtual_master:
                         status_code = 'no_virtual_master'
@@ -155,13 +160,10 @@ class MasterViewSet(viewsets.ModelViewSet):
                         if not v_shift:
                             status_code = 'no_capacity'
                         else:
-                            # Check if virtual master is working at this time
                             v_start = datetime.combine(target_date, v_shift.work_start)
                             v_end = datetime.combine(target_date, v_shift.work_end)
                             if not (v_start <= current_dt and current_dt + service_duration <= v_end):
                                 status_code = 'no_capacity'
-                            # Note: We don't check if Virtual Master is 'busy' because 
-                            # it represents a queue with parallel capacity.
             
             slots.append({
                 'time': current_dt.strftime('%H:%M'),

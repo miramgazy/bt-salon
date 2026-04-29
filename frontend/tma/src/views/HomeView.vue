@@ -256,7 +256,12 @@
       <div v-else class="slot-grid">
         <div v-for="s in slots" :key="s.time" 
              class="slot" 
-             :class="{ selected: state.selectedSlot === s.time, busy: !s.is_available }" 
+             :class="{ 
+                selected: state.selectedSlot === s.time, 
+                busy: s.status === 'busy',
+                lunch: s.status === 'lunch',
+                limit: s.status === 'limit'
+             }" 
              @click="s.is_available ? handleSlotSelect(s.time) : null">
           {{ s.time }}
         </div>
@@ -871,8 +876,10 @@ const handleConfirm = async () => {
   font-size: 14px; cursor: pointer; border: 1px solid var(--border);
   background: var(--card-bg); transition: all 0.2s; font-weight: 600;
 }
-.slot.busy { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
-.slot.selected { background: var(--gold); color: #000; border-color: var(--gold); box-shadow: 0 4px 10px var(--gold-glow); }
+.slot.busy { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #ef4444; text-decoration: line-through; cursor: not-allowed; opacity: 0.6; }
+.slot.lunch { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); color: #f59e0b; cursor: not-allowed; opacity: 0.6; }
+.slot.limit { opacity: 0.3; background: var(--bg-primary); border-style: dashed; cursor: not-allowed; }
+.slot.selected { background: var(--gold-gradient) !important; color: #000 !important; border-color: var(--gold) !important; opacity: 1 !important; text-decoration: none !important; box-shadow: 0 4px 10px var(--gold-glow) !important; }
 
 /* Modal */
 .modal-overlay {
