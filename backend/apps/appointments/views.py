@@ -112,18 +112,24 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             shift, _ = MasterShift.objects.get_or_create(
                 organization=org,
                 master=master,
-                date=start_time.date(),
+                date=timezone.localtime(start_time).date(),
                 defaults={'is_open': False}
             )
             
         with transaction.atomic():
-            master_appt = serializer.save(
-                organization=org,
-                client=client,
-                shift=shift,
-                discount_strategy=service.discount_strategy,
-                created_by_admin=(user.role != User.ROLE_CLIENT)
-            )
+            try:
+                master_appt = serializer.save(
+                    organization=org,
+                    client=client,
+                    shift=shift,
+                    discount_strategy=service.discount_strategy,
+                    created_by_admin=(user.role != User.ROLE_CLIENT)
+                )
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Appointment save failed: {str(e)}")
+                raise
             
             # Note: Child creation and initial financials are now handled in Appointment.save()
 

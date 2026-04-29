@@ -635,11 +635,11 @@ const handleConfirm = async () => {
       end_time: state.selectedSlot.end_iso
     })
     
-     state.showModal = false
+    state.showModal = false
     state.showSuccess = true
   } catch (error) {
-    alert(t('tma.error'))
-    console.error(error)
+    console.error('Booking error detail:', error.response?.data)
+    alert(error.response?.data?.error || t('tma.error'))
   }
 }
 </script>
