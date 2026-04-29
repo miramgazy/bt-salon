@@ -49,19 +49,6 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             
         return qs.order_by('start_time', 'parent_id', 'id')
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            self.perform_create(serializer)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
     def perform_create(self, serializer):
         from apps.clients.models import Client
         from apps.masters.models import MasterShift, Master
@@ -72,13 +59,12 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         org = user.organization
         
-        client = Client.objects.filter(user=user, organization=org).first()
-        
-        if not client:
-            # Handle non-client roles creating appointment for an OFFLINE client
+        client = None
+        # Handle non-client roles (Admin, Owner, Master) creating appointment for a client
+        if hasattr(user, 'role') and user.role != User.ROLE_CLIENT:
             client_id = self.request.data.get('client_id')
-            client_phone = self.request.data.get('client_phone')
             client_name = self.request.data.get('client_name')
+            client_phone = self.request.data.get('client_phone')
 
             if client_id:
                 client = Client.objects.filter(id=client_id, organization=org).first()
@@ -97,19 +83,19 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 elif client_name:
                     client.full_name = client_name
                     client.save()
-            
-            # If still no client and user is not a staff member, or if they are staff but no offline data,
-            # create/get a client profile for the authenticated user themselves.
-            if not client:
-                client, _ = Client.objects.get_or_create(
-                    user=user,
-                    organization=org,
-                    defaults={
-                        'phone': user.phone or f"temp_{getattr(user, 'telegram_id', 'unknown')}",
-                        'full_name': f"{user.first_name} {user.last_name}".strip() or user.username,
-                        'telegram_id': getattr(user, 'telegram_id', None)
-                    }
-                )
+            else:
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({'client_phone': 'Phone number is required for offline clients.'})
+        else:
+            client, _ = Client.objects.get_or_create(
+                user=user,
+                organization=org,
+                defaults={
+                    'phone': user.phone or '',
+                    'full_name': f"{user.first_name} {user.last_name}".strip(),
+                    'telegram_id': getattr(user, 'telegram_id', None)
+                }
+            )
         
         master = serializer.validated_data.get('master')
         service = serializer.validated_data.get('service')
@@ -126,24 +112,18 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             shift, _ = MasterShift.objects.get_or_create(
                 organization=org,
                 master=master,
-                date=timezone.localtime(start_time).date(),
+                date=start_time.date(),
                 defaults={'is_open': False}
             )
             
         with transaction.atomic():
-            try:
-                master_appt = serializer.save(
-                    organization=org,
-                    client=client,
-                    shift=shift,
-                    discount_strategy=service.discount_strategy,
-                    created_by_admin=(user.role != User.ROLE_CLIENT)
-                )
-            except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(f"Appointment save failed: {str(e)}")
-                raise
+            master_appt = serializer.save(
+                organization=org,
+                client=client,
+                shift=shift,
+                discount_strategy=service.discount_strategy,
+                created_by_admin=(user.role != User.ROLE_CLIENT)
+            )
             
             # Note: Child creation and initial financials are now handled in Appointment.save()
 

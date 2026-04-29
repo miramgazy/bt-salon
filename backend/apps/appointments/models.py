@@ -1,5 +1,4 @@
 from django.db import models
-from django.utils import timezone
 from datetime import timedelta
 
 class Appointment(models.Model):
@@ -200,7 +199,7 @@ class Appointment(models.Model):
                     v_shift, _ = MasterShift.objects.get_or_create(
                         organization=self.organization,
                         master=virtual_master,
-                        date=timezone.localtime(self.start_time).date(),
+                        date=self.start_time.date(),
                         defaults={
                             'is_open': True, 
                             'work_start': self.organization.work_start or '00:00', 
