@@ -257,7 +257,7 @@
         <div v-for="s in slots" :key="s.time" 
              class="slot" 
              :class="{ 
-                selected: state.selectedSlot === s.time, 
+                selected: state.selectedSlot && state.selectedSlot.time === s.time, 
                 busy: s.status === 'busy',
                 lunch: s.status === 'lunch',
                 limit: s.status === 'limit'
@@ -628,14 +628,11 @@ const getOldPrice = (svc) => {
 
 const handleConfirm = async () => {
   try {
-    const start = new Date(`${state.selectedDate}T${state.selectedSlot}:00`)
-    const end = new Date(start.getTime() + state.selectedService.duration_minutes * 60000)
-    
     await api.post('/appointments/', {
       master: state.selectedMaster.id,
       service: state.selectedService.id,
-      start_time: start.toISOString(),
-      end_time: end.toISOString()
+      start_time: state.selectedSlot.start_iso,
+      end_time: state.selectedSlot.end_iso
     })
     
      state.showModal = false

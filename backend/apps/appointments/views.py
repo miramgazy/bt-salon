@@ -105,7 +105,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         shift = MasterShift.objects.filter(
             organization=org,
             master=master,
-            date=start_time.date()
+            date=timezone.localtime(start_time).date()
         ).first()
 
         if not shift:
@@ -139,7 +139,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             shift = MasterShift.objects.filter(
                 organization=serializer.instance.organization,
                 master=master,
-                date=start_time.date()
+                date=timezone.localtime(start_time).date()
             ).first()
             
             if not shift:
