@@ -55,6 +55,10 @@ class Appointment(models.Model):
 
     # Financial snapshots
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    service_base_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    service_margin_value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    service_margin_type = models.CharField(max_length=10, null=True, blank=True)
+    
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     discount_strategy = models.CharField(max_length=20, default='owner_only')
     master_net_income = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -84,20 +88,27 @@ class Appointment(models.Model):
                 sub = main_item.sub_service
                 gross_base = sub.base_price
                 gross_margin = sub.margin_value
-                if sub.margin_type == Service.MARGIN_PERCENT:
+                margin_type = sub.margin_type
+                if margin_type == Service.MARGIN_PERCENT:
                     gross_margin = sub.base_price * (sub.margin_value / 100)
                 target_service_total = sub.total_price
             else:
                 gross_base = Decimal('0')
                 gross_margin = Decimal('0')
+                margin_type = Service.MARGIN_FIXED
                 target_service_total = Decimal('0')
         else:
             # Single service or combo sub-record
-            gross_base = self.service.base_price
-            gross_margin = self.service.margin_value
-            if self.service.margin_type == Service.MARGIN_PERCENT:
-                gross_margin = self.service.base_price * (self.service.margin_value / 100)
-            target_service_total = self.service.total_price
+            # Use snapshots if available, otherwise fallback to current service
+            gross_base = self.service_base_price if self.service_base_price is not None else self.service.base_price
+            margin_val = self.service_margin_value if self.service_margin_value is not None else self.service.margin_value
+            margin_type = self.service_margin_type if self.service_margin_type is not None else self.service.margin_type
+            
+            gross_margin = margin_val
+            if margin_type == Service.MARGIN_PERCENT:
+                gross_margin = gross_base * (margin_val / 100)
+            
+            target_service_total = gross_base + gross_margin if margin_type == Service.MARGIN_FIXED else gross_base * (1 + margin_val / 100)
         
         # Discount for this specific record is the difference between its target and actual distributed price
         current_discount = max(Decimal('0'), target_service_total - current_total)
@@ -160,7 +171,19 @@ class Appointment(models.Model):
             self.total_price = self.service.total_price
 
         # 2. Financial calculation
-        self.calculate_financials()
+        # Snapshot service values if not already set (at creation)
+        if is_new or self.service_base_price is None:
+            if self.appointment_type != self.TYPE_COMBO_SUB:
+                self.service_base_price = self.service.base_price
+                self.service_margin_value = self.service.margin_value
+                self.service_margin_type = self.service.margin_type
+
+        # Freeze financials if already DONE
+        if not is_new and old_status == self.STATUS_DONE:
+            # Skip calculation to preserve snapshots
+            pass
+        else:
+            self.calculate_financials()
 
         # 3. Save the instance itself
         super().save(*args, **kwargs)
