@@ -117,15 +117,20 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             )
             
         with transaction.atomic():
-            master_appt = serializer.save(
-                organization=org,
-                client=client,
-                shift=shift,
-                discount_strategy=service.discount_strategy,
-                created_by_admin=(user.role != User.ROLE_CLIENT)
-            )
-            
-            # Note: Child creation and initial financials are now handled in Appointment.save()
+            try:
+                master_appt = serializer.save(
+                    organization=org,
+                    client=client,
+                    shift=shift,
+                    discount_strategy=service.discount_strategy,
+                    created_by_admin=(user.role != User.ROLE_CLIENT)
+                )
+            except Exception as e:
+                import logging
+                from rest_framework.exceptions import ValidationError
+                logger = logging.getLogger(__name__)
+                logger.error(f"Appointment save failed: {str(e)}", exc_info=True)
+                raise ValidationError({'error': str(e)})
 
     def perform_update(self, serializer):
         from apps.masters.models import MasterShift

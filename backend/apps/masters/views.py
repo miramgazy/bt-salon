@@ -126,6 +126,15 @@ class MasterViewSet(viewsets.ModelViewSet):
         service_duration = timedelta(minutes=duration_minutes)
         step = timedelta(minutes=org.slot_duration)
         
+        # Pre-fetch virtual master and its appointments for combo check
+        virtual_master = Master.objects.filter(organization=org, is_virtual=True).first()
+        v_appointments = []
+        if virtual_master:
+            v_appointments = Appointment.objects.filter(
+                master=virtual_master, 
+                start_time__date=target_date
+            ).exclude(status=Appointment.STATUS_CANCELLED)
+
         while current_dt < end_dt:
             slot_end_dt = current_dt + service_duration
             status_code = 'available'
@@ -157,7 +166,6 @@ class MasterViewSet(viewsets.ModelViewSet):
             if status_code == 'available' and service_id:
                 svc = Service.objects.filter(id=service_id).first()
                 if svc and svc.is_combo:
-                    virtual_master = Master.objects.filter(organization=org, is_virtual=True).first()
                     if not virtual_master:
                         status_code = 'no_virtual_master'
                     else:
@@ -169,11 +177,23 @@ class MasterViewSet(viewsets.ModelViewSet):
                             v_end = datetime.combine(target_date, v_shift.work_end)
                             if not (v_start <= current_dt and current_dt + service_duration <= v_end):
                                 status_code = 'no_capacity'
+                            else:
+                                # Check virtual master occupancy
+                                for v_appt in v_appointments:
+                                    v_start_n = timezone.make_naive(v_appt.start_time) if timezone.is_aware(v_appt.start_time) else v_appt.start_time
+                                    v_end_n = timezone.make_naive(v_appt.end_time) if timezone.is_aware(v_appt.end_time) else v_appt.end_time
+                                    if current_dt < v_end_n and slot_end_dt > v_start_n:
+                                        status_code = 'no_capacity'
+                                        break
+            
+            from django.utils import timezone
+            slot_start_aware = timezone.make_aware(current_dt)
+            slot_end_aware = timezone.make_aware(slot_end_dt)
             
             slots.append({
                 'time': current_dt.strftime('%H:%M'),
-                'start_iso': current_dt.isoformat(),
-                'end_iso': slot_end_dt.isoformat(),
+                'start_iso': slot_start_aware.isoformat(),
+                'end_iso': slot_end_aware.isoformat(),
                 'status': status_code,
                 'is_available': status_code == 'available'
             })
