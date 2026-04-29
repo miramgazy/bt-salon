@@ -638,8 +638,8 @@ const handleConfirm = async () => {
      state.showModal = false
     state.showSuccess = true
   } catch (error) {
-    console.error('Booking error detail:', error.response?.data)
-    alert(error.response?.data?.error || t('tma.error'))
+    alert(t('tma.error'))
+    console.error(error)
   }
 }
 </script>
