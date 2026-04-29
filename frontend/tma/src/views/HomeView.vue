@@ -46,7 +46,7 @@
               >{{ $t('tma.tomorrow') }}</button>
               <div :class="['date-pill custom-date-wrapper', { active: state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr }]">
                  <Icon icon="mdi:calendar-month-outline" width="16" />
-                 <input type="date" v-model="state.selectedDate" class="date-input-hidden" :min="todayStr" />
+                 <input type="date" v-model="state.selectedDate" class="date-input-hidden" />
                  <span>{{ (state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr) ? formatDateShort(state.selectedDate) : $t('master.date') }}</span>
               </div>
             </div>
@@ -56,7 +56,7 @@
               <!-- Compact Date -->
               <div :class="['compact-btn', { active: state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr }]">
                 <Icon icon="mdi:calendar-edit" width="20" />
-                <input type="date" v-model="state.selectedDate" class="date-input-hidden" :min="todayStr" />
+                <input type="date" v-model="state.selectedDate" class="date-input-hidden" />
               </div>
 
               <!-- Categories Toggle -->
@@ -234,7 +234,7 @@
            <div :class="['date-pill', { active: state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr }]">
               {{ (state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr) ? formatDateShort(state.selectedDate) : $t('master.date') }}
            </div>
-           <input type="date" class="date-input-hidden" v-model="state.selectedDate" :min="todayStr" />
+           <input type="date" class="date-input-hidden" v-model="state.selectedDate" />
         </div>
       </div>
 
