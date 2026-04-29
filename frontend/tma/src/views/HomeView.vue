@@ -262,7 +262,7 @@
                 lunch: s.status === 'lunch',
                 limit: s.status === 'limit'
              }" 
-             @click="s.is_available ? handleSlotSelect(s.time) : null">
+             @click="s.is_available ? handleSlotSelect(s) : null">
           {{ s.time }}
         </div>
       </div>
@@ -290,7 +290,7 @@
               </div>
              <div class="modal-row">
                <span class="modal-label">{{ $t('common.time') }}</span>
-               <span class="modal-value">{{ state.selectedDate }}, {{ state.selectedSlot }}</span>
+                <span class="modal-value">{{ state.selectedDate }}, {{ state.selectedSlot.time }}</span>
              </div>
              <div class="modal-row" style="border-bottom: none; margin-top: 12px;">
                <span class="modal-label" style="font-size: 16px; color: var(--text); font-weight: 700;">{{ $t('tma.total') }}</span>
@@ -628,18 +628,46 @@ const getOldPrice = (svc) => {
 
 const handleConfirm = async () => {
   try {
+    const slot = state.selectedSlot
+    const date = state.selectedDate
+    const service = state.selectedService
+    const master = state.selectedMaster
+
+    if (!slot || !date || !service || !master) {
+      console.error('Booking failed: missing selection', { slot, date, service, master })
+      alert(t('tma.error'))
+      return
+    }
+
+    // Construct times safely: use ISO from backend if available, 
+    // otherwise fallback to manual construction WITH timezone offset
+    const startTime = slot.start_iso || `${date}T${slot.time}:00+05:00`
+    
+    let endTime = slot.end_iso
+    if (!endTime) {
+        // Fallback for end time using duration
+        const duration = service.duration_minutes || 30
+        const [h, m] = slot.time.split(':').map(Number)
+        const d = new Date(`${date}T${slot.time}:00+05:00`)
+        d.setMinutes(d.getMinutes() + duration)
+        // Manual ISO-like string with timezone
+        const pad = (n) => n.toString().padStart(2, '0')
+        endTime = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00+05:00`
+    }
+
     await api.post('/appointments/', {
-      master: state.selectedMaster.id,
-      service: state.selectedService.id,
-      start_time: state.selectedSlot.start_iso,
-      end_time: state.selectedSlot.end_iso
+      master: master.id,
+      service: service.id,
+      start_time: startTime,
+      end_time: endTime
     })
     
      state.showModal = false
     state.showSuccess = true
   } catch (error) {
-    console.error('Booking error detail:', error.response?.data)
-    alert(error.response?.data?.error || t('tma.error'))
+    console.error('Booking error detail:', error.response?.data || error.message)
+    const errorMsg = error.response?.data?.error || error.response?.data?.detail || t('tma.error')
+    alert(errorMsg)
   }
 }
 </script>

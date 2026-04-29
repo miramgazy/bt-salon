@@ -12,6 +12,18 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
 
+    def create(self, request, *args, **kwargs):
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"DEBUG: Appointment creation payload: {request.data}")
+        
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            logger.error(f"Appointment validation failed: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        return super().create(request, *args, **kwargs)
+
     def get_queryset(self):
         if not self.request.user.is_authenticated or not self.request.user.organization:
             return Appointment.objects.none()
@@ -59,13 +71,13 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         org = user.organization
         
-        client = None
-        # Handle non-client roles (Admin, Owner, Master) creating appointment for a client
-        if hasattr(user, 'role') and user.role != User.ROLE_CLIENT:
-            client_id = self.request.data.get('client_id')
-            client_name = self.request.data.get('client_name')
-            client_phone = self.request.data.get('client_phone')
+        client_id = self.request.data.get('client_id')
+        client_phone = self.request.data.get('client_phone')
+        client_name = self.request.data.get('client_name')
 
+        client = None
+        if client_id or client_phone or client_name:
+            # Staff member creating appointment for a client (offline or existing)
             if client_id:
                 client = Client.objects.filter(id=client_id, organization=org).first()
             elif client_phone:
@@ -83,19 +95,39 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 elif client_name:
                     client.full_name = client_name
                     client.save()
-            else:
-                from rest_framework.exceptions import ValidationError
-                raise ValidationError({'client_phone': 'Phone number is required for offline clients.'})
-        else:
-            client, _ = Client.objects.get_or_create(
-                user=user,
-                organization=org,
-                defaults={
-                    'phone': user.phone or '',
-                    'full_name': f"{user.first_name} {user.last_name}".strip(),
-                    'telegram_id': getattr(user, 'telegram_id', None)
-                }
-            )
+        
+        # If no offline client data or user is a regular client, use the user's own profile
+        if not client:
+            # Try to find existing client profile for this user
+            client = Client.objects.filter(user=user, organization=org).first()
+            
+            if not client:
+                # Try to find by telegram_id and link it
+                tg_id = getattr(user, 'telegram_id', None)
+                if tg_id:
+                    client = Client.objects.filter(telegram_id=tg_id, organization=org).first()
+                
+                # Try to find by phone and link it
+                if not client and user.phone:
+                    clean_user_phone = ''.join(filter(str.isdigit, str(user.phone)))
+                    client = Client.objects.filter(organization=org).filter(
+                        models.Q(phone=user.phone) | models.Q(phone=clean_user_phone)
+                    ).first()
+                
+                if client:
+                    # Link existing client to this user if not already linked
+                    if not client.user:
+                        client.user = user
+                        client.save()
+                else:
+                    # Create new client profile
+                    client = Client.objects.create(
+                        user=user,
+                        organization=org,
+                        phone=user.phone or '',
+                        full_name=f"{user.first_name} {user.last_name}".strip() or user.username,
+                        telegram_id=tg_id
+                    )
         
         master = serializer.validated_data.get('master')
         service = serializer.validated_data.get('service')

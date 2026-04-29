@@ -386,9 +386,11 @@ class TmaWebhookView(APIView):
                     
                     if action == 'confirm':
                         appt.client_confirmation = Appointment.CONFIRMATION_YES
+                        appt.status = Appointment.STATUS_CONFIRMED
                         msg = "Отлично! Мы ждем вас в запланированное время. 😊"
                     else:
                         appt.client_confirmation = Appointment.CONFIRMATION_NO
+                        appt.status = Appointment.STATUS_CANCELLED
                         msg = "Жаль, что вы не сможете прийти. Мы отменили вашу запись. Надеемся увидеть вас в другой раз! 👋"
                     
                     appt.save()
