@@ -375,5 +375,10 @@
     "masterMode": "Шебер панелі",
     "adminMode": "Әкімші панелі",
     "ownerMode": "Бизнес иесінің панелі"
+  },
+  "organization": {
+    "hasLunch": "Түскі үзіліс",
+    "lunchStart": "Үзіліс басталуы",
+    "lunchEnd": "Үзіліс аяқталуы"
   }
 }

@@ -112,7 +112,7 @@
     "management": "Управление (Мастер)",
     "settings": "Настройки",
     "date": "Дата",
-    "avgCheck": "Средний чек",
+    "avgCheck": "Орташа чек",
     "chartTitle": "Динамика дохода",
     "days7": "7 дней",
     "popularServices": "Популярные услуги",
@@ -374,5 +374,10 @@
     "masterMode": "Панель мастера",
     "adminMode": "Панель админа",
     "ownerMode": "Панель владельца"
+  },
+  "organization": {
+    "hasLunch": "Перерыв на обед",
+    "lunchStart": "Начало обеда",
+    "lunchEnd": "Конец обеда"
   }
 }

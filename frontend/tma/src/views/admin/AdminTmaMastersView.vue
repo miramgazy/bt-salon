@@ -188,11 +188,11 @@
               <div class="grid grid-cols-2 gap-3">
                  <div>
                     <label class="form-label">{{ $t('common.start') }}</label>
-                    <input v-model="shiftForm.work_start" type="time" class="form-input" />
+                    <input v-model="shiftForm.work_start" type="time" class="form-input form-input-time" />
                  </div>
                  <div>
                     <label class="form-label">{{ $t('common.end') }}</label>
-                    <input v-model="shiftForm.work_end" type="time" class="form-input" />
+                    <input v-model="shiftForm.work_end" type="time" class="form-input form-input-time" />
                  </div>
               </div>
 
@@ -205,11 +205,11 @@
                 <div v-if="shiftForm.has_lunch" class="grid grid-cols-2 gap-3 mt-4 animate-fade-in">
                     <div>
                         <label class="form-label">{{ $t('organization.lunchStart') }}</label>
-                        <input v-model="shiftForm.lunch_start" type="time" class="form-input" />
+                        <input v-model="shiftForm.lunch_start" type="time" class="form-input form-input-time" />
                     </div>
                     <div>
                         <label class="form-label">{{ $t('organization.lunchEnd') }}</label>
-                        <input v-model="shiftForm.lunch_end" type="time" class="form-input" />
+                        <input v-model="shiftForm.lunch_end" type="time" class="form-input form-input-time" />
                     </div>
                 </div>
               </div>
@@ -815,6 +815,7 @@ onMounted(() => {
   text-align: center; font-size: 14px; font-weight: 600; cursor: pointer;
   background: var(--bg-secondary); transition: all 0.2s;
 }
+.form-input-time { padding: 12px 8px !important; font-size: 14px !important; }
 .slot-item.disabled { opacity: 0.6; cursor: not-allowed; }
 .slot-item.busy { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); color: #ef4444; text-decoration: line-through; }
 .slot-item.lunch { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); color: #f59e0b; }
