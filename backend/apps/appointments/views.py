@@ -112,7 +112,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             shift, _ = MasterShift.objects.get_or_create(
                 organization=org,
                 master=master,
-                date=start_time.date(),
+                date=timezone.localtime(start_time).date(),
                 defaults={'is_open': False}
             )
             
@@ -151,7 +151,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 shift, _ = MasterShift.objects.get_or_create(
                     organization=serializer.instance.organization,
                     master=master,
-                    date=start_time.date(),
+                    date=timezone.localtime(start_time).date(),
                     defaults={'is_open': False}
                 )
             extra_kwargs['shift'] = shift
@@ -233,12 +233,12 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 shift = MasterShift.objects.filter(
                     organization=org,
                     master_id=master_id,
-                    date=start_time.date(),
+                    date=timezone.localtime(start_time).date(),
                     is_open=True
                 ).first()
                 
                 if not shift:
-                    errors.append(f"У мастера на {start_time.date()} не открыта смена.")
+                    errors.append(f"У мастера на {timezone.localtime(start_time).date()} не открыта смена.")
                     continue
                     
                 appt = Appointment.objects.create(

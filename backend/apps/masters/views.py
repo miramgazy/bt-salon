@@ -186,7 +186,6 @@ class MasterViewSet(viewsets.ModelViewSet):
                                         status_code = 'no_capacity'
                                         break
             
-            from django.utils import timezone
             slot_start_aware = timezone.make_aware(current_dt)
             slot_end_aware = timezone.make_aware(slot_end_dt)
             
