@@ -24,7 +24,12 @@ class MasterViewSet(viewsets.ModelViewSet):
         from .utils import get_or_create_virtual_master
         get_or_create_virtual_master(org)
 
-        qs = Master.objects.filter(organization=org).select_related('user')
+        qs = Master.objects.filter(
+            organization=org, 
+            is_active=True,
+            user__is_active=True
+        ).select_related('user')
+        
         shifts_open_today = self.request.query_params.get('shifts_open_today')
         if shifts_open_today == 'true':
             qs = qs.filter(mastershift__date=timezone.now().date(), mastershift__is_open=True)

@@ -101,7 +101,11 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         from apps.masters.utils import get_or_create_virtual_master
         get_or_create_virtual_master(org)
 
-        return User.objects.filter(organization=org, role__in=[User.ROLE_ADMIN, User.ROLE_MASTER])
+        return User.objects.filter(
+            organization=org, 
+            role__in=[User.ROLE_ADMIN, User.ROLE_MASTER],
+            is_active=True
+        )
 
     def perform_create(self, serializer):
         org = self.request.user.organization
@@ -128,8 +132,10 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             
             # Update fields from serializer
             for attr, value in serializer.validated_data.items():
-                setattr(user, attr, value)
+                if attr not in ['organization', 'role', 'username']:
+                    setattr(user, attr, value)
             user.save()
+            serializer.instance = user
         else:
             # Create new user
             clean_phone = ''.join(filter(str.isdigit, phone)) if phone else str(telegram_id)
