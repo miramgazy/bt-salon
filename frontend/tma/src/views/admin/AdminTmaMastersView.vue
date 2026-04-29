@@ -352,14 +352,12 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useI18n } from 'vue-i18n'
+import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
 
-const { t, locale } = useI18n()
-const loading = ref(false)
-const selectedDate = ref(getLocalDateStr())
-const activeTab = ref('today')
-const employees = ref([])
+const auth = useAuthStore()
 
+const { t, locale } = useI18n()
 // Helper functions (defined before use)
 const getLocalDateStr = () => {
     const tzOffset = new Date().getTimezoneOffset()
@@ -386,6 +384,11 @@ const formatDateShort = (d) => {
     const currentLocale = locale.value === 'kz' ? 'kk-KZ' : 'ru-RU'
     return new Date(d).toLocaleDateString(currentLocale, { day: 'numeric', month: 'short' })
 }
+
+const loading = ref(false)
+const selectedDate = ref(getLocalDateStr())
+const activeTab = ref('today')
+const employees = ref([])
 
 const showCreateModal = ref(false)
 const creating = ref(false)
