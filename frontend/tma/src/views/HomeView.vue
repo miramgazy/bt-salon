@@ -262,7 +262,7 @@
                 lunch: s.status === 'lunch',
                 limit: s.status === 'limit'
              }" 
-             @click="s.is_available ? handleSlotSelect(s.time) : null">
+             @click="s.is_available ? handleSlotSelect(s) : null">
           {{ s.time }}
         </div>
       </div>
@@ -290,7 +290,7 @@
               </div>
              <div class="modal-row">
                <span class="modal-label">{{ $t('common.time') }}</span>
-               <span class="modal-value">{{ state.selectedDate }}, {{ state.selectedSlot }}</span>
+               <span class="modal-value">{{ state.selectedDate }}, {{ state.selectedSlot?.time }}</span>
              </div>
              <div class="modal-row" style="border-bottom: none; margin-top: 12px;">
                <span class="modal-label" style="font-size: 16px; color: var(--text); font-weight: 700;">{{ $t('tma.total') }}</span>
