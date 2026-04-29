@@ -112,38 +112,60 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         if not phone and not telegram_id:
             raise serializers.ValidationError({"phone": "Phone or Telegram ID is required."})
 
-        # Check for existing user in this organization
+        # Check for existing user GLOBALLY
         existing_user = None
         if telegram_id:
-            existing_user = User.objects.filter(organization=org, telegram_id=telegram_id).first()
+            existing_user = User.objects.filter(telegram_id=telegram_id).order_by('-organization').first()
         if not existing_user and phone:
-            existing_user = User.objects.filter(organization=org, phone=phone).first()
+            clean_phone = ''.join(filter(str.isdigit, phone))
+            if clean_phone:
+                existing_user = User.objects.filter(phone=clean_phone).order_by('-organization').first()
 
         if existing_user:
-            # Update existing user role and other data
-            user = existing_user
-            user.role = role
-            if phone: user.phone = phone
-            if telegram_id: user.telegram_id = telegram_id
+            # If user has NO organization, assign this one
+            if not existing_user.organization:
+                existing_user.organization = org
+                existing_user.save()
             
-            # Update fields from serializer
-            for attr, value in serializer.validated_data.items():
-                setattr(user, attr, value)
-            user.save()
-        else:
-            # Create new user
-            clean_phone = ''.join(filter(str.isdigit, phone)) if phone else str(telegram_id)
-            username = f"emp_{clean_phone}_{org.id}_{User.objects.count()}"
-            user = serializer.save(
-                organization=org, 
-                role=role,
-                username=username
-            )
-            user.set_unusable_password()
-            user.save()
+            # If user belongs to THIS organization, update them
+            if existing_user.organization == org:
+                # Update existing user role and other data
+                user = existing_user
+                user.role = role
+                if phone: user.phone = phone
+                if telegram_id: user.telegram_id = telegram_id
+                
+                # Update fields from serializer validated data
+                for attr, value in serializer.validated_data.items():
+                    setattr(user, attr, value)
+                user.save()
+                
+                # Ensure Master profile exists if role is master
+                if role == User.ROLE_MASTER:
+                    from apps.masters.models import Master
+                    master, created = Master.objects.get_or_create(user=user, defaults={'organization': org})
+                    services = self.request.data.get('services', [])
+                    if services:
+                        master.services.set(services)
+                    color = self.request.data.get('color')
+                    if color:
+                        master.color = color
+                        master.save()
+                return
 
+        # Create new user if not found or in another org
+        clean_phone = ''.join(filter(str.isdigit, phone)) if phone else str(telegram_id)
+        username = f"emp_{clean_phone}_{org.id}_{User.objects.count()}"
+        user = serializer.save(
+            organization=org, 
+            role=role,
+            username=username
+        )
+        user.set_unusable_password()
+        user.save()
+        
         if role == User.ROLE_MASTER:
-            # Ensure master profile exists
+            from apps.masters.models import Master
             master, created = Master.objects.get_or_create(user=user, defaults={'organization': org})
             services = self.request.data.get('services', [])
             if services:
@@ -170,21 +192,32 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         telegram_id = request.query_params.get('telegram_id')
         phone = request.query_params.get('phone')
         
+        print(f"DEBUG: Employee lookup triggered. TID: {telegram_id}, Phone: {phone}")
+        
         if not telegram_id and not phone:
             return Response({'error': 'Telegram ID or Phone is required'}, status=status.HTTP_400_BAD_REQUEST)
             
-        org = request.user.organization
-        if not org:
-            return Response({'error': 'No organization'}, status=status.HTTP_400_BAD_REQUEST)
-            
         user = None
-        if telegram_id:
-            user = User.objects.filter(organization=org, telegram_id=telegram_id).first()
         
-        if not user and phone:
-            clean_phone = ''.join(filter(str.isdigit, phone))
-            if clean_phone:
-                user = User.objects.filter(organization=org, phone__icontains=clean_phone).first()
+        try:
+            # 1. Search by Telegram ID (Global)
+            if telegram_id:
+                # We search globally because a user might not be assigned to this org yet (e.g. they just started the bot)
+                # We order by -organization to pick a record with an org assigned if multiple exist.
+                user = User.objects.filter(telegram_id=telegram_id).order_by('-organization').first()
+                if user:
+                    print(f"DEBUG: Found user by TID: {user.username} (Org: {user.organization_id})")
+            
+            # 2. Search by Phone (Global)
+            if not user and phone:
+                clean_phone = ''.join(filter(str.isdigit, phone))
+                if clean_phone and len(clean_phone) >= 10:
+                    user = User.objects.filter(phone__icontains=clean_phone).order_by('-organization').first()
+                    if user:
+                        print(f"DEBUG: Found user by Phone: {user.username} (Org: {user.organization_id})")
+        except Exception as e:
+            print(f"ERROR: Employee lookup failed: {str(e)}")
+            return Response({'error': f"Lookup failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
         if user:
             return Response({
@@ -196,6 +229,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 'role': user.role
             })
             
+        print("DEBUG: User not found in lookup")
         return Response({'status': 'not_found'}, status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, methods=['post'], url_path='upload-photo')
