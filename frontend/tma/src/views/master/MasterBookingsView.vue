@@ -39,7 +39,7 @@
              <div class="time-duration">{{ getDuration(apt.start_time, apt.end_time) }} {{ $t('common.min') }}</div>
           </div>
           <div class="booking-info">
-             <div class="client-name">{{ apt.client_detail?.full_name || $t('common.client') }}</div>
+             <div class="client-name">{{ apt.client_detail?.full_name || $t('common.client') }} <Icon v-if="apt.client_confirmation === 'yes'" icon="mdi:check-circle" class="text-success inline ml-1" width="14" /></div>
               <div class="service-name text-gold flex items-start gap-1">
                  <Icon 
                    v-if="apt.appointment_type === 'combo_sub'" 

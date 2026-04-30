@@ -227,6 +227,10 @@
                                 icon="mdi:link-variant" 
                                 :class="getApptAt(ms.appointments, slot.time).appointment_type === 'combo_sub' ? 'text-warning' : 'text-primary'"
                                 width="10" />
+                          <Icon v-if="getApptAt(ms.appointments, slot.time).client_confirmation === 'yes'" 
+                                icon="mdi:check-circle" 
+                                class="text-success" 
+                                width="10" />
                           <p class="font-bold text-black dark:text-white truncate text-[9px] leading-tight">{{ formatTime(getApptAt(ms.appointments, slot.time).start_time) }}</p>
                         </div>
                         <p class="font-medium truncate text-[9px] text-body leading-tight" v-if="getApptAt(ms.appointments, slot.time).client_detail?.full_name">

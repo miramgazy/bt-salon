@@ -16,6 +16,21 @@
             <p class="text-sm text-body">{{ appointment?.client_detail?.phone || '' }}</p>
          </div>
 
+          <!-- Client Confirmation Status -->
+          <div class="mb-4">
+             <label class="text-xs text-body mb-1 block">Подтверждение клиента</label>
+             <div class="flex items-center gap-2">
+                <Icon 
+                  :icon="appointment?.client_confirmation === 'yes' ? 'mdi:check-circle' : (appointment?.client_confirmation === 'no' ? 'mdi:close-circle' : 'mdi:clock-outline')" 
+                  :class="appointment?.client_confirmation === 'yes' ? 'text-success' : (appointment?.client_confirmation === 'no' ? 'text-danger' : 'text-warning')"
+                  width="18" 
+                />
+                <span class="text-sm font-medium" :class="appointment?.client_confirmation === 'yes' ? 'text-success' : (appointment?.client_confirmation === 'no' ? 'text-danger' : 'text-black dark:text-white')">
+                  {{ appointment?.client_confirmation === 'yes' ? 'Да, подтвердил' : (appointment?.client_confirmation === 'no' ? 'Нет, не придет' : 'Ожидает ответа') }}
+                </span>
+             </div>
+          </div>
+
          <!-- Service Info -->
          <div class="mb-6">
             <label class="text-xs text-body mb-1 block">Услуга</label>
