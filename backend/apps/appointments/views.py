@@ -157,6 +157,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                     discount_strategy=service.discount_strategy,
                     created_by_admin=(user.role != User.ROLE_CLIENT)
                 )
+                
+                # Notify Master about new appointment
+                from apps.appointments.notifications import notify_master_new_appointment
+                notify_master_new_appointment(master_appt)
             except Exception as e:
                 import logging
                 from rest_framework.exceptions import ValidationError

@@ -373,7 +373,7 @@ class TmaWebhookView(APIView):
                 except User.DoesNotExist:
                     answer_telegram_callback(token, callback_query.get('id'), text="Ошибка: пользователь не найден")
             
-            # Handle Appointment Confirmation
+            # Handle Appointment Confirmation (Client)
             elif data.startswith('appt_'):
                 # appt_confirm_123 or appt_cancel_123
                 parts = data.split('_')
@@ -398,5 +398,49 @@ class TmaWebhookView(APIView):
                 except Appointment.DoesNotExist:
                     answer_telegram_callback(token, callback_query.get('id'), text="Запись не найдена")
                     send_telegram_message(token, chat_id, "Извините, запись не найдена или уже неактуальна.")
+
+            # Handle Master Appointment Status Update
+            elif data.startswith('master_'):
+                # master_done_123 or master_cancel_123
+                parts = data.split('_')
+                action = parts[1] # done or cancel
+                appt_id = parts[2]
+                
+                try:
+                    appt = Appointment.objects.select_related('master__user').get(id=appt_id)
+                    
+                    # Security check: only the master of this appointment can update it
+                    if appt.master.user.telegram_id != chat_id:
+                        answer_telegram_callback(token, callback_query.get('id'), text="Ошибка доступа")
+                        return Response({'status': 'error', 'message': 'Forbidden'})
+                        
+                    # Status check: avoid double updates or conflicting states
+                    if appt.status == Appointment.STATUS_DONE:
+                        answer_telegram_callback(token, callback_query.get('id'), text="Запись уже завершена")
+                        send_telegram_message(token, chat_id, "✅ Эта запись уже отмечена как выполненная.")
+                        return Response({'status': 'ok'})
+                    
+                    if appt.status == Appointment.STATUS_CANCELLED:
+                        answer_telegram_callback(token, callback_query.get('id'), text="Запись была отменена")
+                        send_telegram_message(token, chat_id, "❌ Эта запись была отменена ранее.")
+                        return Response({'status': 'ok'})
+
+                    answer_telegram_callback(token, callback_query.get('id'))
+                    
+                    is_kz = appt.master.user.language == 'kz'
+                    
+                    if action == 'done':
+                        appt.status = Appointment.STATUS_DONE
+                        msg = "Керемет! Жұмыс орындалды деп белгіленді." if is_kz else "Отлично! Работа отмечена как выполненная."
+                    else:
+                        appt.status = Appointment.STATUS_CANCELLED
+                        msg = "Жазба тоқтатылды." if is_kz else "Запись отменена."
+                    
+                    appt.save()
+                    send_telegram_message(token, chat_id, f"✅ {msg}")
+                    
+                except Appointment.DoesNotExist:
+                    answer_telegram_callback(token, callback_query.get('id'), text="Запись не найдена")
+                    send_telegram_message(token, chat_id, "Извините, запись не найдена.")
 
         return Response({'status': 'ok'})

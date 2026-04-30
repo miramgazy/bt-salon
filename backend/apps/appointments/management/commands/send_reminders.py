@@ -33,6 +33,7 @@ class Command(BaseCommand):
                 start_time__range=(start_range, end_range),
                 status__in=[Appointment.STATUS_PENDING, Appointment.STATUS_CONFIRMED],
                 client_confirmation=Appointment.CONFIRMATION_PENDING,
+                is_reminder_sent=False,
                 client__user__telegram_id__isnull=False
             ).select_related('client__user', 'service', 'master__user')
             
@@ -66,6 +67,8 @@ class Command(BaseCommand):
                     res = send_telegram_message(org.bot_token, user.telegram_id, message, reply_markup=markup)
                     
                     if res and res.get('ok'):
+                        appt.is_reminder_sent = True
+                        appt.save(update_fields=['is_reminder_sent'])
                         logger.info(f"Reminder sent to {user.telegram_id} for appt {appt.id} (Org: {org.name})")
                         total_count += 1
                     else:

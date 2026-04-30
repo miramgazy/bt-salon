@@ -37,6 +37,7 @@ class Appointment(models.Model):
     )
 
     created_by_admin = models.BooleanField(default=False)
+    is_reminder_sent = models.BooleanField(default=False)
     notes = models.TextField(blank=True)
     cancellation_reason = models.TextField(blank=True, null=True, help_text='Причина отмены, если статус cancelled')
     created_at = models.DateTimeField(auto_now_add=True)
