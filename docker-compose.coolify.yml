@@ -48,8 +48,22 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.6'
+          cpus: '0.5'
           memory: 512M
+
+  scheduler:
+    build: ./backend
+    command: sh -c "while true; do python manage.py send_reminders; sleep 600; done"
+    env_file: .env
+    depends_on:
+      - postgres
+      - redis
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 256M
 
   nginx:
     build: 
