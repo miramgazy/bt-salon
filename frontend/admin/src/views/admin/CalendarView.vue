@@ -182,7 +182,8 @@
                       :class="[
                         draggedOverSlot === ms.master.id + slot.time ? 'bg-primary/20 border-primary border-dashed' : 'border-stroke dark:border-strokedark bg-gray-50 dark:bg-meta-4',
                         hasAppt(ms.appointments, slot.time) ? 'border-transparent bg-transparent' : 'hover:border-primary/50 cursor-pointer',
-                        slot.isLunch && !hasAppt(ms.appointments, slot.time) ? 'bg-warning/20 border-warning/30' : ''
+                        slot.isLunch && !hasAppt(ms.appointments, slot.time) ? 'bg-warning/20 border-warning/30' : '',
+                        slot.isClosed && !hasAppt(ms.appointments, slot.time) ? 'bg-gray-200 dark:bg-gray-800 opacity-60 grayscale-[0.5]' : ''
                       ]"
                       :title="slot.isLunch ? 'Обеденный перерыв' : ''"
                       @dragover.prevent="onDragOver(ms.master.id + slot.time)"
@@ -582,21 +583,25 @@ const calendarDays = computed(() => {
       const shift = shiftsMap.value[`${mid}-${dateStr}`]
       
       const slots = []
-      if (shift && shift.work_start && shift.work_end) {
-         let start = timeToMinutes(shift.work_start)
-         let end = timeToMinutes(shift.work_end)
-         const step = organization.value?.slot_duration || 30
-         start = Math.floor(start / step) * step
-         end = Math.ceil(end / step) * step
-         for(let m = start; m < end; m += step) {
-           const hh = String(Math.floor(m / 60)).padStart(2, '0')
-           const mm = String(m % 60).padStart(2, '0')
-           const timeStr = `${hh}:${mm}`
-           slots.push({
-             time: timeStr,
-             isLunch: isLunch(timeStr, shift)
-           })
-         }
+      const step = organization.value?.slot_duration || 30
+      let workStart = shift?.work_start || organization.value?.work_start || '09:00'
+      let workEnd = shift?.work_end || organization.value?.work_end || '20:00'
+      
+      let start = timeToMinutes(workStart)
+      let end = timeToMinutes(workEnd)
+      
+      start = Math.floor(start / step) * step
+      end = Math.ceil(end / step) * step
+
+      for(let m = start; m < end; m += step) {
+        const hh = String(Math.floor(m / 60)).padStart(2, '0')
+        const mm = String(m % 60).padStart(2, '0')
+        const timeStr = `${hh}:${mm}`
+        slots.push({
+          time: timeStr,
+          isLunch: isLunch(timeStr, shift),
+          isClosed: !shift || !shift.is_open
+        })
       }
 
       return { master, appointments: appts, shift, slots, utilization: calcUtilization(appts, shift) }
