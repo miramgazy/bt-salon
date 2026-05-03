@@ -431,13 +431,36 @@ class TmaWebhookView(APIView):
                     
                     if action == 'done':
                         appt.status = Appointment.STATUS_DONE
-                        msg = "Керемет! Жұмыс орындалды деп белгіленді." if is_kz else "Отлично! Работа отмечена как выполненная."
+                        action_text = "орындады" if is_kz else "выполнил(а)"
                     else:
                         appt.status = Appointment.STATUS_CANCELLED
-                        msg = "Жазба тоқтатылды." if is_kz else "Запись отменена."
+                        action_text = "бас тартты" if is_kz else "отменил(а)"
                     
                     appt.save()
-                    send_telegram_message(token, chat_id, f"✅ {msg}")
+
+                    # Prepare detailed summary
+                    from django.utils import timezone
+                    local_time = timezone.localtime(appt.start_time)
+                    time_str = local_time.strftime('%H:%M')
+                    date_str = local_time.strftime('%d.%m.%Y')
+                    
+                    client_confirm = "❓ Күтуде" if is_kz else "❓ Ожидание"
+                    if appt.client_confirmation == 'yes':
+                        client_confirm = "✅ Расталды" if is_kz else "✅ Подтверждено"
+                    elif appt.client_confirmation == 'no':
+                        client_confirm = "❌ Бас тартылды" if is_kz else "❌ Отменено"
+
+                    summary = (
+                        f"<b>✅ Статус жаңартылды:</b>\n\n" if is_kz else f"<b>✅ Статус обновлен:</b>\n\n"
+                        f"👤 Шебер: {appt.master.user.first_name} {action_text}\n" if is_kz else f"👤 Мастер: {appt.master.user.first_name} {action_text}\n"
+                        f"💇‍♂️ Қызмет: {appt.service.name}\n" if is_kz else f"💇‍♂️ Услуга: {appt.service.name}\n"
+                        f"📅 Күні: {date_str} {time_str}\n" if is_kz else f"📅 Дата: {date_str} {time_str}\n"
+                        f"📱 Клиент растауы: {client_confirm}" if is_kz else f"📱 Подтверждение клиента: {client_confirm}"
+                    )
+
+                    # Edit original message to show summary and remove buttons
+                    from apps.accounts.utils import edit_telegram_message
+                    edit_telegram_message(token, chat_id, callback_query['message']['message_id'], summary)
                     
                 except Appointment.DoesNotExist:
                     answer_telegram_callback(token, callback_query.get('id'), text="Запись не найдена")
