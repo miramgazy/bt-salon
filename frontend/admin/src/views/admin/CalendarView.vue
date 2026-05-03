@@ -699,7 +699,42 @@ watch(currentDate, (newDate) => {
   selectedYear.value = newDate.getFullYear()
 }, { immediate: true })
 
-onMounted(fetchAll)
+let socket = null
+const connectWebSocket = () => {
+  if (socket || !organization.value?.id) return
+  
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const host = window.location.host
+  const url = `${protocol}//${host}/ws/appointments/${organization.value.id}/`
+  
+  socket = new WebSocket(url)
+  
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (data.type === 'appointment_update') {
+        fetchAll()
+      }
+    } catch (e) {
+      console.error('WS parsing error', e)
+    }
+  }
+  
+  socket.onclose = () => {
+    socket = null
+    setTimeout(connectWebSocket, 5000)
+  }
+  
+  socket.onerror = (err) => {
+    console.error('WS error', err)
+    socket.close()
+  }
+}
+
+onMounted(async () => {
+  await fetchAll()
+  connectWebSocket()
+})
 </script>
 
 <style scoped>
