@@ -243,6 +243,15 @@ class MasterShiftViewSet(viewsets.ModelViewSet):
         date = self.request.query_params.get('date')
         if date:
             qs = qs.filter(date=date)
+            
+        # Filter by range
+        date_from = self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('date_to')
+        if date_from:
+            qs = qs.filter(date__gte=date_from)
+        if date_to:
+            qs = qs.filter(date__lte=date_to)
+
         # Filter by month (YYYY-MM)
         month = self.request.query_params.get('month')
         if month:

@@ -361,10 +361,25 @@ const currentMonthStr = computed(() => {
 const fetchAll = async () => {
   try {
     loading.value = true
+    
+    // Calculate full visible range for the calendar grid
+    const startOfMonthDate = startOfMonth(currentDate.value)
+    const endOfMonthDate = endOfMonth(currentDate.value)
+    let gridStartDate = startOfMonthDate
+    const dow = getDay(startOfMonthDate)
+    if (dow !== 1) gridStartDate = subDays(startOfMonthDate, dow === 0 ? 6 : dow - 1)
+    
+    let gridEndDate = endOfMonthDate
+    const lastDow = getDay(endOfMonthDate)
+    if (lastDow !== 0) gridEndDate = addDays(endOfMonthDate, 7 - lastDow)
+    
+    const dateFrom = format(gridStartDate, 'yyyy-MM-dd')
+    const dateTo = format(gridEndDate, 'yyyy-MM-dd')
+
     const [apptRes, mastersRes, shiftsRes, orgRes] = await Promise.all([
-      api.get('/api/appointments/'),
+      api.get('/api/appointments/', { params: { date_from: dateFrom, date_to: dateTo } }),
       api.get('/api/masters/'),
-      api.get('/api/masters/shifts/', { params: { month: currentMonthStr.value } }),
+      api.get('/api/masters/shifts/', { params: { date_from: dateFrom, date_to: dateTo } }),
       api.get('/api/organization/')
     ])
     bookings.value = apptRes.data.results || apptRes.data || []
