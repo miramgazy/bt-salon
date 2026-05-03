@@ -377,9 +377,9 @@ const fetchAll = async () => {
     const dateTo = format(gridEndDate, 'yyyy-MM-dd')
 
     const [apptRes, mastersRes, shiftsRes, orgRes] = await Promise.all([
-      api.get('/api/appointments/', { params: { date_from: dateFrom, date_to: dateTo } }),
+      api.get('/api/appointments/', { params: { date_from: dateFrom, date_to: dateTo, page_size: 1000 } }),
       api.get('/api/masters/'),
-      api.get('/api/masters/shifts/', { params: { date_from: dateFrom, date_to: dateTo } }),
+      api.get('/api/masters/shifts/', { params: { date_from: dateFrom, date_to: dateTo, page_size: 1000 } }),
       api.get('/api/organization/')
     ])
     bookings.value = apptRes.data.results || apptRes.data || []
