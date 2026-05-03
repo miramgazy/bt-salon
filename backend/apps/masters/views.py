@@ -139,7 +139,7 @@ class MasterViewSet(viewsets.ModelViewSet):
             slot_end_dt = current_dt + service_duration
             status_code = 'available'
             
-            # 0. Check if service ends after shift
+            # 0. Check if service ends after shift (Allow exactly at end_dt)
             if slot_end_dt > end_dt:
                 status_code = 'limit'
             
@@ -148,6 +148,7 @@ class MasterViewSet(viewsets.ModelViewSet):
                 if org.has_lunch_break and shift.lunch_start and shift.lunch_end:
                     lunch_start_dt = datetime.combine(target_date, shift.lunch_start)
                     lunch_end_dt = datetime.combine(target_date, shift.lunch_end)
+                    # Use small epsilon for float/time comparison if needed, but here combine is precise
                     if lunch_start_dt <= current_dt < lunch_end_dt:
                         status_code = 'lunch'
                     elif current_dt < lunch_end_dt and slot_end_dt > lunch_start_dt:
@@ -170,21 +171,24 @@ class MasterViewSet(viewsets.ModelViewSet):
                         status_code = 'no_virtual_master'
                     else:
                         v_shift = MasterShift.objects.filter(master=virtual_master, date=target_date, is_open=True).first()
-                        if not v_shift:
-                            status_code = 'no_capacity'
-                        else:
+                        if v_shift:
                             v_start = datetime.combine(target_date, v_shift.work_start)
                             v_end = datetime.combine(target_date, v_shift.work_end)
-                            if not (v_start <= current_dt and current_dt + service_duration <= v_end):
-                                status_code = 'no_capacity'
-                            else:
-                                # Check virtual master occupancy
-                                for v_appt in v_appointments:
-                                    v_start_n = timezone.make_naive(v_appt.start_time) if timezone.is_aware(v_appt.start_time) else v_appt.start_time
-                                    v_end_n = timezone.make_naive(v_appt.end_time) if timezone.is_aware(v_appt.end_time) else v_appt.end_time
-                                    if current_dt < v_end_n and slot_end_dt > v_start_n:
-                                        status_code = 'no_capacity'
-                                        break
+                        else:
+                            # Fallback to organization hours if no manual shift for virtual master
+                            v_start = datetime.combine(target_date, org.work_start)
+                            v_end = datetime.combine(target_date, org.work_end)
+                            
+                        if not (v_start <= current_dt and slot_end_dt <= v_end):
+                            status_code = 'no_capacity'
+                        else:
+                            # Check virtual master occupancy
+                            for v_appt in v_appointments:
+                                v_start_n = timezone.make_naive(v_appt.start_time) if timezone.is_aware(v_appt.start_time) else v_appt.start_time
+                                v_end_n = timezone.make_naive(v_appt.end_time) if timezone.is_aware(v_appt.end_time) else v_appt.end_time
+                                if current_dt < v_end_n and slot_end_dt > v_start_n:
+                                    status_code = 'no_capacity'
+                                    break
             
             slot_start_aware = timezone.make_aware(current_dt)
             slot_end_aware = timezone.make_aware(slot_end_dt)
