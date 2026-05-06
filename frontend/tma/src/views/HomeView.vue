@@ -23,91 +23,79 @@
         </label>
       </div>
 
-      <!-- Dynamic Filters Panel -->
+      <!-- Modern Filter Panel (Admin Style) -->
       <div class="filters-panel">
         <div class="panel-main">
+          <!-- Toggle Filter Mode (Search) -->
           <button 
-            :class="['filter-toggle', { active: isFilterMode }]" 
-            @click="toggleFilterMode"
+            :class="['filter-toggle', { active: isSearchMode }]" 
+            @click="toggleSearchMode"
           >
-            <Icon :icon="isFilterMode ? 'mdi:filter-off-outline' : 'mdi:filter-variant'" width="20" />
+            <Icon :icon="isSearchMode ? 'mdi:magnify-minus-outline' : 'mdi:magnify'" width="20" />
           </button>
 
           <TransitionGroup name="panel-slide" tag="div" class="panel-content">
-            <!-- Default: Date Selector -->
-            <div v-if="!isFilterMode" key="dates" class="date-selector-compact">
+            <!-- Default: Date & Category Toggle -->
+            <div v-if="!isSearchMode" key="default" class="panel-row-compact">
+              <!-- Categories Trigger -->
               <button 
-                :class="['date-pill', { active: state.selectedDate === todayStr }]" 
-                @click="state.selectedDate = todayStr"
-              >{{ $t('tma.today') }}</button>
-              <button 
-                :class="['date-pill', { active: state.selectedDate === tomorrowStr }]" 
-                @click="state.selectedDate = tomorrowStr"
-              >{{ $t('tma.tomorrow') }}</button>
-              <div :class="['date-pill custom-date-wrapper', { active: state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr }]">
-                 <Icon icon="mdi:calendar-month-outline" width="16" />
-                 <input type="date" v-model="state.selectedDate" class="date-input-hidden" :min="todayStr" />
-                 <span>{{ (state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr) ? formatDateShort(state.selectedDate) : $t('master.date') }}</span>
+                :class="['date-pill', { active: showCategoryGrid }]" 
+                @click="showCategoryGrid = !showCategoryGrid"
+              >
+                <Icon icon="mdi:tag-outline" width="16" style="margin-right: 4px;" />
+                {{ state.selectedCat ? state.selectedCat.name : $t('tma.serviceCategories') }}
+              </button>
+
+              <div class="date-scroll-mini">
+                <button 
+                  :class="['date-pill-mini', { active: state.selectedDate === todayStr }]" 
+                  @click="state.selectedDate = todayStr"
+                >{{ $t('tma.today') }}</button>
+                <button 
+                  :class="['date-pill-mini', { active: state.selectedDate === tomorrowStr }]" 
+                  @click="state.selectedDate = tomorrowStr"
+                >{{ $t('tma.tomorrow') }}</button>
+                <div :class="['date-pill-mini custom-date-wrapper', { active: state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr }]">
+                   <input type="date" v-model="state.selectedDate" class="date-input-hidden" :min="todayStr" />
+                   <span>{{ (state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr) ? formatDateShort(state.selectedDate) : $t('master.date') }}</span>
+                </div>
               </div>
             </div>
 
-            <!-- Active Filters Mode -->
-            <div v-else key="filters" class="active-filters-row">
-              <!-- Compact Date -->
-              <div :class="['compact-btn', { active: state.selectedDate !== todayStr && state.selectedDate !== tomorrowStr }]">
-                <Icon icon="mdi:calendar-edit" width="20" />
-                <input type="date" v-model="state.selectedDate" class="date-input-hidden" :min="todayStr" />
+            <!-- Search Mode -->
+            <div v-else key="search" class="active-filters-row">
+              <div class="search-input-wrapper flex-1">
+                <Icon icon="mdi:magnify" width="18" class="search-icon" />
+                <input 
+                  v-model="serviceSearchGlobal" 
+                  type="text" 
+                  class="filter-input-compact" 
+                  placeholder="Поиск услуг..."
+                  autofocus
+                />
               </div>
-
-              <!-- Categories Toggle -->
-              <button 
-                :class="['compact-btn', { active: activeFilterPanel === 'category' }]"
-                @click="toggleFilterPanel('category')"
-              >
-                <Icon icon="mdi:tag-outline" width="20" />
-              </button>
-
-              <!-- Search Toggle -->
-              <button 
-                :class="['compact-btn', { active: activeFilterPanel === 'search' }]"
-                @click="toggleFilterPanel('search')"
-              >
-                <Icon icon="mdi:magnify" width="20" />
-              </button>
-
-              <!-- Reset -->
-              <button class="compact-btn text-error" @click="resetMastersFilters" v-if="hasActiveMastersFilters">
-                <Icon icon="mdi:filter-remove-outline" width="20" />
-              </button>
             </div>
           </TransitionGroup>
         </div>
 
-        <!-- Expandable Panels -->
+        <!-- Expandable Categories Grid -->
         <Transition name="panel-expand">
-          <div v-if="isFilterMode && activeFilterPanel === 'category'" class="expanded-panel">
-            <div class="category-scroll">
-              <button 
-                :class="['pill', { active: !state.masterFilter }]" 
-                @click="state.masterFilter = null"
-              >{{ $t('tma.all') }}</button>
-              <button 
-                v-for="cat in categories" :key="cat.id"
-                :class="['pill', { active: state.masterFilter === cat.id }]" 
-                @click="state.masterFilter = cat.id"
-              >{{ cat.name }}</button>
+          <div v-if="showCategoryGrid && !isSearchMode" class="expanded-panel-grid">
+            <div class="cat-grid-compact">
+              <div 
+                :class="['cat-tile-mini', { active: !state.selectedCat }]" 
+                @click="state.selectedCat = null; showCategoryGrid = false"
+              >
+                {{ $t('tma.all') }}
+              </div>
+              <div 
+                v-for="cat in categories" :key="cat.id" 
+                :class="['cat-tile-mini', { active: state.selectedCat?.id === cat.id }]"
+                @click="handleCatClick(cat); showCategoryGrid = false"
+              >
+                {{ cat.name }}
+              </div>
             </div>
-          </div>
-        </Transition>
-
-        <Transition name="panel-expand">
-          <div v-if="isFilterMode && activeFilterPanel === 'search'" class="expanded-panel">
-            <input 
-              v-model="masterSearchQuery" 
-              type="text" 
-              class="filter-input" 
-              :placeholder="$t('admin.searchPlaceholder', 'Поиск мастера...')"
-            />
           </div>
         </Transition>
       </div>
@@ -117,23 +105,44 @@
         <div class="spinner"></div>
       </div>
 
-      <!-- Services tab -->
+      <!-- Services List (Admin Card Style) -->
       <template v-else-if="state.activeTab === 'services'">
-        <div class="section-title header-font" style="margin-bottom: 12px; font-size: 20px;">
-          {{ $t('tma.serviceCategories') }}
-        </div>
-        <div class="cat-grid">
-          <div v-for="cat in categories" :key="cat.id" class="cat-tile" @click="handleCatClick(cat)">
-            <div class="cat-tile-icon">🏷️</div>
-            <div class="cat-tile-name">{{ cat.name }}</div>
+        <div class="services-list mt-4">
+          <div v-if="filteredServicesGlobal.length === 0" class="empty-state">
+            <Icon icon="mdi:magnify-close" width="48" class="text-muted opacity-20 mb-2" />
+            <p>{{ $t('services.empty') }}</p>
+          </div>
+          <div v-for="svc in filteredServicesGlobal" :key="svc.id" class="service-card-premium" @click="handleServiceSelect(svc)">
+            <div class="service-card-content">
+              <div class="service-top-row">
+                <div class="service-name-group">
+                  <span v-if="svc.is_combo" class="combo-badge-mini">
+                    <Icon icon="mdi:link-variant" width="10" />
+                  </span>
+                  <div class="service-name-text">{{ svc.name }}</div>
+                </div>
+                <div class="service-price-tag">
+                  <template v-if="svc.is_floating_price">{{ svc.price_min }} — {{ svc.price_max }} ₸</template>
+                  <template v-else>{{ svc.total_price }} ₸</template>
+                </div>
+              </div>
+              <div class="service-bottom-row">
+                <div class="service-meta-info">
+                  <Icon icon="mdi:clock-outline" width="14" />
+                  <span>{{ svc.duration_minutes }} {{ $t('tma.minutes') }}</span>
+                </div>
+                <div class="service-arrow">
+                  <Icon icon="mdi:chevron-right" width="20" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </template>
 
       <!-- Masters tab -->
       <template v-else-if="state.activeTab === 'masters'">
-        <!-- Filter pills removed (integrated into filters-panel) -->
-        <div class="master-grid">
+        <div class="master-grid mt-4">
           <div v-for="m in filteredMasters" :key="m.id" 
                :class="['master-card', { 'is-self': isSelf(m) }]" 
                @click="!isSelf(m) && handleMasterFirstSelect(m)">
@@ -156,30 +165,39 @@
       </template>
     </div>
 
-    <!-- ══ SERVICE LIST ══ -->
+    <!-- ══ SERVICE LIST ══ (Used when choosing master first) -->
     <div v-else-if="state.page === 'service-list'" class="fade-up">
       <div class="page-header">
         <button class="back-btn" @click="goHome">
             <Icon icon="mdi:arrow-left" width="20" />
         </button>
-        <div class="page-title header-font">{{ state.selectedMaster ? state.selectedMaster.first_name + " " + state.selectedMaster.last_name : state.selectedCat?.name }}</div>
+        <div class="page-title header-font">{{ state.selectedMaster ? state.selectedMaster.first_name + ' ' + state.selectedMaster.last_name : $t('tma.services') }}</div>
       </div>
-      <div class="service-list">
-        <div v-for="svc in catServices" :key="svc.id" class="service-card" @click="handleServiceSelect(svc)">
-          <div class="service-info">
-            <div class="service-name">
-              {{ svc.name }}
-              <span v-if="svc.is_combo" class="combo-badge">Combo</span>
+      <div class="services-list mt-2">
+        <div v-for="svc in catServices" :key="svc.id" class="service-card-premium" @click="handleServiceSelect(svc)">
+            <div class="service-card-content">
+              <div class="service-top-row">
+                <div class="service-name-group">
+                  <span v-if="svc.is_combo" class="combo-badge-mini">
+                    <Icon icon="mdi:link-variant" width="10" />
+                  </span>
+                  <div class="service-name-text">{{ svc.name }}</div>
+                </div>
+                <div class="service-price-tag">
+                  <template v-if="svc.is_floating_price">{{ svc.price_min }} — {{ svc.price_max }} ₸</template>
+                  <template v-else>{{ svc.total_price }} ₸</template>
+                </div>
+              </div>
+              <div class="service-bottom-row">
+                <div class="service-meta-info">
+                  <Icon icon="mdi:clock-outline" width="14" />
+                  <span>{{ svc.duration_minutes }} {{ $t('tma.minutes') }}</span>
+                </div>
+                <div class="service-arrow">
+                  <Icon icon="mdi:chevron-right" width="20" />
+                </div>
+              </div>
             </div>
-            <div class="service-meta">⏱ {{ svc.duration_minutes }} {{ $t('tma.minutes') }}</div>
-          </div>
-          <div class="service-price-wrapper">
-            <div v-if="getOldPrice(svc)" class="old-price">~~{{ getOldPrice(svc) }} ₸~~</div>
-            <div class="service-price">
-              <template v-if="svc.is_floating_price">{{ svc.price_min }} — {{ svc.price_max }} ₸</template>
-              <template v-else>{{ svc.total_price }} ₸</template>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -413,27 +431,39 @@ const slotsLoading = ref(false)
 const shiftClosed = ref(false)
 
 // ── Filters State ──────────────────────────────────────────────
-const isFilterMode = ref(false)
-const activeFilterPanel = ref(null) // 'category' or 'search'
+const isSearchMode = ref(false)
+const showCategoryGrid = ref(false)
+const serviceSearchGlobal = ref('')
 const masterSearchQuery = ref('')
 
-const toggleFilterMode = () => {
-  isFilterMode.value = !isFilterMode.value
-  if (!isFilterMode.value) {
-    resetMastersFilters()
-    activeFilterPanel.value = null
+const toggleSearchMode = () => {
+  isSearchMode.value = !isSearchMode.value
+  if (!isSearchMode.value) {
+    serviceSearchGlobal.value = ''
+  } else {
+    showCategoryGrid.value = false
   }
 }
 
-const toggleFilterPanel = (panel) => {
-  if (activeFilterPanel.value === panel) activeFilterPanel.value = null
-  else activeFilterPanel.value = panel
-}
-
-const resetMastersFilters = () => {
-  state.masterFilter = null
-  masterSearchQuery.value = ''
-}
+const filteredServicesGlobal = computed(() => {
+  let res = services.value
+  
+  // Filter by category
+  if (state.selectedCat) {
+    res = res.filter(s => {
+      const sCatId = s.category?.id || s.category
+      return String(sCatId) === String(state.selectedCat.id)
+    })
+  }
+  
+  // Filter by search
+  if (serviceSearchGlobal.value) {
+    const q = serviceSearchGlobal.value.toLowerCase()
+    res = res.filter(s => s.name.toLowerCase().includes(q))
+  }
+  
+  return res
+})
 
 const hasActiveMastersFilters = computed(() => {
   return state.masterFilter || masterSearchQuery.value
@@ -442,13 +472,11 @@ const hasActiveMastersFilters = computed(() => {
 const fetchData = async () => {
   try {
     loading.value = true
-    console.log('HomeView: Starting fetchData...')
     
     // Attempt to fetch categories
     try {
       const catsRes = await api.get('/categories/', { params: { page_size: 1000 } })
       categories.value = catsRes.data.results || catsRes.data
-      console.log('HomeView: Categories loaded', categories.value.length)
     } catch (e) { console.error('Cats fetch fail', e) }
 
     // Attempt to fetch services
@@ -456,7 +484,6 @@ const fetchData = async () => {
       const servsRes = await api.get('/services/', { params: { page_size: 1000 } })
       const data = servsRes.data.results || servsRes.data
       services.value = Array.isArray(data) ? data : []
-      console.log('HomeView: Services loaded', services.value.length)
     } catch (e) { 
       console.error('Servs fetch fail', e)
       services.value = []
@@ -466,10 +493,8 @@ const fetchData = async () => {
     try {
       const mastersRes = await api.get('/masters/', { params: { page_size: 1000 } })
       masters.value = mastersRes.data.results || mastersRes.data
-      console.log('HomeView: Masters loaded', masters.value.length)
     } catch (e) { console.error('Masters fetch fail', e) }
 
-    // Ensure auth is updated if missing organization info
     if (!auth.organizationSettings) {
       await auth.fetchCurrentUser()
     }
@@ -477,7 +502,6 @@ const fetchData = async () => {
     console.error('General Fetch error:', err)
   } finally {
     loading.value = false
-    console.log('HomeView: fetchData finished')
   }
 }
 
@@ -494,13 +518,11 @@ const catServices = computed(() => {
   if (state.selectedCat) {
     const targetCatId = String(state.selectedCat.id || state.selectedCat)
     baseServices = baseServices.filter(s => {
-      // Handle cases where category might be an object or just an ID
       const sCatId = s.category?.id || s.category
       return String(sCatId) === targetCatId
     })
   }
     
-  // Further filter by master if one was pre-selected (uncommon in current flow but kept for safety)
   if (state.selectedMaster) {
     const masterServices = state.selectedMaster.services || []
     baseServices = baseServices.filter(s => masterServices.includes(s.id))
@@ -551,8 +573,6 @@ const goHome = () => {
 
 const handleCatClick = (cat) => {
   state.selectedCat = cat
-  state.selectedMaster = null // Reset master if choosing from categories
-  state.page = 'service-list'
 }
 
 const handleServiceSelect = (svc) => {
@@ -576,7 +596,7 @@ const handleSlotSelect = (slot) => {
 
 const handleMasterFirstSelect = (master) => {
   state.selectedMaster = master
-  state.selectedCat = null // Clear category so we show all services of this master
+  state.selectedCat = null 
   state.page = 'service-list'
 }
 
@@ -643,12 +663,6 @@ watch([() => state.selectedMaster, () => state.selectedService, () => state.sele
 
 const { t } = useI18n()
 
-const getOldPrice = (svc) => {
-  if (!svc.is_combo || !svc.combo_items) return null
-  const sum = svc.combo_items.reduce((acc, item) => acc + (parseFloat(item.sub_service_price || 0) * item.quantity), 0)
-  return sum > parseFloat(svc.total_price) ? sum : null
-}
-
 const handleConfirm = async () => {
   try {
     const slot = state.selectedSlot
@@ -657,23 +671,17 @@ const handleConfirm = async () => {
     const master = state.selectedMaster
 
     if (!slot || !date || !service || !master) {
-      console.error('Booking failed: missing selection', { slot, date, service, master })
       alert(t('tma.error'))
       return
     }
 
-    // Construct times safely: use ISO from backend if available, 
-    // otherwise fallback to manual construction WITH timezone offset
     const startTime = slot.start_iso || `${date}T${slot.time}:00+05:00`
     
     let endTime = slot.end_iso
     if (!endTime) {
-        // Fallback for end time using duration
         const duration = service.duration_minutes || 30
-        const [h, m] = slot.time.split(':').map(Number)
         const d = new Date(`${date}T${slot.time}:00+05:00`)
         d.setMinutes(d.getMinutes() + duration)
-        // Manual ISO-like string with timezone
         const pad = (n) => n.toString().padStart(2, '0')
         endTime = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00+05:00`
     }
@@ -685,10 +693,9 @@ const handleConfirm = async () => {
       end_time: endTime
     })
     
-     state.showModal = false
+    state.showModal = false
     state.showSuccess = true
   } catch (error) {
-    console.error('Booking error detail:', error.response?.data || error.message)
     const errorMsg = error.response?.data?.error || error.response?.data?.detail || t('tma.error')
     alert(errorMsg)
   }
@@ -709,7 +716,7 @@ const handleConfirm = async () => {
 .tab.active { background: var(--gold-gradient); color: #000; border-color: var(--gold); box-shadow: 0 4px 12px var(--gold-glow); }
 .tab-icon { font-size: 20px; display: block; margin-bottom: 4px; }
 
-/* Dynamic Filters Panel */
+/* Modern Filter Panel (Admin Style) */
 .filters-panel {
   background: var(--bg-secondary);
   border-radius: 18px;
@@ -752,17 +759,43 @@ const handleConfirm = async () => {
   overflow: hidden;
 }
 
-.date-selector-compact {
+.panel-row-compact {
   display: flex;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
   width: 100%;
+}
+.date-scroll-mini {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  flex: 1;
+}
+.date-pill-mini {
+  white-space: nowrap;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--tg-bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.date-pill-mini.active {
+  background: var(--gold-gradient);
+  color: #000;
+  border-color: var(--gold);
 }
 
 .date-pill {
   white-space: nowrap;
   padding: 8px 16px;
   border-radius: 20px;
-  background: var(--bg-secondary, var(--card-bg));
+  background: var(--tg-bg);
   border: 1px solid var(--border);
   color: var(--muted);
   font-size: 13px;
@@ -771,10 +804,42 @@ const handleConfirm = async () => {
   transition: all 0.2s;
 }
 .date-pill.active {
-  background: var(--gold-gradient);
-  color: #000;
+  background: var(--gold-accent, rgba(212, 175, 55, 0.15));
+  color: var(--gold);
   border-color: var(--gold);
-  box-shadow: 0 4px 10px var(--gold-glow);
+}
+
+.expanded-panel-grid {
+  margin-top: 8px;
+  padding: 4px;
+  background: var(--tg-bg);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.cat-grid-compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 4px;
+}
+.cat-tile-mini {
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cat-tile-mini.active {
+  background: var(--gold-accent, rgba(212, 175, 55, 0.15));
+  color: var(--gold);
+  border-color: var(--gold);
 }
 
 .active-filters-row {
@@ -783,63 +848,110 @@ const handleConfirm = async () => {
   width: 100%;
 }
 
-.compact-btn {
-  flex: 1;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--tg-bg);
-  border: 1px solid var(--border);
-  color: var(--muted);
+.search-input-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
 }
-.compact-btn.active {
-  background: var(--gold-accent, var(--gold-glow));
-  color: var(--gold);
+.search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--muted);
+}
+.filter-input-compact {
+  width: 100%;
+  background: var(--tg-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 10px 10px 34px;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+}
+.filter-input-compact:focus {
   border-color: var(--gold);
 }
 
-.expanded-panel {
-  margin-top: 8px;
-  padding: 8px;
-  background: var(--tg-bg);
-  border-radius: 14px;
-  border: 1px solid var(--border);
-}
-
-.category-scroll {
-  display: flex;
-  overflow-x: auto;
-  gap: 8px;
-  scrollbar-width: none;
-}
-.category-scroll::-webkit-scrollbar { display: none; }
-
-.pill {
-  white-space: nowrap; padding: 6px 14px; border-radius: 20px;
-  background: var(--bg-secondary); border: 1px solid var(--border);
-  font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer;
-}
-.pill.active { background: var(--gold); color: #000; border-color: var(--gold); }
-
-.filter-input {
-  width: 100%;
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
+/* Service Card Premium (Admin Style) */
+.services-list { display: flex; flex-direction: column; gap: 12px; }
+.service-card-premium {
   background: var(--bg-secondary);
-  color: var(--text);
-  font-size: 14px;
-  outline: none;
-  font-family: inherit;
+  border-radius: 18px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
 }
-.filter-input:focus { border-color: var(--gold); }
+.service-card-premium:active {
+  transform: scale(0.98);
+  border-color: var(--gold);
+}
+.service-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.service-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.service-name-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+.service-name-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+.service-price-tag {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.service-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+.service-meta-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.service-arrow {
+  color: var(--muted);
+  opacity: 0.5;
+}
 
-.text-error { color: #dc2626; }
+.combo-badge-mini {
+  background: var(--gold-gradient);
+  color: #000;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+}
 
 .custom-date-wrapper {
   display: flex;
@@ -852,54 +964,6 @@ const handleConfirm = async () => {
   top: 0; left: 0; width: 100%; height: 100%;
   opacity: 0; cursor: pointer;
 }
-
-/* Animations */
-.panel-slide-enter-active, .panel-slide-leave-active { transition: all 0.3s ease; }
-.panel-slide-enter-from { opacity: 0; transform: translateX(20px); }
-.panel-slide-leave-to { opacity: 0; transform: translateX(-20px); }
-
-.panel-expand-enter-active, .panel-expand-leave-active { 
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  max-height: 100px;
-  overflow: hidden;
-}
-.panel-expand-enter-from, .panel-expand-leave-to { 
-  max-height: 0;
-  opacity: 0;
-  margin-top: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-}
-
-/* Legacy Date selector (removed) */
-/*.date-bar styles... */
-
-
-/* Category grid */
-.cat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 24px; }
-.cat-tile {
-  background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 16px 8px; text-align: center; cursor: pointer; transition: all .2s;
-}
-.cat-tile:active { transform: scale(0.96); border-color: var(--gold); }
-.cat-tile-icon { font-size: 26px; margin-bottom: 8px; }
-.cat-tile-name { font-size: 11px; color: var(--text); font-weight: 600; line-height: 1.3; }
-
-/* Services list */
-.service-list { display: flex; flex-direction: column; gap: 10px; }
-.service-card {
-  background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 18px; cursor: pointer; transition: all .2s; display: flex; justify-content: space-between; align-items: center;
-}
-.service-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
-.combo-badge { 
-  background: var(--gold-gradient); color: #000; font-size: 10px; 
-  padding: 2px 6px; border-radius: 4px; font-weight: 800; text-transform: uppercase;
-}
-.service-meta { font-size: 12px; color: var(--muted); font-weight: 500; }
-.service-price { font-size: 18px; font-weight: 700; color: var(--gold); font-family: var(--font-header); }
-.service-price-wrapper { text-align: right; }
-.old-price { font-size: 11px; color: var(--muted); text-decoration: line-through; margin-bottom: -2px; }
 
 /* Master grid */
 .master-grid { display: flex; flex-direction: column; gap: 10px; }
@@ -976,80 +1040,19 @@ const handleConfirm = async () => {
 .modal-scroll-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
 /* Premium Profile Styles */
-.profile-hero-premium {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin-bottom: 24px;
-}
-
+.profile-hero-premium { display: flex; flex-direction: column; gap: 20px; margin-bottom: 24px; }
 .profile-photo-rect {
-  width: 100%;
-  max-width: 240px;
-  height: 272px;
-  margin: 0 auto;
-  border-radius: 24px;
-  overflow: hidden;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 100%; max-width: 240px; height: 272px; margin: 0 auto;
+  border-radius: 24px; overflow: hidden; background: var(--bg-secondary);
+  border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  display: flex; align-items: center; justify-content: center;
 }
-
-.profile-photo-rect img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.photo-placeholder {
-  font-size: 80px;
-  opacity: 0.5;
-}
-
-.profile-header-info {
-  text-align: center;
-}
-
-.profile-badges {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.badge-gold {
-  background: var(--gold-gradient);
-  color: #000;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.badge-outline {
-  border: 1px solid var(--border);
-  color: var(--muted);
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.profile-hero { text-align: center; margin-bottom: 24px; }
-.profile-photo-large {
-  width: 120px; height: 120px; border-radius: 50%;
-  margin: 0 auto 16px; border: 3px solid var(--gold);
-  padding: 4px; background: var(--bg-secondary);
-  overflow: hidden; display: flex; align-items: center; justify-content: center;
-}
-.profile-photo-large img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-.profile-photo-large span { font-size: 64px; }
-
+.profile-photo-rect img { width: 100%; height: 100%; object-fit: cover; }
+.photo-placeholder { font-size: 80px; opacity: 0.5; }
+.profile-header-info { text-align: center; }
+.profile-badges { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
+.badge-outline { border: 1px solid var(--border); color: var(--muted); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
 .profile-name { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
-
 .profile-section { margin-bottom: 24px; }
 .section-label { 
   font-size: 11px; font-weight: 800; text-transform: uppercase; 
@@ -1057,15 +1060,24 @@ const handleConfirm = async () => {
   display: flex; align-items: center; gap: 8px;
 }
 .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); opacity: 0.5; }
-
 .profile-bio { line-height: 1.6; color: var(--text); font-size: 15px; }
-
 .profile-services-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .mini-service-tag { 
   background: var(--bg-secondary); border: 1px solid var(--border);
   padding: 6px 12px; border-radius: 20px; font-size: 12px; color: var(--muted);
   font-weight: 600;
 }
-
 .modal-footer { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border); }
+
+/* Animations */
+.panel-slide-enter-active, .panel-slide-leave-active { transition: all 0.3s ease; }
+.panel-slide-enter-from { opacity: 0; transform: translateX(20px); }
+.panel-slide-leave-to { opacity: 0; transform: translateX(-20px); }
+
+@keyframes panel-expand {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.panel-expand-enter-active { animation: panel-expand 0.2s ease-out; }
+.panel-expand-leave-active { animation: panel-expand 0.2s ease-in reverse; }
 </style>
