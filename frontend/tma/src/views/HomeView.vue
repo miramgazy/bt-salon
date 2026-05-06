@@ -454,9 +454,13 @@ const fetchData = async () => {
     // Attempt to fetch services
     try {
       const servsRes = await api.get('/services/', { params: { page_size: 1000 } })
-      services.value = servsRes.data.results || servsRes.data
+      const data = servsRes.data.results || servsRes.data
+      services.value = Array.isArray(data) ? data : []
       console.log('HomeView: Services loaded', services.value.length)
-    } catch (e) { console.error('Servs fetch fail', e) }
+    } catch (e) { 
+      console.error('Servs fetch fail', e)
+      services.value = []
+    }
 
     // Attempt to fetch masters
     try {
@@ -482,13 +486,26 @@ onMounted(() => {
 })
 
 const catServices = computed(() => {
-  const baseServices = state.selectedCat 
-    ? services.value.filter(s => s.category === state.selectedCat.id)
-    : services.value
-    
-  if (state.selectedMaster) {
-    return baseServices.filter(s => state.selectedMaster.services?.includes(s.id))
+  if (!services.value) return []
+  
+  let baseServices = services.value
+  
+  // Filter by category if one is selected
+  if (state.selectedCat) {
+    const targetCatId = String(state.selectedCat.id || state.selectedCat)
+    baseServices = baseServices.filter(s => {
+      // Handle cases where category might be an object or just an ID
+      const sCatId = s.category?.id || s.category
+      return String(sCatId) === targetCatId
+    })
   }
+    
+  // Further filter by master if one was pre-selected (uncommon in current flow but kept for safety)
+  if (state.selectedMaster) {
+    const masterServices = state.selectedMaster.services || []
+    baseServices = baseServices.filter(s => masterServices.includes(s.id))
+  }
+  
   return baseServices
 })
 

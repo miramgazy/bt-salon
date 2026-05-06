@@ -33,8 +33,8 @@ class ServiceViewSet(viewsets.ModelViewSet):
         active_only = self.request.query_params.get('is_active')
         if active_only == 'true':
             qs = qs.filter(is_active=True)
-        elif not self.request.user.is_staff and not hasattr(self.request.user, 'role'):
-            # Default for non-admin/staff users (like TMA clients)
+        elif not self.request.user.is_staff and getattr(self.request.user, 'role', 'client') == 'client':
+            # Default for clients
             qs = qs.filter(is_active=True)
 
         # Search by name
