@@ -137,6 +137,36 @@
               </div>
             </div>
           </div>
+
+          <!-- Pagination Controls -->
+          <div v-if="services.length > 0" class="pagination-footer mt-6 flex flex-col gap-4">
+              <div class="flex items-center justify-between text-xs text-muted px-2">
+                  <span>{{ $t('admin.pageSize') || 'Показывать по:' }}</span>
+                  <div class="flex gap-2">
+                      <button v-for="size in [20, 50]" :key="size" 
+                              class="size-pill" 
+                              :class="{ active: pageSize === size }"
+                              @click="pageSize = size; onPageSizeChange()">
+                          {{ size }}
+                      </button>
+                  </div>
+              </div>
+              
+              <div class="flex items-center justify-center gap-4">
+                  <button class="btn-page" :disabled="currentPage === 1" @click="prevPage">
+                      <Icon icon="mdi:chevron-left" width="24" />
+                  </button>
+                  <div class="page-indicator">
+                      <b>{{ currentPage }}</b> / {{ totalPages }}
+                  </div>
+                  <button class="btn-page" :disabled="currentPage >= totalPages" @click="nextPage">
+                      <Icon icon="mdi:chevron-right" width="24" />
+                  </button>
+              </div>
+              <div class="text-[10px] text-center text-muted uppercase tracking-widest">
+                  Всего: {{ totalCount }}
+              </div>
+          </div>
         </div>
       </template>
 
@@ -436,6 +466,12 @@ const showCategoryGrid = ref(false)
 const serviceSearchGlobal = ref('')
 const masterSearchQuery = ref('')
 
+// Pagination
+const currentPage = ref(1)
+const pageSize = ref(20)
+const totalCount = ref(0)
+const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value) || 1)
+
 const toggleSearchMode = () => {
   isSearchMode.value = !isSearchMode.value
   if (!isSearchMode.value) {
@@ -446,28 +482,37 @@ const toggleSearchMode = () => {
 }
 
 const filteredServicesGlobal = computed(() => {
-  let res = services.value
-  
-  // Filter by category
-  if (state.selectedCat) {
-    res = res.filter(s => {
-      const sCatId = s.category?.id || s.category
-      return String(sCatId) === String(state.selectedCat.id)
-    })
-  }
-  
-  // Filter by search
-  if (serviceSearchGlobal.value) {
-    const q = serviceSearchGlobal.value.toLowerCase()
-    res = res.filter(s => s.name.toLowerCase().includes(q))
-  }
-  
-  return res
+  return services.value
 })
 
 const hasActiveMastersFilters = computed(() => {
   return state.masterFilter || masterSearchQuery.value
 })
+
+const fetchServices = async () => {
+  try {
+    loading.value = true
+    const params = {
+      page: currentPage.value,
+      page_size: pageSize.value,
+      search: serviceSearchGlobal.value,
+      category: state.selectedCat?.id || ''
+    }
+    const servsRes = await api.get('/services/', { params })
+    if (servsRes.data.results) {
+        services.value = servsRes.data.results
+        totalCount.value = servsRes.data.count
+    } else {
+        services.value = Array.isArray(servsRes.data) ? servsRes.data : []
+        totalCount.value = services.value.length
+    }
+  } catch (e) {
+    console.error('Servs fetch fail', e)
+    services.value = []
+  } finally {
+    loading.value = false
+  }
+}
 
 const fetchData = async () => {
   try {
@@ -479,15 +524,8 @@ const fetchData = async () => {
       categories.value = catsRes.data.results || catsRes.data
     } catch (e) { console.error('Cats fetch fail', e) }
 
-    // Attempt to fetch services
-    try {
-      const servsRes = await api.get('/services/', { params: { page_size: 1000 } })
-      const data = servsRes.data.results || servsRes.data
-      services.value = Array.isArray(data) ? data : []
-    } catch (e) { 
-      console.error('Servs fetch fail', e)
-      services.value = []
-    }
+    // Fetch initial services
+    await fetchServices()
 
     // Attempt to fetch masters
     try {
@@ -503,6 +541,40 @@ const fetchData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// Watchers for server-side filtering
+let debounceTimer = null
+watch(serviceSearchGlobal, () => {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+        currentPage.value = 1
+        fetchServices()
+    }, 400)
+})
+
+watch(() => state.selectedCat, () => {
+    currentPage.value = 1
+    fetchServices()
+})
+
+const onPageSizeChange = () => {
+    currentPage.value = 1
+    fetchServices()
+}
+
+const nextPage = () => {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value++
+        fetchServices()
+    }
+}
+
+const prevPage = () => {
+    if (currentPage.value > 1) {
+        currentPage.value--
+        fetchServices()
+    }
 }
 
 onMounted(() => {
@@ -1073,6 +1145,38 @@ const handleConfirm = async () => {
 .panel-slide-enter-active, .panel-slide-leave-active { transition: all 0.3s ease; }
 .panel-slide-enter-from { opacity: 0; transform: translateX(20px); }
 .panel-slide-leave-to { opacity: 0; transform: translateX(-20px); }
+
+/* Pagination */
+.pagination-footer {
+    padding: 0 4px 20px;
+}
+.size-pill {
+    padding: 4px 12px;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    transition: all 0.2s;
+}
+.size-pill.active {
+    background: var(--gold-gradient);
+    color: #000;
+    border-color: var(--gold);
+}
+.btn-page {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold); transition: all 0.2s;
+}
+.btn-page:disabled { opacity: 0.3; }
+.btn-page:active:not(:disabled) { transform: scale(0.9); background: var(--gold-glow); }
+.page-indicator { font-size: 16px; color: var(--text); }
+.page-indicator b { color: var(--gold); }
 
 @keyframes panel-expand {
   from { opacity: 0; transform: translateY(-10px); }
