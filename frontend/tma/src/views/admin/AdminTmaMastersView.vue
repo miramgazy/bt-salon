@@ -52,7 +52,9 @@
                      {{ emp.role === 'admin' ? $t('admin.adminRole') : $t('admin.masterRole') }}
                    </span>
                  </div>
-                 <div class="emp-phone" v-if="emp.phone">{{ emp.phone }}</div>
+                 <div class="emp-phone clickable-phone" v-if="emp.phone" @click="openPhoneActions(emp.phone)">
+                   {{ formatPhone(emp.phone) }}
+                 </div>
              </div>
              
              <div class="emp-edit-col">
@@ -88,6 +90,33 @@
           </div>
        </div>
     </div>
+
+    <!-- Phone Actions Sheet -->
+    <div v-if="showPhoneActions" class="overlay" style="z-index: 2000" @click="showPhoneActions = false">
+      <div class="sheet" @click.stop>
+        <div class="sheet-title text-center block" style="display: block; text-align: center;">
+          {{ formatPhone(selectedPhone) }}
+        </div>
+        <div class="flex flex-col gap-3 mt-4">
+          <button class="action-item" @click="copyPhone">
+            <Icon icon="mdi:content-copy" width="24" />
+            <span>{{ $t('profile.copyPhone') }}</span>
+          </button>
+          <button class="action-item whatsapp" @click="openWhatsApp">
+            <Icon icon="mdi:whatsapp" width="24" />
+            <span>{{ $t('profile.whatsapp') }}</span>
+          </button>
+          <button class="btn-sheet btn-sheet-ghost mt-4" @click="showPhoneActions = false">{{ $t('common.cancel') }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <Transition name="fade">
+      <div v-if="toast.show" class="toast-message">
+        {{ toast.message }}
+      </div>
+    </Transition>
 
     <!-- Employee Modal (Bottom Sheet - Create/Edit) -->
     <div v-if="showCreateModal" class="overlay" @click="showCreateModal = false">
@@ -438,6 +467,43 @@ const bookingDate = ref('')
 const bookingForm = ref({
     client_name: '', client_phone: '', time: ''
 })
+
+// Phone Actions
+const showPhoneActions = ref(false)
+const selectedPhone = ref('')
+const toast = ref({ show: false, message: '' })
+
+const formatPhone = (phone) => {
+  if (!phone) return ''
+  const clean = phone.toString().replace(/\+/g, '')
+  return `+${clean}`
+}
+
+const openPhoneActions = (phone) => {
+  if (!phone) return
+  selectedPhone.value = phone
+  showPhoneActions.value = true
+}
+
+const showToastMessage = (msg) => {
+  toast.value.message = msg
+  toast.value.show = true
+  setTimeout(() => { toast.value.show = false }, 2000)
+}
+
+const copyPhone = () => {
+  const phone = formatPhone(selectedPhone.value)
+  navigator.clipboard.writeText(phone).then(() => {
+    showToastMessage(t('common.copied'))
+    showPhoneActions.value = false
+  })
+}
+
+const openWhatsApp = () => {
+  const clean = selectedPhone.value.toString().replace(/\D/g, '')
+  window.open(`https://wa.me/${clean}`, '_blank')
+  showPhoneActions.value = false
+}
 
 const onCustomDateChange = (e) => {
     bookingDate.value = e.target.value
@@ -916,5 +982,46 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 700;
   color: var(--text);
+}
+
+/* Phone Actions */
+.clickable-phone {
+    color: var(--gold) !important;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+.action-item:active { transform: scale(0.98); background: var(--border); }
+.action-item.whatsapp { color: #25D366; border-color: rgba(37, 211, 102, 0.3); }
+
+.toast-message {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 3000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 </style>

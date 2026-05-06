@@ -24,7 +24,8 @@
     "month": "Месяц",
     "organization": "Салон",
     "cancel": "Отмена",
-    "select": "Выбрать"
+    "select": "Выбрать",
+    "copied": "Скопировано"
   },
   "language": {
     "kz": "Қазақша",
@@ -379,7 +380,9 @@
     "clientMode": "Режим клиента",
     "masterMode": "Панель мастера",
     "adminMode": "Панель админа",
-    "ownerMode": "Панель владельца"
+    "ownerMode": "Панель владельца",
+    "copyPhone": "Копировать номер",
+    "whatsapp": "Написать в WhatsApp"
   },
   "organization": {
     "hasLunch": "Перерыв на обед",

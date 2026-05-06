@@ -24,7 +24,8 @@
     "month": "Ай",
     "organization": "Салон",
     "cancel": "Бас тарту",
-    "select": "Таңдау"
+    "select": "Таңдау",
+    "copied": "Көшірілді"
   },
   "language": {
     "kz": "Қазақша",
@@ -380,7 +381,9 @@
     "clientMode": "Клиент режимі",
     "masterMode": "Шебер панелі",
     "adminMode": "Әкімші панелі",
-    "ownerMode": "Бизнес иесінің панелі"
+    "ownerMode": "Бизнес иесінің панелі",
+    "copyPhone": "Нөмірді көшіру",
+    "whatsapp": "WhatsApp-қа жазу"
   },
   "organization": {
     "hasLunch": "Түскі үзіліс",
