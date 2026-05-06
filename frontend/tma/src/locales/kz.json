@@ -238,6 +238,7 @@
     "management": "Басқару (Әкімші)",
     "roleManagement": "Рөлді басқару",
     "clientMode": "Клиент режимі",
+    "pageSize": "Көрсету:",
     "bookingsTitle": "Салон жазбалары",
     "mastersTitle": "Қызметкерлер",
     "addMaster": "Жаңа қызметкер",

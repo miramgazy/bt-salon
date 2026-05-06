@@ -238,6 +238,7 @@
     "management": "Управление (Админ)",
     "roleManagement": "Управление ролью",
     "clientMode": "Режим клиента",
+    "pageSize": "Показывать по:",
     "bookingsTitle": "Записи салона",
     "mastersTitle": "Сотрудники",
     "addMaster": "Новый сотрудник",
