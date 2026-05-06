@@ -126,17 +126,35 @@
             <div class="flex items-center justify-between mb-2">
               <label class="form-label mb-0">{{ $t('admin.masterServices') }}</label>
               <div class="flex gap-4">
-                <button type="button" @click="form.services = servicesList.map(s => s.id)" class="text-[11px] font-bold text-gold uppercase tracking-wider">{{ $t('admin.selectAll') || 'Выделить все' }}</button>
-                <button type="button" @click="form.services = []" class="text-[11px] font-bold text-muted uppercase tracking-wider">{{ $t('admin.deselectAll') || 'Снять все' }}</button>
+                <button type="button" @click="selectAllFilteredEdit" class="text-[11px] font-bold text-gold uppercase tracking-wider">{{ $t('admin.selectAll') || 'Выделить все' }}</button>
+                <button type="button" @click="deselectAllFilteredEdit" class="text-[11px] font-bold text-muted uppercase tracking-wider">{{ $t('admin.deselectAll') || 'Снять все' }}</button>
               </div>
             </div>
-            <div v-if="servicesList.length === 0" class="text-sm text-muted">{{ $t('admin.noServicesInSalon') }}</div>
-            <div class="flex flex-col gap-2 mt-2">
-                <label v-for="srv in servicesList" :key="srv.id" class="flex items-center gap-3 bg-secondary p-3 rounded-xl border border-[var(--border)] cursor-pointer">
+
+            <!-- Service Filters for Edit -->
+            <div class="flex gap-2 mb-3">
+              <div class="search-input-wrapper flex-1">
+                <Icon icon="mdi:magnify" width="16" class="search-icon" />
+                <input 
+                  v-model="serviceSearchQuery" 
+                  type="text" 
+                  placeholder="Поиск..." 
+                  class="filter-input-compact"
+                />
+              </div>
+              <select v-model="serviceCategoryFilter" class="filter-input-compact w-auto px-2">
+                <option value="all">Все</option>
+                <option v-for="cat in categoriesList" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+              </select>
+            </div>
+
+            <div v-if="filteredServicesForEdit.length === 0" class="text-sm text-muted text-center py-4 bg-secondary rounded-xl">{{ $t('admin.noServicesInSalon') }}</div>
+            <div class="flex flex-col gap-2 mt-2 max-h-[300px] overflow-y-auto pr-1">
+                <label v-for="srv in filteredServicesForEdit" :key="srv.id" class="flex items-center gap-3 bg-secondary p-3 rounded-xl border border-[var(--border)] cursor-pointer">
                     <input type="checkbox" :value="srv.id" v-model="form.services" class="w-5 h-5 accent-gold border-gray-300 rounded focus:ring-gold" />
-                    <div>
+                    <div class="flex-1">
                         <div class="text-sm font-semibold">{{ srv.name }}</div>
-                        <div class="text-xs text-muted font-mono">{{ srv.duration }} {{ $t('common.min') }} • {{ srv.price }} ₸</div>
+                        <div class="text-[11px] text-muted">{{ srv.duration_minutes || srv.duration }} {{ $t('common.min') }} • {{ srv.total_price || srv.price }} ₸</div>
                     </div>
                 </label>
             </div>
@@ -432,6 +450,30 @@ const filteredServices = computed(() => {
     return base.filter(s => s.category === selectedCategory.value)
 })
 
+// Service filtering in Master Edit modal
+const serviceSearchQuery = ref('')
+const serviceCategoryFilter = ref('all')
+
+const filteredServicesForEdit = computed(() => {
+    return servicesList.value.filter(s => {
+        const matchesSearch = s.name.toLowerCase().includes(serviceSearchQuery.value.toLowerCase())
+        const matchesCategory = serviceCategoryFilter.value === 'all' || s.category === serviceCategoryFilter.value
+        return matchesSearch && matchesCategory
+    })
+})
+
+const selectAllFilteredEdit = () => {
+    const filteredIds = filteredServicesForEdit.value.map(s => s.id)
+    const currentServices = new Set(form.value.services)
+    filteredIds.forEach(id => currentServices.add(id))
+    form.value.services = Array.from(currentServices)
+}
+
+const deselectAllFilteredEdit = () => {
+    const filteredIds = filteredServicesForEdit.value.map(s => s.id)
+    form.value.services = form.value.services.filter(id => !filteredIds.includes(id))
+}
+
 const form = ref({
     first_name: '',
     last_name: '',
@@ -487,12 +529,14 @@ const onMainDateChange = (e) => {
 const fetchData = async () => {
     loading.value = true
     try {
-        const [empRes, srvRes] = await Promise.all([
+        const [empRes, srvRes, catRes] = await Promise.all([
             api.get('/organization/employees/', { params: { date: selectedDate.value } }),
-            api.get('/services/')
+            api.get('/services/'),
+            api.get('/categories/')
         ])
         employees.value = empRes.data.results || empRes.data
         servicesList.value = srvRes.data.results || srvRes.data
+        categoriesList.value = catRes.data.results || catRes.data
     } catch (e) {
         console.error(e)
     } finally {
@@ -503,6 +547,8 @@ const fetchData = async () => {
 const openCreateModal = () => {
     isEditing.value = false
     editingId.value = null
+    serviceSearchQuery.value = ''
+    serviceCategoryFilter.value = 'all'
     form.value = {
         first_name: '', last_name: '', phone: '', telegram_id: null, services: [], role: 'master'
     }
@@ -512,6 +558,8 @@ const openCreateModal = () => {
 const openEditModal = (emp) => {
     isEditing.value = true
     editingId.value = emp.id
+    serviceSearchQuery.value = ''
+    serviceCategoryFilter.value = 'all'
     form.value = {
         first_name: emp.first_name, 
         last_name: emp.last_name, 

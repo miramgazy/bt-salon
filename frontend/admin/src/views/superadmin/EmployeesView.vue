@@ -235,25 +235,51 @@
               </div>
           </div>
 
-          <div class="mb-8">
-            <div class="mb-2.5 flex items-center justify-between">
-              <label class="font-medium text-black dark:text-white">Услуги мастера</label>
-              <div class="flex gap-3">
-                <button type="button" @click="form.services = services.map(s => s.id)" class="text-xs font-bold text-primary hover:underline">Выделить все</button>
-                <button type="button" @click="form.services = []" class="text-xs font-bold text-body hover:underline">Снять все</button>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto rounded border border-stroke p-3 dark:border-form-strokedark">
-                <div v-for="service in services" :key="service.id" class="flex items-center">
-                    <label class="flex cursor-pointer items-center text-sm text-black dark:text-white">
-                        <input type="checkbox" v-model="form.services" :value="service.id"
-                            class="mr-2 h-4 w-4 rounded border-stroke text-primary focus:ring-primary dark:border-strokedark" />
-                        {{ service.name }}
-                    </label>
+            <div class="mb-4">
+              <div class="mb-3 flex items-center justify-between">
+                <label class="font-medium text-black dark:text-white">Услуги мастера</label>
+                <div class="flex gap-3">
+                  <button type="button" @click="selectAllFiltered" class="text-xs font-bold text-primary hover:underline">Выделить все</button>
+                  <button type="button" @click="deselectAllFiltered" class="text-xs font-bold text-body hover:underline">Снять все</button>
                 </div>
+              </div>
+              
+              <!-- Service Filters -->
+              <div class="mb-3 flex gap-2">
+                <div class="relative flex-1">
+                  <span class="absolute top-1/2 left-3 -translate-y-1/2 text-body">
+                    <Icon icon="mdi:magnify" width="16" />
+                  </span>
+                  <input 
+                    v-model="serviceSearchQuery" 
+                    type="text" 
+                    placeholder="Поиск услуги..." 
+                    class="w-full rounded border border-stroke bg-transparent py-2 pl-9 pr-4 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-form-input" 
+                  />
+                </div>
+                <select 
+                  v-model="serviceCategoryFilter"
+                  class="rounded border border-stroke bg-transparent py-2 px-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-form-input"
+                >
+                  <option value="all">Все категории</option>
+                  <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto rounded border border-stroke p-3 dark:border-form-strokedark bg-gray-50 dark:bg-meta-4/10">
+                  <div v-for="service in filteredServicesForModal" :key="service.id" class="flex items-center">
+                      <label class="flex cursor-pointer items-center text-sm text-black dark:text-white">
+                          <input type="checkbox" v-model="form.services" :value="service.id"
+                              class="mr-2 h-4 w-4 rounded border-stroke text-primary focus:ring-primary dark:border-strokedark" />
+                          {{ service.name }}
+                      </label>
+                  </div>
+                  <div v-if="filteredServicesForModal.length === 0" class="col-span-2 text-center py-4 text-xs text-body italic">
+                    Услуги не найдены
+                  </div>
+              </div>
+              <p v-if="services.length === 0" class="text-xs text-warning mt-1">Сначала добавьте услуги в разделе «Услуги»</p>
             </div>
-            <p v-if="services.length === 0" class="text-xs text-warning mt-1">Сначала добавьте услуги в разделе «Услуги»</p>
-          </div>
           </template>
 
           <div class="flex gap-4">
@@ -280,6 +306,7 @@ import api from '../../api'
 
 const masters = ref([])
 const services = ref([])
+const categories = ref([])
 const loading = ref(true)
 const saving = ref(false)
 const showModal = ref(false)
@@ -290,6 +317,30 @@ const fileInputRef = ref(null)
 const bioTextareaRef = ref(null)
 const photoPreview = ref(null)
 const selectedPhotoFile = ref(null)
+
+// Service filtering in modal
+const serviceSearchQuery = ref('')
+const serviceCategoryFilter = ref('all')
+
+const filteredServicesForModal = computed(() => {
+    return services.value.filter(s => {
+        const matchesSearch = s.name.toLowerCase().includes(serviceSearchQuery.value.toLowerCase())
+        const matchesCategory = serviceCategoryFilter.value === 'all' || s.category === serviceCategoryFilter.value
+        return matchesSearch && matchesCategory
+    })
+})
+
+const selectAllFiltered = () => {
+    const filteredIds = filteredServicesForModal.value.map(s => s.id)
+    const currentServices = new Set(form.services)
+    filteredIds.forEach(id => currentServices.add(id))
+    form.services = Array.from(currentServices)
+}
+
+const deselectAllFiltered = () => {
+    const filteredIds = filteredServicesForModal.value.map(s => s.id)
+    form.services = form.services.filter(id => !filteredIds.includes(id))
+}
 
 const form = reactive({
     first_name: '',
@@ -364,10 +415,21 @@ const fetchServices = async () => {
     }
 }
 
+const fetchCategories = async () => {
+    try {
+        const response = await api.get('/api/categories/')
+        categories.value = response.data.results || response.data || []
+    } catch (err) {
+        console.error('Error fetching categories:', err)
+    }
+}
+
 const openAddModal = () => {
     isEditing.value = false
     currentMasterId.value = null
     bioTab.value = 'write'
+    serviceSearchQuery.value = ''
+    serviceCategoryFilter.value = 'all'
     Object.assign(form, {
         first_name: '', last_name: '', phone: '', role: 'master',
         color: '#3C50E0', telegram_id: '', bio: '',
@@ -382,6 +444,8 @@ const editMaster = (master) => {
     isEditing.value = true
     currentMasterId.value = master.id
     bioTab.value = 'write'
+    serviceSearchQuery.value = ''
+    serviceCategoryFilter.value = 'all'
     Object.assign(form, {
         first_name: master.first_name,
         last_name: master.last_name,
@@ -479,6 +543,7 @@ const insertMd = (prefix, suffix) => {
 onMounted(() => {
     fetchMasters()
     fetchServices()
+    fetchCategories()
 })
 </script>
 
