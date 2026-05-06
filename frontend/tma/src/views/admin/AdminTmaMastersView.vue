@@ -530,9 +530,9 @@ const fetchData = async () => {
     loading.value = true
     try {
         const [empRes, srvRes, catRes] = await Promise.all([
-            api.get('/organization/employees/', { params: { date: selectedDate.value } }),
-            api.get('/services/'),
-            api.get('/categories/')
+            api.get('/organization/employees/', { params: { date: selectedDate.value, page_size: 1000 } }),
+            api.get('/services/', { params: { page_size: 1000 } }),
+            api.get('/categories/', { params: { page_size: 1000 } })
         ])
         employees.value = empRes.data.results || empRes.data
         servicesList.value = srvRes.data.results || srvRes.data
@@ -663,8 +663,8 @@ const startBooking = async (emp) => {
     
     try {
         const [catRes, srvRes] = await Promise.all([
-            api.get('/categories/'),
-            api.get('/services/')
+            api.get('/categories/', { params: { page_size: 1000 } }),
+            api.get('/services/', { params: { page_size: 1000 } })
         ])
         categoriesList.value = catRes.data.results || catRes.data
         servicesList.value = srvRes.data.results || srvRes.data

@@ -446,21 +446,21 @@ const fetchData = async () => {
     
     // Attempt to fetch categories
     try {
-      const catsRes = await api.get('/categories/')
+      const catsRes = await api.get('/categories/', { params: { page_size: 1000 } })
       categories.value = catsRes.data.results || catsRes.data
       console.log('HomeView: Categories loaded', categories.value.length)
     } catch (e) { console.error('Cats fetch fail', e) }
 
     // Attempt to fetch services
     try {
-      const servsRes = await api.get('/services/')
+      const servsRes = await api.get('/services/', { params: { page_size: 1000 } })
       services.value = servsRes.data.results || servsRes.data
       console.log('HomeView: Services loaded', services.value.length)
     } catch (e) { console.error('Servs fetch fail', e) }
 
     // Attempt to fetch masters
     try {
-      const mastersRes = await api.get('/masters/')
+      const mastersRes = await api.get('/masters/', { params: { page_size: 1000 } })
       masters.value = mastersRes.data.results || mastersRes.data
       console.log('HomeView: Masters loaded', masters.value.length)
     } catch (e) { console.error('Masters fetch fail', e) }

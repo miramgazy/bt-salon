@@ -408,7 +408,7 @@ const fetchMasters = async () => {
 
 const fetchServices = async () => {
     try {
-        const response = await api.get('/api/services/')
+        const response = await api.get('/api/services/', { params: { page_size: 1000 } })
         services.value = response.data.results || response.data || []
     } catch (err) {
         console.error('Error fetching services:', err)
@@ -417,7 +417,7 @@ const fetchServices = async () => {
 
 const fetchCategories = async () => {
     try {
-        const response = await api.get('/api/categories/')
+        const response = await api.get('/api/categories/', { params: { page_size: 1000 } })
         categories.value = response.data.results || response.data || []
     } catch (err) {
         console.error('Error fetching categories:', err)
