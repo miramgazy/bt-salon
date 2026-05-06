@@ -13,7 +13,9 @@
         <div v-else class="avatar-placeholder">👤</div>
       </div>
       <div class="header-name header-font">{{ auth.user?.first_name }} {{ auth.user?.last_name || '' }}</div>
-      <div style="color: var(--muted); font-size: 14px">+{{ auth.user?.phone }}</div>
+      <div class="clickable-phone" @click="openPhoneActions(auth.user?.phone)">
+        {{ formatPhone(auth.user?.phone) }}
+      </div>
       <div class="role-badge owner-badge">Owner</div>
     </div>
 
@@ -42,7 +44,7 @@
       <div class="setting-row">
         <span>{{ $t('profile.phone', 'Номер телефона') }}</span>
         <div class="phone-display">
-          <span>+{{ auth.user?.phone }}</span>
+          <span class="clickable-phone-text" @click="openPhoneActions(auth.user?.phone)">{{ formatPhone(auth.user?.phone) }}</span>
         </div>
       </div>
 
@@ -83,11 +85,40 @@
          <span>Выйти из аккаунта</span>
        </button>
     </div>
+
+    <!-- Phone Actions Sheet -->
+    <Transition name="fade">
+      <div v-if="showPhoneActions" class="phone-modal-overlay" @click="showPhoneActions = false">
+        <div class="actions-sheet" @click.stop>
+          <div class="sheet-header">
+            <div class="sheet-title">{{ formatPhone(selectedPhone) }}</div>
+          </div>
+          <div class="actions-list">
+            <button class="action-item" @click="copyPhone">
+              <Icon icon="mdi:content-copy" width="24" />
+              <span>{{ $t('profile.copyPhone') }}</span>
+            </button>
+            <button class="action-item whatsapp" @click="openWhatsApp">
+              <Icon icon="mdi:whatsapp" width="24" />
+              <span>{{ $t('profile.whatsapp') }}</span>
+            </button>
+          </div>
+          <button class="btn-cancel-sheet" @click="showPhoneActions = false">{{ $t('common.cancel') }}</button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Toast -->
+    <Transition name="toast">
+      <div v-if="toast.show" class="toast-message">
+        {{ toast.message }}
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
@@ -99,6 +130,43 @@ const router = useRouter()
 
 const selectedLanguage = ref('ru')
 const isBotSubscribed = ref(true)
+
+// Phone actions
+const showPhoneActions = ref(false)
+const selectedPhone = ref('')
+const toast = reactive({ show: false, message: '' })
+
+const formatPhone = (phone) => {
+  if (!phone) return ''
+  const clean = phone.toString().replace(/\+/g, '')
+  return `+${clean}`
+}
+
+const openPhoneActions = (phone) => {
+  if (!phone) return
+  selectedPhone.value = phone
+  showPhoneActions.value = true
+}
+
+const showToastMessage = (msg) => {
+  toast.message = msg
+  toast.show = true
+  setTimeout(() => { toast.show = false }, 2000)
+}
+
+const copyPhone = () => {
+  const phone = formatPhone(selectedPhone.value)
+  navigator.clipboard.writeText(phone).then(() => {
+    showToastMessage(t('common.copied'))
+    showPhoneActions.value = false
+  })
+}
+
+const openWhatsApp = () => {
+  const clean = selectedPhone.value.toString().replace(/\D/g, '')
+  window.open(`https://wa.me/${clean}`, '_blank')
+  showPhoneActions.value = false
+}
 
 onMounted(async () => {
   await auth.fetchCurrentUser()
@@ -259,4 +327,120 @@ input:checked + .slider:before { transform: translateX(20px); background-color: 
   padding: 12px;
   cursor: pointer;
 }
+
+/* Phone Actions Sheet */
+.clickable-phone {
+  color: var(--gold);
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 4px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: rgba(212, 175, 55, 0.3);
+}
+.clickable-phone-text {
+  cursor: pointer;
+  color: var(--gold);
+}
+
+.phone-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.actions-sheet {
+  width: 100%;
+  max-width: 500px;
+  background: var(--bg);
+  border-radius: 24px 24px 0 0;
+  padding: 24px 16px 40px;
+  animation: slide-up 0.3s ease-out;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.sheet-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.sheet-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+.action-item:active {
+  transform: scale(0.98);
+  background: var(--border);
+}
+.action-item.whatsapp {
+  color: #25D366;
+  border-color: rgba(37, 211, 102, 0.3);
+}
+
+.btn-cancel-sheet {
+  width: 100%;
+  padding: 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+/* Toast */
+.toast-message {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 2000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: translate(-50%, 20px); }
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
