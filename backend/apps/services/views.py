@@ -36,8 +36,18 @@ class ServiceViewSet(viewsets.ModelViewSet):
         elif not self.request.user.is_staff and not hasattr(self.request.user, 'role'):
             # Default for non-admin/staff users (like TMA clients)
             qs = qs.filter(is_active=True)
+
+        # Search by name
+        search = self.request.query_params.get('search')
+        if search:
+            qs = qs.filter(name__icontains=search)
+
+        # Filter by category
+        category_id = self.request.query_params.get('category')
+        if category_id:
+            qs = qs.filter(category_id=category_id)
             
-        return qs
+        return qs.order_by('name')
 
     def perform_create(self, serializer):
         serializer.save(organization=self.request.user.organization)

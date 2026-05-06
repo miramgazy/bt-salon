@@ -17,18 +17,56 @@
         </button>
       </div>
     </div>
-
-    <!-- Category Filter Row -->
-    <div class="category-scroll mb-6">
-         <button 
-            :class="['date-pill', 'flex-shrink-0', { active: selectedCategory === 'all' }]"
-            @click="selectedCategory = 'all'"
-         >{{ $t('admin.allCategories') }}</button>
+    
+    <!-- Modern Filter Panel -->
+    <div class="filters-panel">
+      <div class="panel-main">
+        <!-- Trigger Icon -->
         <button 
-           v-for="cat in categories" :key="cat.id"
-           :class="['date-pill', 'flex-shrink-0', { active: selectedCategory === cat.id }]"
-           @click="selectedCategory = cat.id"
-        >{{ cat.name }}</button>
+          :class="['filter-toggle', { active: isFilterMode }]" 
+          @click="toggleFilterMode"
+        >
+          <Icon :icon="isFilterMode ? 'mdi:filter-off-outline' : 'mdi:filter-variant'" width="20" />
+        </button>
+
+        <TransitionGroup name="panel-slide" tag="div" class="panel-content">
+          <!-- Default Mode: Category Scroll -->
+          <div v-if="!isFilterMode" key="categories" class="category-scroll">
+            <button 
+              :class="['date-pill', 'flex-shrink-0', { active: selectedCategory === 'all' }]"
+              @click="selectedCategory = 'all'"
+            >{{ $t('admin.allCategories') }}</button>
+            <button 
+              v-for="cat in categories" :key="cat.id"
+              :class="['date-pill', 'flex-shrink-0', { active: selectedCategory === cat.id }]"
+              @click="selectedCategory = cat.id"
+            >{{ cat.name }}</button>
+          </div>
+
+          <!-- Filter Mode: Search Control -->
+          <div v-else key="filters" class="active-filters-row">
+            <div class="search-input-wrapper flex-1">
+              <Icon icon="mdi:magnify" width="18" class="search-icon" />
+              <input 
+                v-model="searchQuery" 
+                type="text" 
+                placeholder="Поиск по названию..." 
+                class="filter-input-compact"
+                @input="onFilterChange"
+                autofocus
+              />
+              <button v-if="searchQuery" @click="searchQuery = ''; onFilterChange()" class="clear-search">
+                <Icon icon="mdi:close-circle" width="16" />
+              </button>
+            </div>
+            
+            <!-- Clear All if needed -->
+            <button v-if="searchQuery" class="compact-btn-mini text-error" @click="searchQuery = ''; onFilterChange(); isFilterMode = false">
+              <Icon icon="mdi:filter-remove-outline" width="18" />
+            </button>
+          </div>
+        </TransitionGroup>
+      </div>
     </div>
     
     <div v-if="loading" class="loading-state">
@@ -74,6 +112,36 @@
              </div>
           </div>
        </div>
+    </div>
+
+    <!-- Pagination Controls -->
+    <div v-if="!loading && services.length > 0" class="pagination-footer mt-6 flex flex-col gap-4">
+        <div class="flex items-center justify-between text-xs text-muted px-2">
+            <span>{{ $t('admin.pageSize') || 'Показывать по:' }}</span>
+            <div class="flex gap-2">
+                <button v-for="size in [20, 50]" :key="size" 
+                        class="size-pill" 
+                        :class="{ active: pageSize === size }"
+                        @click="pageSize = size; onPageSizeChange()">
+                    {{ size }}
+                </button>
+            </div>
+        </div>
+        
+        <div class="flex items-center justify-center gap-4">
+            <button class="btn-page" :disabled="currentPage === 1" @click="prevPage">
+                <Icon icon="mdi:chevron-left" width="24" />
+            </button>
+            <div class="page-indicator">
+                <b>{{ currentPage }}</b> / {{ totalPages }}
+            </div>
+            <button class="btn-page" :disabled="currentPage >= totalPages" @click="nextPage">
+                <Icon icon="mdi:chevron-right" width="24" />
+            </button>
+        </div>
+        <div class="text-[10px] text-center text-muted uppercase tracking-widest">
+            Всего: {{ totalCount }}
+        </div>
     </div>
 
     <!-- Create Service Modal (Bottom Sheet) -->
@@ -427,6 +495,50 @@ const categories = ref([])
 const loading = ref(false)
 const selectedCategory = ref('all')
 
+// Filtering & Pagination
+const isFilterMode = ref(false)
+const searchQuery = ref('')
+const currentPage = ref(1)
+const pageSize = ref(20)
+const totalCount = ref(0)
+const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value) || 1)
+
+const toggleFilterMode = () => {
+    isFilterMode.value = !isFilterMode.value
+    if (!isFilterMode.value) {
+        searchQuery.value = ''
+        fetchData()
+    }
+}
+
+let debounceTimer = null
+const onFilterChange = () => {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+        currentPage.value = 1
+        fetchData()
+    }, 400)
+}
+
+const onPageSizeChange = () => {
+    currentPage.value = 1
+    fetchData()
+}
+
+const nextPage = () => {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value++
+        fetchData()
+    }
+}
+
+const prevPage = () => {
+    if (currentPage.value > 1) {
+        currentPage.value--
+        fetchData()
+    }
+}
+
 const getLocalDateStr = () => {
     const tzOffset = new Date().getTimezoneOffset()
     return new Date(new Date().getTime() - (tzOffset * 60 * 1000)).toISOString().split('T')[0]
@@ -530,8 +642,7 @@ const setBookingDate = (type) => {
     }
 }
 const filteredServices = computed(() => {
-    if (selectedCategory.value === 'all') return services.value
-    return services.value.filter(s => s.category === selectedCategory.value)
+    return services.value
 })
 
 const filteredWorkingMasters = computed(() => {
@@ -544,11 +655,25 @@ const filteredWorkingMasters = computed(() => {
 const fetchData = async () => {
     loading.value = true
     try {
+        const params = {
+            page: currentPage.value,
+            page_size: pageSize.value,
+            search: searchQuery.value,
+            category: selectedCategory.value === 'all' ? '' : selectedCategory.value
+        }
         const [resSrv, resCat] = await Promise.all([
-            api.get('/services/'),
+            api.get('/services/', { params }),
             api.get('/categories/')
         ])
-        services.value = resSrv.data.results || resSrv.data
+        
+        if (resSrv.data.results) {
+            services.value = resSrv.data.results
+            totalCount.value = resSrv.data.count
+        } else {
+            services.value = resSrv.data
+            totalCount.value = Array.isArray(resSrv.data) ? resSrv.data.length : 0
+        }
+        
         categories.value = resCat.data.results || resCat.data
     } catch (e) {
         console.error(e)
@@ -556,6 +681,12 @@ const fetchData = async () => {
         loading.value = false
     }
 }
+
+// Watch selectedCategory to reset page
+watch(selectedCategory, () => {
+    currentPage.value = 1
+    fetchData()
+})
 
 const openCategoryModal = () => {
     newCategory.value = ''
@@ -810,28 +941,139 @@ onMounted(() => {
 .admin-services {
   padding: 20px 16px 100px;
 }
+
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .page-title { font-size: 24px; font-weight: 800; color: var(--text); }
 .add-btn { background: var(--gold-gradient); border: none; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #fff; cursor: pointer; box-shadow: 0 4px 10px var(--gold-glow); }
 .add-btn-secondary { background: var(--bg-secondary); border: 1px solid var(--border); color: var(--gold); box-shadow: none; width: 40px; height: 40px; }
 
-.category-header { font-size: 15px; font-weight: 700; color: var(--muted); margin-bottom: 12px; letter-spacing: 0.5px; text-transform: uppercase; }
+/* Modern Filter Panel */
+.filters-panel {
+  background: var(--bg-secondary);
+  border-radius: 18px;
+  padding: 6px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.panel-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: var(--tg-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.filter-toggle.active {
+  background: var(--gold-gradient);
+  color: #fff;
+  border-color: var(--gold);
+}
+
+.panel-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  overflow: hidden;
+}
+
+.category-scroll {
+    display: flex; overflow-x: auto; gap: 6px; scrollbar-width: none;
+    width: 100%;
+}
+.category-scroll::-webkit-scrollbar { display: none; }
 
 .date-pill {
-  white-space: nowrap; padding: 8px 16px; border-radius: 20px;
-  background: var(--bg-secondary); border: 1px solid var(--border);
+  white-space: nowrap; padding: 6px 12px; border-radius: 12px;
+  background: var(--tg-bg); border: 1px solid var(--border);
   color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
 }
 .date-pill.active {
   background: var(--gold-gradient); color: #000; border-color: var(--gold);
-  box-shadow: 0 4px 10px var(--gold-glow);
 }
 
-.category-scroll {
-    display: flex; overflow-x: auto; gap: 8px; scrollbar-width: none;
+.active-filters-row {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  align-items: center;
 }
-.category-scroll::-webkit-scrollbar { display: none; }
 
+.search-input-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.filter-input-compact {
+  width: 100%;
+  height: 38px;
+  padding: 0 34px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--tg-bg);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.filter-input-compact:focus {
+  border-color: var(--gold);
+}
+
+.clear-search {
+  position: absolute;
+  right: 10px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.compact-btn-mini {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--tg-bg);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Animations */
+.panel-slide-enter-active, .panel-slide-leave-active { transition: all 0.3s ease; }
+.panel-slide-enter-from { opacity: 0; transform: translateX(20px); }
+.panel-slide-leave-to { opacity: 0; transform: translateX(-20px); }
+
+/* Service Cards */
 .service-card {
   background: var(--bg-secondary);
   border-radius: 16px;
@@ -883,63 +1125,10 @@ onMounted(() => {
     display: flex; gap: 8px; width: 100%;
 }
 
-.date-selector { display: flex; gap: 8px; align-items: center; margin-bottom: 24px; overflow-x: auto; scrollbar-width: none; }
-.date-selector::-webkit-scrollbar { display: none; }
-.custom-date-wrapper { position: relative; }
-.date-input-hidden { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-
 .service-meta { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
 .service-price { font-weight: 800; font-size: 17px; color: var(--gold); }
 
-.master-card {
-  padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border);
-  background: var(--bg-secondary); cursor: pointer; transition: all 0.2s; margin-bottom: 8px;
-}
-.emp-avatar-sm {
-  width: 28px; height: 28px; border-radius: 50%; background: var(--bg);
-  display: flex; align-items: center; justify-content: center; overflow: hidden;
-  border: 1px solid var(--border); font-size: 14px;
-}
-.emp-avatar-sm img { width: 100%; height: 100%; object-fit: cover; }
-
-.slot-item {
-  padding: 12px 0; border-radius: 12px; border: 1px solid var(--border);
-  text-align: center; font-size: 14px; font-weight: 600; cursor: pointer;
-  background: var(--bg-secondary); transition: all 0.2s;
-}
-.slot-item.disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
-.slot-item.selected { background: var(--gold-gradient); color: #000; border-color: var(--gold); }
-
-.slots-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    max-height: 300px;
-    overflow-y: auto;
-    padding-right: 4px;
-}
-.slots-grid::-webkit-scrollbar {
-    width: 4px;
-}
-.slots-grid::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 4px;
-}
-
-.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
-.empty-icon { font-size: 48px; margin-bottom: 10px; filter: grayscale(1) opacity(0.5); }
-
-.spinner {
-  width: 32px; height: 32px;
-  border: 3px solid var(--border);
-  border-top-color: var(--gold);
-  border-radius: 50%;
-  animation: spin 1s infinite linear;
-  margin: 40px auto;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Modals */
+/* Modals & Forms */
 .overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
   display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px);
@@ -966,53 +1155,8 @@ onMounted(() => {
   font-family: inherit;
 }
 .form-input:focus { border-color: var(--gold); }
-.text-error { color: #dc2626; }
-.text-gold { color: var(--gold); }
-.text-muted { color: var(--muted); }
-.bold { font-weight: 800; }
 
-.total-price-box {
-  background: var(--gold-glow);
-  border: 1px solid var(--gold);
-  padding: 12px 14px;
-  border-radius: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.type-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-}
-.type-btn {
-    background: var(--bg-secondary); border: 2px solid var(--border); border-radius: 24px;
-    padding: 20px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    color: var(--text); font-weight: 700; transition: all 0.2s;
-    aspect-ratio: 1 / 1;
-}
-.type-btn:active { transform: scale(0.95); background: var(--border); }
-.type-btn-combo { border-color: var(--gold); color: var(--gold); }
-.type-icon-box {
-    width: 56px; height: 56px; border-radius: 16px;
-    background: var(--bg); display: flex; align-items: center; justify-content: center;
-    margin-bottom: 12px;
-}
-.type-btn-combo .type-icon-box { background: var(--gold-glow); }
-
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border-width: 0;
-}
-
+/* Combo & Specialized UI */
 .main-star-btn {
     display: flex;
     align-items: center;
@@ -1030,7 +1174,7 @@ onMounted(() => {
 }
 
 .combo-item-row { display: flex; gap: 8px; align-items: center; }
-.remove-btn { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; color: var(--danger); }
+.remove-btn { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; color: #dc2626; }
 
 .strat-pill {
     flex: 1; padding: 10px 4px; border-radius: 10px; border: 1px solid var(--border);
@@ -1087,11 +1231,108 @@ input:checked + .slider:before {
   transform: translateX(20px);
 }
 
-.grid { display: grid; }
-.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
-
 .combo-badge-mini {
     background: var(--gold-glow); color: var(--gold); border: 1px solid var(--gold);
     width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
 }
+
+/* Pagination */
+.pagination-footer {
+    padding: 0 4px 20px;
+}
+.size-pill {
+    padding: 4px 12px;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    transition: all 0.2s;
+}
+.size-pill.active {
+    background: var(--gold-gradient);
+    color: #000;
+    border-color: var(--gold);
+}
+.btn-page {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold); transition: all 0.2s;
+}
+.btn-page:disabled { opacity: 0.3; }
+.btn-page:active:not(:disabled) { transform: scale(0.9); background: var(--gold-glow); }
+.page-indicator { font-size: 16px; color: var(--text); }
+.page-indicator b { color: var(--gold); }
+
+/* Helpers */
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 1s infinite linear;
+  margin: 40px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+.empty-icon { font-size: 48px; margin-bottom: 10px; filter: grayscale(1) opacity(0.5); }
+
+.text-error { color: #dc2626; }
+.text-gold { color: var(--gold); }
+.text-muted { color: var(--muted); }
+.bold { font-weight: 800; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
+.grid { display: grid; }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+
+.success-toast {
+  position: fixed;
+  top: 20px; left: 50%;
+  transform: translateX(-50%);
+  background: #10b981;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+  z-index: 3000;
+}
+
+.master-card {
+  padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--bg-secondary); cursor: pointer; transition: all 0.2s; margin-bottom: 8px;
+}
+.emp-avatar-sm {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+  border: 1px solid var(--border); font-size: 14px;
+}
+.emp-avatar-sm img { width: 100%; height: 100%; object-fit: cover; }
+
+.slots-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+.slots-grid::-webkit-scrollbar { width: 4px; }
+.slots-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.slot-item {
+  padding: 12px 0; border-radius: 12px; border: 1px solid var(--border);
+  text-align: center; font-size: 14px; font-weight: 600; cursor: pointer;
+  background: var(--bg-secondary); transition: all 0.2s;
+}
+.slot-item.disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
+.slot-item.selected { background: var(--gold-gradient); color: #000; border-color: var(--gold); }
 </style>

@@ -31,6 +31,41 @@
     </div>
     <!-- Breadcrumb End -->
 
+    <!-- Filter Bar Start -->
+    <div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-sm border border-stroke bg-white py-4 px-4 shadow-default dark:border-strokedark dark:bg-bg-dark-2 sm:px-6 xl:px-7.5">
+      <div class="flex flex-1 items-center gap-4">
+        <div class="relative flex-1 max-w-sm">
+          <span class="absolute top-1/2 left-4 -translate-y-1/2 text-body">
+            <Icon icon="mdi:magnify" width="20" />
+          </span>
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Поиск по названию..." 
+            class="w-full rounded-md border border-stroke bg-gray-50 py-2.5 pl-11 pr-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white transition-all"
+            @input="onFilterChange"
+          />
+        </div>
+        <div class="relative">
+          <select 
+            v-model="selectedCategoryFilter" 
+            class="appearance-none rounded-md border border-stroke bg-gray-50 py-2.5 pl-4 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white transition-all"
+            @change="onFilterChange"
+          >
+            <option value="">Все категории</option>
+            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+          </select>
+          <span class="absolute top-1/2 right-3 -translate-y-1/2 text-body pointer-events-none">
+            <Icon icon="mdi:chevron-down" width="18" />
+          </span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 text-sm text-body">
+        Всего: <span class="font-bold text-black dark:text-white">{{ totalCount }}</span>
+      </div>
+    </div>
+    <!-- Filter Bar End -->
+
     <!-- Table Start -->
     <div class="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-bg-dark-2 sm:px-7.5 xl:pb-1">
       <div class="max-w-full overflow-x-auto">
@@ -105,6 +140,45 @@
             </tr>
           </tbody>
         </table>
+
+        <!-- Pagination Start -->
+        <div class="flex items-center justify-between py-5 px-4 sm:px-6 border-t border-stroke dark:border-strokedark mt-4">
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-body">Показывать по:</span>
+            <select v-model="pageSize" @change="onPageSizeChange" class="rounded border border-stroke bg-transparent py-1 px-2 text-sm outline-none focus:border-primary dark:border-strokedark">
+              <option :value="20">20</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+            </select>
+          </div>
+          
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+              <button 
+                @click="prevPage" 
+                :disabled="currentPage === 1"
+                class="flex h-9 w-9 items-center justify-center rounded border border-stroke hover:bg-gray-50 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4 transition-all"
+              >
+                <Icon icon="mdi:chevron-left" width="22" />
+              </button>
+              
+              <div class="flex items-center gap-1 px-2">
+                <span class="text-sm font-bold text-black dark:text-white">{{ currentPage }}</span>
+                <span class="text-sm text-body">из</span>
+                <span class="text-sm font-bold text-black dark:text-white">{{ totalPages }}</span>
+              </div>
+
+              <button 
+                @click="nextPage" 
+                :disabled="currentPage >= totalPages"
+                class="flex h-9 w-9 items-center justify-center rounded border border-stroke hover:bg-gray-50 disabled:opacity-50 dark:border-strokedark dark:hover:bg-meta-4 transition-all"
+              >
+                <Icon icon="mdi:chevron-right" width="22" />
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Pagination End -->
       </div>
     </div>
     <!-- Table End -->
@@ -348,6 +422,42 @@ const newCategoryName = ref('')
 const showComboModal = ref(false)
 const editingCombo = ref(null)
 
+// Filtering & Pagination State
+const searchQuery = ref('')
+const selectedCategoryFilter = ref('')
+const currentPage = ref(1)
+const pageSize = ref(20)
+const totalCount = ref(0)
+const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value) || 1)
+
+let debounceTimer = null
+const onFilterChange = () => {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+        currentPage.value = 1
+        fetchData()
+    }, 400)
+}
+
+const onPageSizeChange = () => {
+    currentPage.value = 1
+    fetchData()
+}
+
+const nextPage = () => {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value++
+        fetchData()
+    }
+}
+
+const prevPage = () => {
+    if (currentPage.value > 1) {
+        currentPage.value--
+        fetchData()
+    }
+}
+
 const openComboModal = () => {
   editingCombo.value = null
   showComboModal.value = true
@@ -464,11 +574,25 @@ const getCategoryName = (catId) => {
 const fetchData = async () => {
   try {
     loading.value = true
+    const params = {
+      page: currentPage.value,
+      page_size: pageSize.value,
+      search: searchQuery.value,
+      category: selectedCategoryFilter.value
+    }
     const [servRes, catRes] = await Promise.all([
-      api.get('/api/services/'),
+      api.get('/api/services/', { params }),
       api.get('/api/categories/')
     ])
-    services.value = servRes.data.results || servRes.data
+    
+    if (servRes.data.results) {
+        services.value = servRes.data.results
+        totalCount.value = servRes.data.count
+    } else {
+        services.value = servRes.data
+        totalCount.value = Array.isArray(servRes.data) ? servRes.data.length : 0
+    }
+    
     categories.value = catRes.data.results || catRes.data
   } catch (error) {
     console.error('Error fetching data:', error)
