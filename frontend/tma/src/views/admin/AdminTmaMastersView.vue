@@ -123,7 +123,13 @@
             <input v-model="form.telegram_id" type="number" class="form-input" :class="{ 'border-gold/50 bg-gold/5': !isEditing && !form.telegram_id }" :placeholder="$t('admin.telegramIdPlaceholder')" />
           </div>
           <div>
-            <label class="form-label">{{ $t('admin.masterServices') }}</label>
+            <div class="flex items-center justify-between mb-2">
+              <label class="form-label mb-0">{{ $t('admin.masterServices') }}</label>
+              <div class="flex gap-4">
+                <button type="button" @click="form.services = servicesList.map(s => s.id)" class="text-[11px] font-bold text-gold uppercase tracking-wider">{{ $t('admin.selectAll') || 'Выделить все' }}</button>
+                <button type="button" @click="form.services = []" class="text-[11px] font-bold text-muted uppercase tracking-wider">{{ $t('admin.deselectAll') || 'Снять все' }}</button>
+              </div>
+            </div>
             <div v-if="servicesList.length === 0" class="text-sm text-muted">{{ $t('admin.noServicesInSalon') }}</div>
             <div class="flex flex-col gap-2 mt-2">
                 <label v-for="srv in servicesList" :key="srv.id" class="flex items-center gap-3 bg-secondary p-3 rounded-xl border border-[var(--border)] cursor-pointer">

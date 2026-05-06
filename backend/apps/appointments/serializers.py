@@ -50,6 +50,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
             'name': obj.service.name,
             'duration_minutes': obj.service.duration_minutes,
             'total_price': price,
+            'is_floating_price': obj.service.is_floating_price,
+            'price_min': obj.service.price_min,
+            'price_max': obj.service.price_max,
         }
 
     def get_display_title(self, obj):

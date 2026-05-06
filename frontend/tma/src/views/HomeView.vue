@@ -175,7 +175,10 @@
           </div>
           <div class="service-price-wrapper">
             <div v-if="getOldPrice(svc)" class="old-price">~~{{ getOldPrice(svc) }} ₸~~</div>
-            <div class="service-price">{{ svc.total_price }} ₸</div>
+            <div class="service-price">
+              <template v-if="svc.is_floating_price">{{ svc.price_min }} — {{ svc.price_max }} ₸</template>
+              <template v-else>{{ svc.total_price }} ₸</template>
+            </div>
           </div>
         </div>
       </div>
@@ -292,10 +295,13 @@
                <span class="modal-label">{{ $t('common.time') }}</span>
                 <span class="modal-value">{{ state.selectedDate }}, {{ state.selectedSlot.time }}</span>
              </div>
-             <div class="modal-row" style="border-bottom: none; margin-top: 12px;">
-               <span class="modal-label" style="font-size: 16px; color: var(--text); font-weight: 700;">{{ $t('tma.total') }}</span>
-               <span class="modal-value gold header-font" style="font-size: 22px;">{{ state.selectedService.total_price }} ₸</span>
-             </div>
+              <div class="modal-row" style="border-bottom: none; margin-top: 12px;">
+                <span class="modal-label" style="font-size: 16px; color: var(--text); font-weight: 700;">{{ $t('tma.total') }}</span>
+                <span class="modal-value gold header-font" style="font-size: 22px;">
+                  <template v-if="state.selectedService.is_floating_price">{{ state.selectedService.price_min }} — {{ state.selectedService.price_max }} ₸</template>
+                  <template v-else>{{ state.selectedService.total_price }} ₸</template>
+                </span>
+              </div>
          </div>
          
          <button class="btn-confirm" @click="handleConfirm">

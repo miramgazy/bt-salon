@@ -29,14 +29,22 @@ class Service(models.Model):
 
     is_active = models.BooleanField(default=True)
     is_combo = models.BooleanField(default=False)
+    is_floating_price = models.BooleanField(default=False)
+    price_min = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    price_max = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     discount_strategy = models.CharField(max_length=20, choices=DISCOUNT_STRATEGIES, default=STRATEGY_OWNER)
 
     def save(self, *args, **kwargs):
         if not self.is_combo:
-            if self.margin_type == self.MARGIN_FIXED:
-                self.total_price = self.base_price + self.margin_value
+            if self.is_floating_price:
+                # For floating price, total_price is set to price_min for list display fallback
+                self.total_price = self.price_min
             else:
-                self.total_price = self.base_price * (1 + self.margin_value / 100)
+                # New logic: Master share (base_price) = Total - Margin
+                if self.margin_type == self.MARGIN_FIXED:
+                    self.base_price = self.total_price - self.margin_value
+                else:
+                    self.base_price = self.total_price * (1 - self.margin_value / 100)
         super().save(*args, **kwargs)
 
     def __str__(self):

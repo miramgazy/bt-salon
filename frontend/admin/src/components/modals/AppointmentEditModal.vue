@@ -38,6 +38,41 @@
             <p class="text-sm text-body">Длительность: {{ appointment?.service_detail?.duration_minutes }} мин.</p>
          </div>
 
+            <!-- Status Edit -->
+            <div class="mb-4">
+               <label class="text-xs font-bold uppercase tracking-wider text-body mb-2 block">Статус записи</label>
+               <select 
+                 v-model="editedStatus"
+                 class="w-full rounded-lg border border-stroke bg-gray-50 py-2.5 px-4 text-black outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white font-medium"
+               >
+                 <option value="pending">Ожидает</option>
+                 <option value="confirmed">Подтверждена</option>
+                 <option value="cancelled">Отменена</option>
+                 <option value="done">Завершена</option>
+               </select>
+            </div>
+
+            <!-- Final Price (only if DONE and floating price) -->
+            <div v-if="editedStatus === 'done' && isFloatingPrice" class="mb-4 animate-fadeIn">
+               <div class="rounded-lg border-2 border-primary bg-primary/5 p-4">
+                  <label class="text-xs font-bold uppercase tracking-wider text-primary mb-2 block">Введите итоговую стоимость (₸) <span class="text-danger">*</span></label>
+                  <div class="relative">
+                     <input 
+                       type="number" 
+                       v-model.number="editedTotalPrice"
+                       class="w-full rounded-lg border border-primary bg-white py-3 px-4 text-black outline-none dark:text-white font-bold text-xl"
+                       placeholder="Сумма оплаты"
+                       required
+                       autofocus
+                     />
+                     <div class="mt-2 text-[11px] text-primary font-medium flex justify-between">
+                        <span>Установленный диапазон для услуги:</span>
+                        <span>{{ appointment?.service_detail?.price_min || 0 }} — {{ appointment?.service_detail?.price_max || 0 }} ₸</span>
+                     </div>
+                  </div>
+               </div>
+            </div>
+
           <!-- Financial Info (Show only if calculated or finished) -->
           <div v-if="appointment?.master_net_income !== null" class="mb-6 p-4 rounded-lg border-2" 
                :class="appointment?.is_overflow ? 'border-warning/50 bg-warning/5' : 'border-stroke dark:border-strokedark bg-gray-50 dark:bg-meta-4'">
@@ -45,7 +80,7 @@
             
             <div class="flex justify-between items-center mb-2">
               <span class="text-sm text-body">Итого к оплате:</span>
-              <span class="font-bold text-black dark:text-white">{{ appointment?.service_detail?.total_price }} ₸</span>
+              <span class="font-bold text-black dark:text-white">{{ editedTotalPrice || appointment?.service_detail?.total_price }} ₸</span>
             </div>
             
             <div class="flex justify-between items-center mb-2">
@@ -119,7 +154,11 @@ const emit = defineEmits(['close', 'success'])
 const loading = ref(false)
 const editedTime = ref('')
 const editedMasterId = ref(null)
+const editedStatus = ref('pending')
+const editedTotalPrice = ref(0)
 const masters = ref([])
+
+const isFloatingPrice = computed(() => props.appointment?.service_detail?.is_floating_price)
 
 const filteredMasters = computed(() => {
   const serviceId = props.appointment?.service || props.appointment?.service_detail?.id
@@ -150,6 +189,8 @@ watch(() => props.show, (val) => {
       }
     }
     editedMasterId.value = props.appointment?.master || props.appointment?.master_detail?.id
+    editedStatus.value = props.appointment?.status || 'pending'
+    editedTotalPrice.value = props.appointment?.total_price || props.appointment?.service_detail?.total_price || 0
   }
 })
 
@@ -165,6 +206,20 @@ const calculatedEndTime = computed(() => {
 
 const save = async () => {
   if (!editedTime.value || !props.appointment) return
+
+  // Validation for floating price
+  if (editedStatus.value === 'done' && isFloatingPrice.value) {
+    const min = props.appointment.service_detail.price_min
+    const max = props.appointment.service_detail.price_max
+    if (!editedTotalPrice.value) {
+      alert('Пожалуйста, введите итоговую стоимость')
+      return
+    }
+    if (editedTotalPrice.value < min || editedTotalPrice.value > max) {
+      alert(`Стоимость должна быть в диапазоне от ${min} до ${max} ₸`)
+      return
+    }
+  }
   
   try {
     loading.value = true
@@ -177,7 +232,9 @@ const save = async () => {
     await api.patch(`/api/appointments/${props.appointment.id}/`, {
       master: editedMasterId.value,
       start_time: newStart,
-      end_time: newEnd
+      end_time: newEnd,
+      status: editedStatus.value,
+      total_price: editedTotalPrice.value
     })
     
     emit('success')

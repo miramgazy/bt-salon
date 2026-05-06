@@ -200,6 +200,12 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def done(self, request, pk=None):
         appt = self.get_object()
+        
+        # If total_price is provided (for floating price services), update it
+        new_price = request.data.get('total_price')
+        if new_price:
+            appt.total_price = new_price
+            
         appt.status = Appointment.STATUS_DONE
         appt.save()
         return Response({'status': 'done'})

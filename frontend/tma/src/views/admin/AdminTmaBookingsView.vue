@@ -189,6 +189,15 @@
         <div class="sheet-title mb-4">{{ $t('admin.editBooking') }} #{{ activeApt.id }}</div>
         
         <div v-if="!showCancelPrompt">
+          <div v-if="(activeApt.status === 'pending' || activeApt.status === 'confirmed') && activeApt.service_detail?.is_floating_price" class="mb-4 animate-fadeIn">
+            <label class="form-label">Итоговая цена ({{ activeApt.service_detail.price_min }} — {{ activeApt.service_detail.price_max }} ₸)</label>
+            <input 
+              v-model.number="finalPrice" 
+              type="number" 
+              class="form-input text-lg bold text-gold" 
+              :placeholder="`Например: ${activeApt.service_detail.price_min}`"
+            />
+          </div>
           <button v-if="activeApt.status === 'pending' || activeApt.status === 'confirmed'" class="btn-sheet" @click="markAsDone">{{ $t('admin.finishService') }}</button>
           <button v-if="activeApt.status === 'pending'" class="btn-sheet bg-secondary mt-2" @click="confirmApt">{{ $t('admin.status.confirmed') }}</button>
           <button v-if="activeApt.status !== 'cancelled' && activeApt.status !== 'done'" class="btn-sheet bg-danger mt-2" @click="showCancelPrompt = true">{{ $t('admin.status.cancelled') }}</button>
@@ -454,6 +463,8 @@ const editForm = ref({
     oldTime: ''
 })
 
+const finalPrice = ref(null)
+
 const toggleFilterMode = () => {
     isFilterMode.value = !isFilterMode.value
     if (!isFilterMode.value) {
@@ -609,11 +620,28 @@ const confirmApt = async () => {
 
 const markAsDone = async () => {
     if (!activeApt.value) return
+    const isFloating = activeApt.value.service_detail?.is_floating_price
+    
+    if (isFloating) {
+        if (!finalPrice.value) {
+            alert('Пожалуйста, введите итоговую цену')
+            return
+        }
+        if (finalPrice.value < activeApt.value.service_detail.price_min || finalPrice.value > activeApt.value.service_detail.price_max) {
+            alert(`Цена должна быть в диапазоне от ${activeApt.value.service_detail.price_min} до ${activeApt.value.service_detail.price_max} ₸`)
+            return
+        }
+    }
+
     try {
-        await api.post(`/appointments/${activeApt.value.id}/done/`)
+        const payload = isFloating ? { total_price: finalPrice.value } : {}
+        await api.post(`/appointments/${activeApt.value.id}/done/`, payload)
         activeApt.value = null
+        finalPrice.value = null
         fetchAppointments()
-    } catch (e) { alert(t('common.error')) }
+    } catch (e) { 
+        alert(e.response?.data?.error || t('common.error')) 
+    }
 }
 
 const cancelApt = async () => {

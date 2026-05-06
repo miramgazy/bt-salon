@@ -275,6 +275,9 @@
     "selectServiceType": "Выберите тип услуги",
     "singleService": "Обычная",
     "comboService": "Комбо",
+    "floatingPrice": "Плавающая цена",
+    "priceMin": "Мин. цена",
+    "priceMax": "Макс. цена",
     "totalForClient": "Итого для клиента",
     "noMastersToday": "Нет мастеров на сегодня.",
     "selectTimeToday": "Выберите время на сегодня",
@@ -314,7 +317,9 @@
     "sub": "Ведомая",
     "date": "Дата",
     "searchPlaceholder": "Имя или телефон клиента...",
-    "noMastersForService": "На выбранную услугу нет доступных мастеров."
+    "noMastersForService": "На выбранную услугу нет доступных мастеров.",
+    "selectAll": "Выделить все",
+    "deselectAll": "Снять все"
   },
   "appointments": {
     "title": "Мои записи",

@@ -27,6 +27,14 @@ class ServiceSerializer(serializers.ModelSerializer):
         read_only_fields = ['organization']
 
     def validate(self, data):
+        if data.get('is_floating_price'):
+            price_min = data.get('price_min')
+            price_max = data.get('price_max')
+            if price_min is None or price_max is None:
+                raise serializers.ValidationError("Минимальная и максимальная цены обязательны для плавающей цены.")
+            if price_min > price_max:
+                raise serializers.ValidationError("Минимальная цена не может быть больше максимальной.")
+        
         if data.get('is_combo'):
             sub_services = data.get('sub_services', [])
             if not sub_services:

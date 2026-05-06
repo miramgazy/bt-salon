@@ -64,8 +64,10 @@
                   class="w-full rounded border border-stroke bg-gray-50 py-2 px-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
                 >
                   <option value="">Выберите услугу</option>
-                  <option v-for="s in allServices" :key="s.id" :value="s.id">
-                    {{ s.name }} ({{ s.duration_minutes }} мин) — {{ s.total_price }} ₸
+                   <option v-for="s in allServices" :key="s.id" :value="s.id">
+                    {{ s.name }} ({{ s.duration_minutes }} мин) — 
+                    <template v-if="s.is_floating_price">{{ s.price_min }} — {{ s.price_max }} ₸</template>
+                    <template v-else>{{ s.total_price }} ₸</template>
                   </option>
                 </select>
               </div>

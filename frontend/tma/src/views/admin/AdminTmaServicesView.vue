@@ -8,9 +8,14 @@
     </Transition>
     <div class="page-header flex-between mb-4">
       <h1 class="page-title">{{ $t('services.title') }}</h1>
-      <button class="add-btn" @click="showTypeSelector = true">
-        <Icon icon="mdi:plus" width="24" />
-      </button>
+      <div class="flex items-center gap-2">
+        <button class="add-btn add-btn-secondary" @click="openComboModal" :title="$t('admin.comboService')">
+           <Icon icon="mdi:link-variant" width="20" />
+        </button>
+        <button class="add-btn" @click="openCreateModal" :title="$t('admin.singleService')">
+           <Icon icon="mdi:plus" width="24" />
+        </button>
+      </div>
     </div>
 
     <!-- Category Filter Row -->
@@ -54,7 +59,8 @@
                     <Icon icon="mdi:clock-outline" width="14" /> {{ srv.duration_minutes }} {{ $t('services.minutes') }}
                  </div>
                 <div class="service-price">
-                   {{ srv.total_price }} ₸
+                   <template v-if="srv.is_floating_price">{{ srv.price_min }} — {{ srv.price_max }} ₸</template>
+                   <template v-else>{{ srv.total_price }} ₸</template>
                 </div>
              </div>
              
@@ -93,33 +99,67 @@
               <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
             </select>
           </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="form-label">{{ $t('admin.durationMin') }} <span class="text-error">*</span></label>
-              <input v-model="form.duration_minutes" type="number" class="form-input" required />
-            </div>
-            <div>
-              <label class="form-label">{{ $t('admin.basePrice') }} <span class="text-error">*</span></label>
-              <input v-model="form.base_price" type="number" class="form-input" required />
-            </div>
+          <div>
+            <label class="form-label">{{ $t('admin.durationMin') }} <span class="text-error">*</span></label>
+            <input v-model="form.duration_minutes" type="number" class="form-input" required />
           </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="form-label">{{ $t('admin.marginType') }}</label>
-              <select v-model="form.margin_type" class="form-input">
-                <option value="fixed">{{ $t('admin.fixed') }}</option>
-                <option value="percent">{{ $t('admin.percent') }}</option>
-              </select>
+
+          <!-- Floating Price Toggle -->
+          <div class="toggle-container mb-4">
+            <div class="toggle-info">
+                <label class="font-bold text-sm block">Плавающая цена</label>
+                <span class="text-xs text-muted">Клиент видит диапазон цен</span>
             </div>
-            <div>
-              <label class="form-label">{{ $t('admin.marginSize') }}</label>
-              <input v-model="form.margin_value" type="number" class="form-input" />
-            </div>
+            <label class="switch">
+                <input type="checkbox" v-model="form.is_floating_price" />
+                <span class="slider"></span>
+            </label>
           </div>
-          
-          <div class="total-price-box mt-2">
-            <span class="text-muted">{{ $t('admin.totalForClient') }}:</span>
-            <span class="text-gold bold text-lg">{{ computedTotal }} ₸</span>
+
+          <!-- New Flow: Total Price First -->
+          <div class="p-3 bg-secondary/50 rounded-xl border border-gold/20 mb-4">
+              <label class="form-label text-gold bold mb-2 block uppercase tracking-wider">Стоимость для клиента</label>
+              <div v-if="form.is_floating_price" class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-[10px] uppercase text-muted block mb-1">Минимум</label>
+                    <input v-model="form.price_min" type="number" class="form-input text-lg bold" required />
+                  </div>
+                  <div>
+                    <label class="text-[10px] uppercase text-muted block mb-1">Максимум</label>
+                    <input v-model="form.price_max" type="number" class="form-input text-lg bold" required />
+                  </div>
+              </div>
+              <div v-else>
+                  <input v-model="form.total_price" type="number" class="form-input text-2xl bold text-gold text-center" placeholder="0" required />
+              </div>
+          </div>
+
+          <!-- Margin & Master Share -->
+          <div class="p-3 bg-secondary rounded-xl border border-border mb-4">
+              <label class="text-[10px] font-bold uppercase text-muted mb-3 block tracking-widest">Настройка наценки салона</label>
+              <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label class="form-label text-xs">Тип</label>
+                  <select v-model="form.margin_type" class="form-input text-sm">
+                    <option value="fixed">Фикс (₸)</option>
+                    <option value="percent">Процент (%)</option>
+                  </select>
+                </div>
+                <div>
+                    <label class="form-label text-xs">Размер</label>
+                    <input v-model="form.margin_value" type="number" class="form-input text-sm" />
+                </div>
+              </div>
+              
+              <div class="pt-2 border-t border-border flex justify-between items-center">
+                  <span class="text-xs text-muted font-bold uppercase">Доля мастера:</span>
+                  <span v-if="form.is_floating_price" class="bold text-sm">
+                      {{ masterShareMin }} — {{ masterShareMax }} ₸
+                  </span>
+                  <span v-else class="bold text-lg">
+                      {{ masterShareTotal }} ₸
+                  </span>
+              </div>
           </div>
 
           <button type="submit" class="btn-sheet mt-2" :disabled="creating">
@@ -129,27 +169,7 @@
       </div>
     </div>
 
-    <!-- Service Type Selector -->
-    <div v-if="showTypeSelector" class="overlay" @click="showTypeSelector = false">
-       <div class="sheet" @click.stop>
-          <div class="sheet-title mb-6 text-center">{{ $t('admin.selectServiceType') || 'Выберите тип услуги' }}</div>
-          <div class="type-grid">
-             <button class="type-btn" @click="openCreateModal(); showTypeSelector = false">
-                <div class="type-icon-box">
-                   <Icon icon="mdi:content-cut" width="32" />
-                </div>
-                <span>{{ $t('admin.singleService') || 'Обычная' }}</span>
-             </button>
-             <button class="type-btn type-btn-combo" @click="openComboModal(); showTypeSelector = false">
-                <div class="type-icon-box">
-                   <Icon icon="mdi:link-variant" width="32" />
-                </div>
-                <span>{{ $t('admin.comboService') || 'Комбо' }}</span>
-             </button>
-          </div>
-          <button class="btn-sheet btn-sheet-ghost mt-6" @click="showTypeSelector = false">{{ $t('common.close') }}</button>
-       </div>
-    </div>
+
 
     <!-- Combo Service Modal (Bottom Sheet) -->
     <div v-if="showComboModal" class="overlay" @click="showComboModal = false">
@@ -198,20 +218,62 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-4 bg-secondary p-3 rounded-xl text-xs">
-             <div>
-                <div class="text-muted mb-1">Сумма услуг:</div>
-                <div class="bold">{{ comboSumPrice }} ₸</div>
-             </div>
-             <div>
-                <div class="text-muted mb-1">Длительность:</div>
-                <div class="bold">{{ comboSumDuration }} мин</div>
-             </div>
+          <!-- Floating Price Toggle for Combo -->
+          <div class="toggle-container mb-4">
+            <div class="toggle-info">
+                <label class="font-bold text-sm block">Плавающая цена</label>
+                <span class="text-xs text-muted">Итоговая цена будет в диапазоне</span>
+            </div>
+            <label class="switch">
+                <input type="checkbox" v-model="comboForm.is_floating_price" />
+                <span class="slider"></span>
+            </label>
           </div>
 
-          <div>
-            <label class="form-label">Цена комбо (₸)</label>
-            <input v-model="comboForm.total_price" type="number" class="form-input text-lg bold text-gold" required />
+          <!-- New Flow: Total Price First -->
+          <div class="p-3 bg-secondary/50 rounded-xl border border-gold/20 mb-4">
+              <label class="form-label text-gold bold mb-2 block uppercase tracking-wider">Стоимость комбо (для клиента)</label>
+              <div v-if="comboForm.is_floating_price" class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-[10px] uppercase text-muted block mb-1">Минимум</label>
+                    <input v-model="comboForm.price_min" type="number" class="form-input text-lg bold" required />
+                  </div>
+                  <div>
+                    <label class="text-[10px] uppercase text-muted block mb-1">Максимум</label>
+                    <input v-model="comboForm.price_max" type="number" class="form-input text-lg bold" required />
+                  </div>
+              </div>
+              <div v-else>
+                  <input v-model="comboForm.total_price" type="number" class="form-input text-2xl bold text-gold text-center" placeholder="0" required />
+              </div>
+          </div>
+
+          <!-- Margin Selection -->
+          <div class="p-3 bg-secondary rounded-xl border border-border mb-4">
+              <label class="text-[10px] font-bold uppercase text-muted mb-3 block tracking-widest">Настройка наценки салона</label>
+              <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label class="form-label text-xs">Тип</label>
+                  <select v-model="comboForm.margin_type" class="form-input text-sm">
+                    <option value="fixed">Фикс (₸)</option>
+                    <option value="percent">Процент (%)</option>
+                  </select>
+                </div>
+                <div>
+                    <label class="form-label text-xs">Размер</label>
+                    <input v-model="comboForm.margin_value" type="number" class="form-input text-sm" />
+                </div>
+              </div>
+              
+              <div class="pt-2 border-t border-border flex justify-between items-center">
+                  <span class="text-xs text-muted font-bold uppercase">Доля мастера:</span>
+                  <span v-if="comboForm.is_floating_price" class="bold text-sm">
+                      {{ comboMasterShareMin }} — {{ comboMasterShareMax }} ₸
+                  </span>
+                  <span v-else class="bold text-lg">
+                      {{ comboMasterShareTotal }} ₸
+                  </span>
+              </div>
           </div>
 
           <div v-if="comboDiscount > 0">
@@ -397,7 +459,15 @@ const savingCat = ref(false)
 const successMsg = ref('')
 
 const comboForm = ref({
-    name: '', category: '', total_price: 0, discount_strategy: 'owner_only'
+    name: '', 
+    category: '', 
+    total_price: 0, 
+    discount_strategy: 'owner_only',
+    margin_type: 'fixed',
+    margin_value: 0,
+    is_floating_price: false,
+    price_min: 0,
+    price_max: 0
 })
 const selectedSubServices = ref([{ id: '', quantity: 1 }])
 const mainIndex = ref(0)
@@ -422,9 +492,13 @@ const form = ref({
     name: '',
     category: '',
     duration_minutes: 60,
-    base_price: 1000,
+    total_price: 1000,
+    base_price: 0,
     margin_type: 'fixed',
-    margin_value: 0
+    margin_value: 0,
+    is_floating_price: false,
+    price_min: 0,
+    price_max: 0
 })
 
 // Booking Wizard States
@@ -502,11 +576,46 @@ const createCategory = async () => {
     }
 }
 
-const computedTotal = computed(() => {
-    let base = parseInt(form.value.base_price) || 0
-    let m = parseInt(form.value.margin_value) || 0
-    if (form.value.margin_type === 'fixed') return base + m
-    return Math.round(base + (base * (m / 100)))
+const masterShareTotal = computed(() => {
+    let total = parseFloat(form.value.total_price) || 0
+    let m = parseFloat(form.value.margin_value) || 0
+    if (form.value.margin_type === 'fixed') return Math.max(0, total - m)
+    return Math.round(total * (1 - m / 100))
+})
+
+const masterShareMin = computed(() => {
+    let total = parseFloat(form.value.price_min) || 0
+    let m = parseFloat(form.value.margin_value) || 0
+    if (form.value.margin_type === 'fixed') return Math.max(0, total - m)
+    return Math.round(total * (1 - m / 100))
+})
+
+const masterShareMax = computed(() => {
+    let total = parseFloat(form.value.price_max) || 0
+    let m = parseFloat(form.value.margin_value) || 0
+    if (form.value.margin_type === 'fixed') return Math.max(0, total - m)
+    return Math.round(total * (1 - m / 100))
+})
+
+const comboMasterShareTotal = computed(() => {
+    let total = parseFloat(comboForm.value.total_price) || 0
+    let m = parseFloat(comboForm.value.margin_value) || 0
+    if (comboForm.value.margin_type === 'fixed') return Math.max(0, total - m)
+    return Math.round(total * (1 - m / 100))
+})
+
+const comboMasterShareMin = computed(() => {
+    let total = parseFloat(comboForm.value.price_min) || 0
+    let m = parseFloat(comboForm.value.margin_value) || 0
+    if (comboForm.value.margin_type === 'fixed') return Math.max(0, total - m)
+    return Math.round(total * (1 - m / 100))
+})
+
+const comboMasterShareMax = computed(() => {
+    let total = parseFloat(comboForm.value.price_max) || 0
+    let m = parseFloat(comboForm.value.margin_value) || 0
+    if (comboForm.value.margin_type === 'fixed') return Math.max(0, total - m)
+    return Math.round(total * (1 - m / 100))
 })
 
 const openCreateModal = () => {
@@ -514,7 +623,8 @@ const openCreateModal = () => {
     editingId.value = null
     form.value = {
         name: '', category: categories.value[0]?.id || '', duration_minutes: 60,
-        base_price: 1000, margin_type: 'fixed', margin_value: 0, is_combo: false
+        total_price: 1000, base_price: 0, margin_type: 'fixed', margin_value: 0, 
+        is_combo: false, is_floating_price: false, price_min: 0, price_max: 0
     }
     showCreateModal.value = true
 }
@@ -541,7 +651,12 @@ const openEditModal = (srv) => {
             name: srv.name,
             category: srv.category,
             total_price: srv.total_price,
-            discount_strategy: srv.discount_strategy
+            discount_strategy: srv.discount_strategy,
+            margin_type: srv.margin_type,
+            margin_value: srv.margin_value,
+            is_floating_price: srv.is_floating_price,
+            price_min: srv.price_min,
+            price_max: srv.price_max
         }
         selectedSubServices.value = srv.combo_items.map(i => ({ id: i.sub_service, quantity: i.quantity }))
         mainIndex.value = srv.combo_items.findIndex(i => i.is_main)
@@ -552,10 +667,14 @@ const openEditModal = (srv) => {
             name: srv.name,
             category: srv.category,
             duration_minutes: srv.duration_minutes,
+            total_price: srv.total_price,
             base_price: srv.base_price,
             margin_type: srv.margin_type,
             margin_value: srv.margin_value,
-            is_combo: false
+            is_combo: false,
+            is_floating_price: srv.is_floating_price,
+            price_min: srv.price_min,
+            price_max: srv.price_max
         }
         showCreateModal.value = true
     }
@@ -572,9 +691,7 @@ const submitCombo = async () => {
             ...comboForm.value,
             is_combo: true,
             duration_minutes: comboSumDuration.value,
-            base_price: 0,
-            margin_type: 'fixed',
-            margin_value: 0,
+            base_price: comboMasterShareTotal.value,
             sub_services: selectedSubServices.value.map((s, idx) => ({
                 sub_service: s.id,
                 quantity: s.quantity || 1,
@@ -598,6 +715,10 @@ const submitCombo = async () => {
 }
 
 const submitService = async () => {
+    if (form.value.is_floating_price && form.value.price_min > form.value.price_max) {
+        alert('Минимальная цена не может быть больше максимальной')
+        return
+    }
     creating.value = true
     try {
         if (isEditing.value) {
@@ -692,6 +813,7 @@ onMounted(() => {
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .page-title { font-size: 24px; font-weight: 800; color: var(--text); }
 .add-btn { background: var(--gold-gradient); border: none; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #fff; cursor: pointer; box-shadow: 0 4px 10px var(--gold-glow); }
+.add-btn-secondary { background: var(--bg-secondary); border: 1px solid var(--border); color: var(--gold); box-shadow: none; width: 40px; height: 40px; }
 
 .category-header { font-size: 15px; font-weight: 700; color: var(--muted); margin-bottom: 12px; letter-spacing: 0.5px; text-transform: uppercase; }
 
@@ -916,6 +1038,57 @@ onMounted(() => {
     transition: all 0.2s; text-align: center;
 }
 .strat-pill.active { background: var(--gold-gradient); color: #000; border-color: var(--gold); }
+
+.toggle-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+}
+
+/* Toggle Switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--border);
+  transition: .4s;
+  border-radius: 24px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+input:checked + .slider {
+  background-color: var(--gold);
+}
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.grid { display: grid; }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
 
 .combo-badge-mini {
     background: var(--gold-glow); color: var(--gold); border: 1px solid var(--gold);

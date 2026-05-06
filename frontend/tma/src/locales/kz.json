@@ -275,6 +275,9 @@
     "selectServiceType": "Қызмет түрін таңдаңыз",
     "singleService": "Қарапайым",
     "comboService": "Комбо",
+    "floatingPrice": "Құбылмалы баға",
+    "priceMin": "Минималды баға",
+    "priceMax": "Максималды баға",
     "totalForClient": "Клиент үшін барлығы",
     "noMastersToday": "Бүгін шеберлер жоқ.",
     "selectTimeToday": "Бүгінге уақыт таңдаңыз",
@@ -315,7 +318,9 @@
     "sub": "Қосалқы",
     "date": "Күні",
     "searchPlaceholder": "Клиенттің аты немесе телефоны...",
-    "noMastersForService": "Таңдалған қызметке қолжетімді шеберлер жоқ."
+    "noMastersForService": "Таңдалған қызметке қолжетімді шеберлер жоқ.",
+    "selectAll": "Барлығын таңдау",
+    "deselectAll": "Барлығын алып тастау"
   },
   "appointments": {
     "title": "Менің жазбаларым",

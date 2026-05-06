@@ -70,7 +70,8 @@
                     <Icon icon="mdi:link-variant" width="10" /> Комбо
                   </span>
                 </div>
-                <p v-if="!service.is_combo" class="text-xs text-body dark:text-bodydark">{{ service.base_price }} ₸ (база)</p>
+                <p v-if="!service.is_combo && !service.is_floating_price" class="text-xs text-body dark:text-bodydark">{{ service.base_price }} ₸ (база)</p>
+                <p v-else-if="service.is_floating_price" class="text-xs text-warning font-bold">Плавающая цена</p>
                 <p v-else class="text-[10px] text-body dark:text-bodydark">Состоит из {{ service.combo_items?.length || 0 }} услуг</p>
               </td>
               <td class="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
@@ -80,7 +81,8 @@
                 <p class="text-black dark:text-white">{{ service.duration_minutes }} мин</p>
               </td>
               <td class="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                <p class="font-bold text-primary">{{ service.total_price }} ₸</p>
+                <p v-if="service.is_floating_price" class="font-bold text-primary">{{ service.price_min }} — {{ service.price_max }} ₸</p>
+                <p v-else class="font-bold text-primary">{{ service.total_price }} ₸</p>
               </td>
               <td class="border-b border-[#eee] py-5 px-4 dark:border-strokedark text-center">
                 <span 
@@ -119,6 +121,7 @@
         </h3>
         
         <form @submit.prevent="saveService">
+          <!-- Basic Info -->
           <div class="mb-4.5">
             <label class="mb-2.5 block text-black dark:text-white font-medium">Название</label>
             <input
@@ -130,13 +133,13 @@
             />
           </div>
 
-          <div class="mb-4.5 flex flex-col gap-6 xl:flex-row">
-            <div class="w-full xl:w-1/2">
+          <div class="mb-4.5 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
               <label class="mb-2.5 block text-black dark:text-white font-medium">Категория</label>
               <div class="flex gap-2">
                 <select
                   v-model="form.category"
-                  class="w-full rounded border-[1.5px] border-stroke bg-gray-50 py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary dark:border-strokedark dark:bg-bg-dark dark:text-white"
+                  class="w-full rounded border-[1.5px] border-stroke bg-gray-50 py-3 px-5 font-medium outline-none transition focus:border-primary dark:border-strokedark dark:bg-bg-dark dark:text-white"
                   required
                 >
                   <option value="" disabled>Выберите...</option>
@@ -149,39 +152,71 @@
                 </button>
               </div>
             </div>
-
-            <div class="w-full xl:w-1/2">
+            <div>
               <label class="mb-2.5 block text-black dark:text-white font-medium">Длительность (мин)</label>
-              <input
-                v-model.number="form.duration_minutes"
-                type="number"
-                class="w-full rounded border-[1.5px] border-stroke bg-gray-50 py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary dark:border-strokedark dark:bg-bg-dark dark:text-white"
-                required
-              />
+              <input v-model.number="form.duration_minutes" type="number" class="w-full rounded border-[1.5px] border-stroke bg-gray-50 py-3 px-5 font-medium outline-none transition focus:border-primary dark:border-strokedark dark:bg-bg-dark dark:text-white" required />
+            </div>
+          </div>
+          
+          <!-- Floating Price Toggle -->
+          <div class="mb-6 flex items-center justify-between p-4 bg-gray-50 dark:bg-meta-4 rounded-xl border border-stroke dark:border-strokedark shadow-sm">
+            <div>
+                <label class="font-bold text-black dark:text-white block">Плавающая цена</label>
+                <span class="text-xs text-body">Клиент видит диапазон цен</span>
+            </div>
+            <label class="relative inline-flex cursor-pointer items-center">
+                <input type="checkbox" v-model="form.is_floating_price" class="sr-only peer" />
+                <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:border-gray-600 dark:bg-gray-700"></div>
+            </label>
+          </div>
+
+          <!-- New Flow: Total Price First -->
+          <div class="mb-6 p-5 bg-primary/5 rounded-2xl border-2 border-primary/20">
+            <label class="mb-3 block text-black dark:text-white font-black text-lg uppercase tracking-tight">Стоимость услуги (для клиента)</label>
+            <div v-if="form.is_floating_price" class="grid grid-cols-2 gap-4 animate-fadeIn">
+              <div>
+                <label class="mb-2 block text-[10px] font-bold uppercase text-primary">Минимум (₸)</label>
+                <input v-model.number="form.price_min" type="number" class="w-full rounded-xl border-2 border-primary/20 bg-white py-3 px-5 text-xl font-black text-primary outline-none transition focus:border-primary dark:bg-bg-dark" required />
+              </div>
+              <div>
+                <label class="mb-2 block text-[10px] font-bold uppercase text-primary">Максимум (₸)</label>
+                <input v-model.number="form.price_max" type="number" class="w-full rounded-xl border-2 border-primary/20 bg-white py-3 px-5 text-xl font-black text-primary outline-none transition focus:border-primary dark:bg-bg-dark" required />
+              </div>
+            </div>
+            <div v-else class="animate-fadeIn">
+              <input v-model.number="form.total_price" type="number" class="w-full rounded-xl border-2 border-primary bg-white py-4 px-6 text-3xl font-black text-primary outline-none transition dark:bg-bg-dark" placeholder="0" required />
             </div>
           </div>
 
-          <div class="mb-4.5 grid grid-cols-3 gap-4">
-            <div>
-              <label class="mb-2.5 block text-xs font-medium uppercase text-bodydark2">База (₸)</label>
-              <input v-model.number="form.base_price" type="number" class="w-full rounded border border-stroke bg-gray-50 py-2 px-3 outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white" />
+          <!-- Margin Distribution -->
+          <div class="mb-8 p-5 bg-gray-50 dark:bg-meta-4 rounded-2xl border border-stroke dark:border-strokedark">
+            <label class="mb-4 block text-xs font-bold uppercase text-bodydark2 tracking-widest">Наценка салона</label>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                  <label class="mb-2 block text-[10px] font-medium uppercase text-body">Тип</label>
+                  <select v-model="form.margin_type" class="w-full rounded-lg border border-stroke bg-white py-2.5 px-4 outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white">
+                      <option value="fixed">Фиксированная (₸)</option>
+                      <option value="percent">Процент от итога (%)</option>
+                  </select>
+              </div>
+              <div>
+                  <label class="mb-2 block text-[10px] font-medium uppercase text-body">Значение</label>
+                  <input v-model.number="form.margin_value" type="number" class="w-full rounded-lg border border-stroke bg-white py-2.5 px-4 outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white" />
+              </div>
             </div>
-            <div>
-                <label class="mb-2.5 block text-xs font-medium uppercase text-bodydark2">Тип наценки</label>
-                <select v-model="form.margin_type" class="w-full rounded border border-stroke bg-gray-50 py-2 px-3 outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white">
-                    <option value="fixed">Фикс (₸)</option>
-                    <option value="percent">Процент (%)</option>
-                </select>
-            </div>
-            <div>
-                <label class="mb-2.5 block text-xs font-medium uppercase text-bodydark2">Наценка</label>
-                <input v-model.number="form.margin_value" type="number" class="w-full rounded border border-stroke bg-gray-50 py-2 px-3 outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white" />
-            </div>
-          </div>
 
-          <div class="mb-6 rounded-md bg-primary/5 p-4 flex justify-between items-center border border-primary/20">
-            <span class="text-sm font-medium text-body">Итоговая цена для клиента:</span>
-            <span class="text-xl font-bold text-primary">{{ calculatedTotalPrice }} ₸</span>
+            <!-- Master Share Preview -->
+            <div class="pt-4 border-t border-stroke dark:border-strokedark flex justify-between items-center">
+                <div class="text-xs font-bold text-body uppercase">Доля мастера:</div>
+                <div class="text-right">
+                    <div v-if="form.is_floating_price" class="font-bold text-black dark:text-white">
+                        {{ masterShareMin }} — {{ masterShareMax }} ₸
+                    </div>
+                    <div v-else class="font-black text-xl text-black dark:text-white">
+                        {{ masterShareTotal }} ₸
+                    </div>
+                </div>
+            </div>
           </div>
 
           <div class="flex gap-4">
@@ -382,18 +417,42 @@ const form = ref({
   name: '',
   category: '',
   duration_minutes: 30,
+  total_price: 1000,
   base_price: 0,
   margin_type: 'fixed',
-  margin_value: 0
+  margin_value: 0,
+  is_floating_price: false,
+  price_min: 0,
+  price_max: 0
 })
 
-const calculatedTotalPrice = computed(() => {
-  const base = parseFloat(form.value.base_price) || 0
+const masterShareTotal = computed(() => {
+  const total = parseFloat(form.value.total_price) || 0
   const margin = parseFloat(form.value.margin_value) || 0
   if (form.value.margin_type === 'fixed') {
-    return (base + margin).toFixed(2)
+    return Math.max(0, total - margin).toFixed(0)
   } else {
-    return (base * (1 + margin / 100)).toFixed(2)
+    return Math.max(0, total * (1 - margin / 100)).toFixed(0)
+  }
+})
+
+const masterShareMin = computed(() => {
+  const total = parseFloat(form.value.price_min) || 0
+  const margin = parseFloat(form.value.margin_value) || 0
+  if (form.value.margin_type === 'fixed') {
+    return Math.max(0, total - margin).toFixed(0)
+  } else {
+    return Math.max(0, total * (1 - margin / 100)).toFixed(0)
+  }
+})
+
+const masterShareMax = computed(() => {
+  const total = parseFloat(form.value.price_max) || 0
+  const margin = parseFloat(form.value.margin_value) || 0
+  if (form.value.margin_type === 'fixed') {
+    return Math.max(0, total - margin).toFixed(0)
+  } else {
+    return Math.max(0, total * (1 - margin / 100)).toFixed(0)
   }
 })
 
@@ -425,9 +484,13 @@ const openCreateModal = () => {
     name: '',
     category: categories.value.length > 0 ? categories.value[0].id : '',
     duration_minutes: 30,
+    total_price: 1000,
     base_price: 0,
     margin_type: 'fixed',
-    margin_value: 0
+    margin_value: 0,
+    is_floating_price: false,
+    price_min: 0,
+    price_max: 0
   }
   showModal.value = true
 }
@@ -443,6 +506,10 @@ const closeModal = () => {
 }
 
 const saveService = async () => {
+  if (form.value.is_floating_price && form.value.price_min > form.value.price_max) {
+    alert('Минимальная цена не может быть больше максимальной')
+    return
+  }
   try {
     saving.value = true
     if (isEditing.value) {

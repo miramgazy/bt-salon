@@ -236,7 +236,13 @@
           </div>
 
           <div class="mb-8">
-            <label class="mb-2.5 block font-medium text-black dark:text-white">Услуги мастера</label>
+            <div class="mb-2.5 flex items-center justify-between">
+              <label class="font-medium text-black dark:text-white">Услуги мастера</label>
+              <div class="flex gap-3">
+                <button type="button" @click="form.services = services.map(s => s.id)" class="text-xs font-bold text-primary hover:underline">Выделить все</button>
+                <button type="button" @click="form.services = []" class="text-xs font-bold text-body hover:underline">Снять все</button>
+              </div>
+            </div>
             <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto rounded border border-stroke p-3 dark:border-form-strokedark">
                 <div v-for="service in services" :key="service.id" class="flex items-center">
                     <label class="flex cursor-pointer items-center text-sm text-black dark:text-white">

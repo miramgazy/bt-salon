@@ -82,34 +82,50 @@ class Appointment(models.Model):
         current_total = Decimal(str(self.total_price)) if self.total_price > 0 else Decimal(str(self.service.total_price))
         
         # 1. Determine Gross base_price and margin for this specific record
-        if self.appointment_type == self.TYPE_COMBO_MASTER:
+        if self.service.is_floating_price:
+            # Floating price: target is the actual entered price
+            # Split it according to margin settings
+            if self.service.margin_type == Service.MARGIN_PERCENT:
+                gross_margin = current_total * (self.service.margin_value / 100)
+                gross_base = current_total - gross_margin
+            else: # FIXED
+                gross_margin = self.service.margin_value
+                gross_base = current_total - gross_margin
+            
+            target_service_total = current_total
+        elif self.appointment_type == self.TYPE_COMBO_MASTER:
             # For the master record in a combo, we use the "Main" sub-service's settings
             main_item = self.service.combo_items.filter(is_main=True).first()
             if main_item:
                 sub = main_item.sub_service
-                gross_base = sub.base_price
-                gross_margin = sub.margin_value
-                margin_type = sub.margin_type
-                if margin_type == Service.MARGIN_PERCENT:
-                    gross_margin = sub.base_price * (sub.margin_value / 100)
                 target_service_total = sub.total_price
+                margin_val = sub.margin_value
+                margin_type = sub.margin_type
+                
+                if margin_type == Service.MARGIN_PERCENT:
+                    gross_margin = target_service_total * (margin_val / 100)
+                else:
+                    gross_margin = margin_val
+                
+                gross_base = target_service_total - gross_margin
             else:
                 gross_base = Decimal('0')
                 gross_margin = Decimal('0')
-                margin_type = Service.MARGIN_FIXED
                 target_service_total = Decimal('0')
         else:
             # Single service or combo sub-record
-            # Use snapshots if available, otherwise fallback to current service
-            gross_base = self.service_base_price if self.service_base_price is not None else self.service.base_price
-            margin_val = self.service_margin_value if self.service_margin_value is not None else self.service.margin_value
-            margin_type = self.service_margin_type if self.service_margin_type is not None else self.service.margin_type
+            # target_service_total is what the client SHOULD pay (base price + margin)
+            target_service_total = self.service_total_price if hasattr(self, 'service_total_price') and self.service_total_price is not None else self.service.total_price
             
-            gross_margin = margin_val
+            margin_val = self.service_margin_value if hasattr(self, 'service_margin_value') and self.service_margin_value is not None else self.service.margin_value
+            margin_type = self.service_margin_type if hasattr(self, 'service_margin_type') and self.service_margin_type is not None else self.service.margin_type
+            
             if margin_type == Service.MARGIN_PERCENT:
-                gross_margin = gross_base * (margin_val / 100)
-            
-            target_service_total = gross_base + gross_margin if margin_type == Service.MARGIN_FIXED else gross_base * (1 + margin_val / 100)
+                gross_margin = target_service_total * (margin_val / 100)
+            else:
+                gross_margin = margin_val
+                
+            gross_base = target_service_total - gross_margin
         
         # Discount for this specific record is the difference between its target and actual distributed price
         current_discount = max(Decimal('0'), target_service_total - current_total)
@@ -161,6 +177,7 @@ class Appointment(models.Model):
                 old_status = old_instance.status
                 old_start = old_instance.start_time
                 old_reason = old_instance.cancellation_reason
+                old_total_price = old_instance.total_price
             except Appointment.DoesNotExist:
                 pass
 
@@ -169,7 +186,10 @@ class Appointment(models.Model):
             self.appointment_type = self.TYPE_COMBO_MASTER
         
         if not self.total_price and self.service and self.appointment_type != self.TYPE_COMBO_SUB:
-            self.total_price = self.service.total_price
+            if self.service.is_floating_price:
+                self.total_price = self.service.price_min
+            else:
+                self.total_price = self.service.total_price
 
         # 2. Financial calculation
         # Snapshot service values if not already set (at creation)
@@ -267,7 +287,8 @@ class Appointment(models.Model):
 
                 else:
                     # SYNC UPDATES TO CHILDREN
-                    if old_status != self.status or old_start != self.start_time or old_reason != self.cancellation_reason:
+                    price_changed = old_total_price != self.total_price
+                    if old_status != self.status or old_start != self.start_time or old_reason != self.cancellation_reason or price_changed:
                         main_item = self.service.combo_items.filter(is_main=True).first()
                         if main_item:
                             self.end_time = self.start_time + timedelta(minutes=main_item.sub_service.duration_minutes)
@@ -280,5 +301,34 @@ class Appointment(models.Model):
                             child.cancellation_reason = self.cancellation_reason
                             child.save()
                         
+                        if price_changed:
+                            # REDISTRIBUTE PRICES
+                            combo_price = Decimal(str(self.total_price))
+                            main_item = self.service.combo_items.filter(is_main=True).first()
+                            total_parts_price = sum(Decimal(str(it.sub_service.total_price)) * it.quantity for it in self.service.combo_items.all())
+                            total_discount = max(Decimal('0'), total_parts_price - combo_price)
+                            
+                            children = list(self.children.all())
+                            all_records = [self] + children
+                            num_records = len(all_records)
+                            discount_per_record = total_discount / num_records if num_records > 0 else Decimal('0')
+                            
+                            for appt in all_records:
+                                if appt == self:
+                                    sub_price = Decimal(str(main_item.sub_service.total_price)) if main_item else Decimal('0')
+                                else:
+                                    sub_price = Decimal(str(appt.service.total_price))
+                                
+                                appt.total_price = sub_price - discount_per_record
+                                appt.calculate_financials()
+                                # Update directly to avoid recursion
+                                Appointment.objects.filter(pk=appt.pk).update(
+                                    total_price=appt.total_price,
+                                    discount_amount=appt.discount_amount,
+                                    master_net_income=appt.master_net_income,
+                                    salon_net_income=appt.salon_net_income,
+                                    is_overflow=appt.is_overflow
+                                )
+
                         self.calculate_financials()
                         super().save(update_fields=['end_time', 'master_net_income', 'salon_net_income', 'is_overflow'])

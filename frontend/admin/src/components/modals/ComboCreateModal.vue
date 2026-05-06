@@ -106,15 +106,66 @@
             </div>
           </div>
 
-          <div class="mb-4">
-            <label class="mb-2 block text-black dark:text-white font-medium">Итоговая цена комбо (₸)</label>
-            <input
-              v-model.number="form.total_price"
-              type="number"
-              class="w-full rounded border-[1.5px] border-primary bg-white py-3 px-5 text-xl font-bold text-primary outline-none transition dark:bg-bg-dark"
-              required
-            />
-            <p v-if="discount > 0" class="text-xs text-success mt-1 font-medium">Экономия клиента: {{ discount }} ₸</p>
+          <div class="mb-4 mt-6">
+            <div class="mb-4 flex items-center justify-between p-3 bg-white dark:bg-bg-dark rounded-lg border border-stroke dark:border-strokedark">
+              <div>
+                  <label class="font-medium text-black dark:text-white block">Плавающая цена</label>
+                  <span class="text-xs text-body">Итоговая цена будет в диапазоне</span>
+              </div>
+              <label class="relative inline-flex cursor-pointer items-center">
+                  <input type="checkbox" v-model="form.is_floating_price" class="sr-only peer" />
+                  <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:border-gray-600 dark:bg-gray-700"></div>
+              </label>
+            </div>
+
+            <!-- Total Price Input -->
+            <div class="mb-6 p-5 bg-primary/5 rounded-2xl border-2 border-primary/20">
+                <label class="mb-3 block text-black dark:text-white font-black text-lg uppercase tracking-tight">Стоимость комбо (для клиента)</label>
+                <div v-if="form.is_floating_price" class="grid grid-cols-2 gap-4 animate-fadeIn">
+                    <div>
+                        <label class="mb-2 block text-[10px] font-bold uppercase text-primary">Минимум (₸)</label>
+                        <input v-model.number="form.price_min" type="number" class="w-full rounded-xl border-2 border-primary/20 bg-white py-3 px-5 text-xl font-black text-primary outline-none transition focus:border-primary dark:bg-bg-dark" required />
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-[10px] font-bold uppercase text-primary">Максимум (₸)</label>
+                        <input v-model.number="form.price_max" type="number" class="w-full rounded-xl border-2 border-primary/20 bg-white py-3 px-5 text-xl font-black text-primary outline-none transition focus:border-primary dark:bg-bg-dark" required />
+                    </div>
+                </div>
+                <div v-else class="animate-fadeIn">
+                    <input v-model.number="form.total_price" type="number" class="w-full rounded-xl border-2 border-primary bg-white py-4 px-6 text-3xl font-black text-primary outline-none transition dark:bg-bg-dark" placeholder="0" required />
+                </div>
+            </div>
+
+            <!-- Margin Selection -->
+            <div class="mb-6 p-5 bg-gray-50 dark:bg-meta-4 rounded-2xl border border-stroke dark:border-strokedark">
+                <label class="mb-4 block text-xs font-bold uppercase text-bodydark2 tracking-widest">Наценка салона</label>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="mb-2 block text-[10px] font-medium uppercase text-body">Тип</label>
+                        <select v-model="form.margin_type" class="w-full rounded-lg border border-stroke bg-white py-2.5 px-4 outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white">
+                            <option value="fixed">Фиксированная (₸)</option>
+                            <option value="percent">Процент от итога (%)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-[10px] font-medium uppercase text-body">Значение</label>
+                        <input v-model.number="form.margin_value" type="number" class="w-full rounded-lg border border-stroke bg-white py-2.5 px-4 outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white" />
+                    </div>
+                </div>
+
+                <!-- Master Share Preview -->
+                <div class="pt-4 border-t border-stroke dark:border-strokedark flex justify-between items-center">
+                    <div class="text-xs font-bold text-body uppercase">Доля мастера:</div>
+                    <div class="text-right">
+                        <div v-if="form.is_floating_price" class="font-bold text-black dark:text-white">
+                            {{ masterShareMin }} — {{ masterShareMax }} ₸
+                        </div>
+                        <div v-else class="font-black text-xl text-black dark:text-white">
+                            {{ masterShareTotal }} ₸
+                        </div>
+                    </div>
+                </div>
+            </div>
           </div>
 
           <!-- Strategy Selection -->
@@ -177,9 +228,12 @@ const form = ref({
   total_price: 0,
   discount_strategy: 'owner_only',
   is_combo: true,
-  base_price: 0, // Placeholder, will be derived from sub-services or kept at 0
+  base_price: 0,
   margin_type: 'fixed',
-  margin_value: 0
+  margin_value: 0,
+  is_floating_price: false,
+  price_min: 0,
+  price_max: 0
 })
 
 const selectedSubServices = ref([{ id: '', quantity: 1 }])
@@ -214,7 +268,10 @@ watch(() => props.show, (val) => {
         is_combo: true,
         base_price: 0,
         margin_type: 'fixed',
-        margin_value: 0
+        margin_value: 0,
+        is_floating_price: false,
+        price_min: 0,
+        price_max: 0
       }
       selectedSubServices.value = [{ id: '', quantity: 1 }]
       mainIndex.value = 0
@@ -254,11 +311,37 @@ const sumDuration = computed(() => {
   return 0
 })
 
-const discount = computed(() => {
-  return Math.max(0, sumPrice.value - form.value.total_price)
+const masterShareTotal = computed(() => {
+  const total = parseFloat(form.value.total_price) || 0
+  const margin = parseFloat(form.value.margin_value) || 0
+  if (form.value.margin_type === 'fixed') {
+    return Math.max(0, total - margin).toFixed(0)
+  } else {
+    return Math.max(0, total * (1 - margin / 100)).toFixed(0)
+  }
 })
 
-// Auto-update total_price when sumPrice changes (if not editing or just started)
+const masterShareMin = computed(() => {
+  const total = parseFloat(form.value.price_min) || 0
+  const margin = parseFloat(form.value.margin_value) || 0
+  if (form.value.margin_type === 'fixed') {
+    return Math.max(0, total - margin).toFixed(0)
+  } else {
+    return Math.max(0, total * (1 - margin / 100)).toFixed(0)
+  }
+})
+
+const masterShareMax = computed(() => {
+  const total = parseFloat(form.value.price_max) || 0
+  const margin = parseFloat(form.value.margin_value) || 0
+  if (form.value.margin_type === 'fixed') {
+    return Math.max(0, total - margin).toFixed(0)
+  } else {
+    return Math.max(0, total * (1 - margin / 100)).toFixed(0)
+  }
+})
+
+// Auto-update total_price when sumPrice changes
 watch(sumPrice, (newVal) => {
   if (!isEditing.value && form.value.total_price === 0) {
     form.value.total_price = newVal
@@ -266,6 +349,9 @@ watch(sumPrice, (newVal) => {
 })
 
 const isValid = computed(() => {
+  if (form.value.is_floating_price) {
+    return form.value.name && form.value.category && selectedSubServices.value.every(item => item.id) && form.value.price_max >= form.value.price_min && form.value.price_min > 0
+  }
   return form.value.name && 
          form.value.category && 
          selectedSubServices.value.every(item => item.id) &&
@@ -274,27 +360,20 @@ const isValid = computed(() => {
 })
 
 const saveCombo = async () => {
+  if (form.value.is_floating_price && form.value.price_min > form.value.price_max) {
+    alert('Минимальная цена не может быть больше максимальной')
+    return
+  }
   try {
     saving.value = true
     
-    // Preparation: base_price for combo is irrelevant but required by model logic
-    // We'll set it as sum of base_prices of sub-services for consistency
-    let totalBase = 0
-    let totalMargin = 0
-    selectedSubServices.value.forEach(item => {
-      const s = availableServices.value.find(svc => svc.id === item.id)
-      if (s) {
-        totalBase += parseFloat(s.base_price) * item.quantity
-        totalMargin += (parseFloat(s.total_price) - parseFloat(s.base_price)) * item.quantity
-      }
-    })
+    // For combos, base_price is the master share
+    const totalBase = parseFloat(masterShareTotal.value)
     
     const payload = {
       ...form.value,
       duration_minutes: sumDuration.value,
       base_price: totalBase,
-      margin_type: 'fixed',
-      margin_value: totalMargin,
       sub_services: selectedSubServices.value.map((s, idx) => ({
         sub_service: s.id,
         quantity: s.quantity,
