@@ -35,6 +35,11 @@ class MasterViewSet(viewsets.ModelViewSet):
             qs = qs.filter(mastershift__date=timezone.now().date(), mastershift__is_open=True)
         return qs
 
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('all') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
+
     def perform_create(self, serializer):
         serializer.save(organization=self.request.user.organization)
 
@@ -265,6 +270,11 @@ class MasterShiftViewSet(viewsets.ModelViewSet):
             except ValueError:
                 pass
         return qs
+
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('all') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
 
     def create(self, request, *args, **kwargs):
         master_id = request.data.get('master')

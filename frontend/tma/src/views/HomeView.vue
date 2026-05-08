@@ -204,7 +204,11 @@
         <div class="page-title header-font">{{ state.selectedMaster ? state.selectedMaster.first_name + ' ' + state.selectedMaster.last_name : $t('tma.services') }}</div>
       </div>
       <div class="services-list mt-2">
-        <div v-for="svc in catServices" :key="svc.id" class="service-card-premium" @click="handleServiceSelect(svc)">
+        <div v-if="services.length === 0" class="empty-state">
+          <Icon icon="mdi:magnify-close" width="48" class="text-muted opacity-20 mb-2" />
+          <p>{{ $t('services.empty') }}</p>
+        </div>
+        <div v-for="svc in services" :key="svc.id" class="service-card-premium" @click="handleServiceSelect(svc)">
             <div class="service-card-content">
               <div class="service-top-row">
                 <div class="service-name-group">
@@ -227,6 +231,36 @@
                   <Icon icon="mdi:chevron-right" width="20" />
                 </div>
               </div>
+            </div>
+        </div>
+
+        <!-- Pagination for Service List page -->
+        <div v-if="services.length > 0" class="pagination-footer mt-6 flex flex-col gap-4">
+            <div class="flex items-center justify-between text-xs text-muted px-2">
+                <span>{{ $t('admin.pageSize') || 'Показывать по:' }}</span>
+                <div class="flex gap-2">
+                    <button v-for="size in [20, 50]" :key="size" 
+                            class="size-pill" 
+                            :class="{ active: pageSize === size }"
+                            @click="pageSize = size; onPageSizeChange()">
+                        {{ size }}
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-center gap-4">
+                <button class="btn-page" :disabled="currentPage === 1" @click="prevPage">
+                    <Icon icon="mdi:chevron-left" width="24" />
+                </button>
+                <div class="page-indicator">
+                    <b>{{ currentPage }}</b> / {{ totalPages }}
+                </div>
+                <button class="btn-page" :disabled="currentPage >= totalPages" @click="nextPage">
+                    <Icon icon="mdi:chevron-right" width="24" />
+                </button>
+            </div>
+            <div class="text-[10px] text-center text-muted uppercase tracking-widest">
+                Всего: {{ totalCount }}
             </div>
         </div>
       </div>
@@ -496,7 +530,8 @@ const fetchServices = async () => {
       page: currentPage.value,
       page_size: pageSize.value,
       search: serviceSearchGlobal.value,
-      category: state.selectedCat?.id || ''
+      category: state.selectedCat?.id || '',
+      master_id: state.selectedMaster?.id || ''
     }
     const servsRes = await api.get('/services/', { params })
     if (servsRes.data.results) {
@@ -730,6 +765,11 @@ const renderedBio = computed(() => {
 watch([() => state.selectedMaster, () => state.selectedService, () => state.selectedDate, () => state.page], () => {
     if (state.selectedMaster && ['slots'].includes(state.page)) {
         fetchSlots()
+    }
+    // Refresh services if master or category selection changes on sub-pages
+    if (['service-list'].includes(state.page)) {
+        currentPage.value = 1
+        fetchServices()
     }
 })
 

@@ -219,3 +219,8 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         master.save()
         serializer = self.get_serializer(user, context={'request': request})
         return Response({'photo_url': serializer.data.get('photo_url')})
+
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('all') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
