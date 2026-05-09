@@ -187,7 +187,8 @@ const submit = async () => {
     emit('close')
   } catch (err) {
     console.error('Failed to open shifts:', err)
-    alert('Ошибка при открытии смен. Возможно, смена уже открыта.')
+    const msg = err.response?.data?.error || err.response?.data?.message || 'Ошибка при открытии смен. Возможно, смена уже открыта.'
+    alert(msg)
   } finally {
     saving.value = false
   }

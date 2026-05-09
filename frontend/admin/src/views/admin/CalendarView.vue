@@ -163,7 +163,14 @@
                       <p v-if="ms.shift" class="text-xs text-body mt-0.5">
                         <Icon icon="mdi:clock-outline" class="inline" /> {{ ms.shift.work_start?.slice(0,5) }} - {{ ms.shift.work_end?.slice(0,5) }}
                       </p>
-                      <p v-else-if="!ms.master.is_virtual" class="text-xs text-warning mt-0.5">Смена закрыта</p>
+                      <p v-else-if="!ms.master.is_virtual" class="text-xs text-warning mt-0.5">
+                        {{ ms.shift && ms.shift.actual_start ? 'На работе' : 'Смена закрыта' }}
+                      </p>
+                      <div v-if="ms.shift && ms.shift.actual_start" class="mt-1 flex items-center gap-1.5">
+                        <span class="flex h-2 w-2 rounded-full bg-success"></span>
+                        <span class="text-[10px] font-bold text-success uppercase">Активен</span>
+                        <span class="text-[10px] text-body ml-1">с {{ ms.shift.actual_start.split('T')[1].substring(0,5) }}</span>
+                      </div>
                       <p v-if="ms.master.is_virtual" class="text-[10px] uppercase font-bold text-warning-600 mt-0.5">Очередь</p>
                     </div>
                   </div>
@@ -571,8 +578,8 @@ const calendarDays = computed(() => {
       masterSummaries.push({ master, count: appts.length, utilization })
     })
 
-    // Also add masters with open shifts but no appointments (show in modal only)
-    const shiftsToday = shifts.value.filter(s => s.date === dateStr && s.is_open)
+    // Also add masters with shifts but no appointments (show in modal only)
+    const shiftsToday = shifts.value.filter(s => s.date === dateStr)
     shiftsToday.forEach(s => {
       const mid = s.master
       if (!byMaster[mid]) {
