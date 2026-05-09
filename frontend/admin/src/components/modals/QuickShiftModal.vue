@@ -174,7 +174,7 @@ const fetchData = async () => {
   try {
     loading.value = true
     const [mRes, oRes] = await Promise.all([
-      api.get('/api/masters/', { params: { page_size: 1000 } }),
+      api.get('/api/masters/', { params: { all: true } }),
       api.get('/api/organization/')
     ])
     masters.value = (mRes.data.results || mRes.data || []).filter(m => m.is_active)

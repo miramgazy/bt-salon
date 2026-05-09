@@ -552,7 +552,8 @@ const fetchAppointments = async () => {
     const res = await api.get('/appointments/', {
       params: {
         date_from: selectedDate.value,
-        date_to: selectedDate.value
+        date_to: selectedDate.value,
+        all: true
       }
     })
     appointments.value = res.data.results || res.data

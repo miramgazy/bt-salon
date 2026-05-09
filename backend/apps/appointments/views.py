@@ -11,6 +11,11 @@ from django.db import models
 class AppointmentViewSet(viewsets.ModelViewSet):
     queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
+    
+    def paginate_queryset(self, queryset):
+        if self.request.query_params.get('all') == 'true':
+            return None
+        return super().paginate_queryset(queryset)
 
     def create(self, request, *args, **kwargs):
         import logging

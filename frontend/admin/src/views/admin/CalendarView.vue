@@ -399,9 +399,9 @@ const fetchAll = async () => {
     const dateTo = gridEndDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Almaty' })
 
     const [apptRes, mastersRes, shiftsRes, orgRes] = await Promise.all([
-      api.get('/api/appointments/', { params: { date_from: dateFrom, date_to: dateTo, page_size: 1000 } }),
-      api.get('/api/masters/', { params: { page_size: 1000 } }),
-      api.get('/api/masters/shifts/', { params: { date_from: dateFrom, date_to: dateTo, page_size: 1000 } }),
+      api.get('/api/appointments/', { params: { date_from: dateFrom, date_to: dateTo, all: true } }),
+      api.get('/api/masters/', { params: { all: true } }),
+      api.get('/api/masters/shifts/', { params: { date_from: dateFrom, date_to: dateTo, all: true } }),
       api.get('/api/organization/')
     ])
     bookings.value = apptRes.data.results || apptRes.data || []

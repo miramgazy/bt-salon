@@ -222,7 +222,7 @@ const fetchShifts = async () => {
     try {
         loading.value = true
         const response = await api.get('/api/masters/shifts/', {
-            params: { date: selectedDate.value }
+            params: { date: selectedDate.value, all: true }
         })
         // Filter is_open=true if backend doesn't do it by default for the date
         const data = response.data.results || response.data || []
