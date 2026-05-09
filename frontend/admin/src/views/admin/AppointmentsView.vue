@@ -341,8 +341,8 @@ const changePage = (page) => {
 const fetchData = async () => {
     try {
         const [mRes, sRes] = await Promise.all([
-            api.get('/api/masters/'),
-            api.get('/api/services/')
+            api.get('/api/masters/', { params: { page_size: 1000 } }),
+            api.get('/api/services/', { params: { page_size: 1000 } })
         ])
         masters.value = mRes.data.results || mRes.data
         services.value = sRes.data.results || sRes.data

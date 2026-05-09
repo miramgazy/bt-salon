@@ -177,8 +177,9 @@ const fetchStatus = async () => {
     const localNow = new Date(now.getTime() - (offset * 60 * 1000))
     const today = localNow.toISOString().split('T')[0]
     const res = await api.get('/masters/shifts/', { params: { date: today } })
-    if (res.data && res.data.length > 0) {
-      const shift = res.data[0]
+    const data = res.data.results || res.data || []
+    if (data.length > 0) {
+      const shift = data[0]
       shiftStatus.isScheduled = shift.is_open
       if (shift.actual_start) {
         shiftStatus.isOpen = true

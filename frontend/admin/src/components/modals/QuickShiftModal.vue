@@ -108,7 +108,8 @@ import api from '../../api'
 
 const props = defineProps({
   show: Boolean,
-  date: String
+  date: String,
+  targetMasterId: { type: [Number, String], default: null }
 })
 
 const emit = defineEmits(['close', 'success'])
@@ -127,8 +128,9 @@ const hasSelected = computed(() => {
 const initMasterSelections = () => {
   masters.value.forEach(m => {
     if (!selections[m.id]) {
+      const isTarget = props.targetMasterId && String(m.id) === String(props.targetMasterId)
       selections[m.id] = {
-        selected: false,
+        selected: isTarget || false,
         work_start: orgSettings.value?.work_start?.slice(0, 5) || '10:00',
         work_end: orgSettings.value?.work_end?.slice(0, 5) || '20:00',
         lunch_start: orgSettings.value?.lunch_start?.slice(0, 5) || '13:00',
@@ -143,7 +145,7 @@ const fetchData = async () => {
   try {
     loading.value = true
     const [mRes, oRes] = await Promise.all([
-      api.get('/api/masters/'),
+      api.get('/api/masters/', { params: { page_size: 1000 } }),
       api.get('/api/organization/')
     ])
     masters.value = (mRes.data.results || mRes.data || []).filter(m => m.is_active)
@@ -193,6 +195,8 @@ const submit = async () => {
 
 watch(() => props.show, (newVal) => {
   if (newVal) {
+    // Clear selections to avoid state leakage between different days/masters
+    Object.keys(selections).forEach(key => delete selections[key])
     modalDate.value = props.date || new Date().toISOString().split('T')[0]
     fetchData()
   }

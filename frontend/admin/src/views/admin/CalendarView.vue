@@ -171,10 +171,20 @@
 
                 <!-- Slots Flex Container -->
                 <div class="flex-1">
-                  <div v-if="!ms.shift" class="text-sm text-body italic py-2">Нет смены на этот день</div>
+                  <div v-if="!ms.shift || !ms.shift.is_open" class="flex flex-col gap-2 py-2">
+                    <div class="text-sm text-body italic">
+                      {{ ms.shift && !ms.shift.is_open ? 'Смена закрыта' : 'Нет смены на этот день' }}
+                    </div>
+                    <button 
+                      @click="openShiftModal(selectedDay.dateStr, ms.master.id)"
+                      class="flex items-center justify-center gap-2 rounded-lg bg-success/10 py-2 px-4 text-sm font-bold text-success hover:bg-success/20 transition-all border border-success/20"
+                    >
+                      <Icon icon="mdi:calendar-plus" width="16" />
+                      Открыть смену мастеру
+                    </button>
+                  </div>                   
+                  <!-- Render each slot -->
                   <div v-else class="flex flex-wrap gap-2">
-                    
-                    <!-- Render each slot -->
                     <div 
                       v-for="slot in ms.slots" 
                       :key="ms.master.id + slot.time"
@@ -241,13 +251,10 @@
                           {{ getApptAt(ms.appointments, slot.time).display_title }}
                         </p>
                       </div>
- 
                     </div>
- 
                   </div>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
@@ -275,6 +282,7 @@
     <QuickShiftModal
       :show="showShiftModal"
       :date="shiftModalDate"
+      :target-master-id="shiftModalMasterId"
       @close="showShiftModal = false"
       @success="onShiftSuccess"
     />
@@ -339,9 +347,11 @@ const isForgotten = (appt, master) => {
 // Shift modal state
 const showShiftModal = ref(false)
 const shiftModalDate = ref('')
+const shiftModalMasterId = ref(null)
 
-const openShiftModal = (dateStr) => {
+const openShiftModal = (dateStr, masterId = null) => {
   shiftModalDate.value = dateStr
+  shiftModalMasterId.value = masterId
   showShiftModal.value = true
 }
 
@@ -379,7 +389,7 @@ const fetchAll = async () => {
 
     const [apptRes, mastersRes, shiftsRes, orgRes] = await Promise.all([
       api.get('/api/appointments/', { params: { date_from: dateFrom, date_to: dateTo, page_size: 1000 } }),
-      api.get('/api/masters/'),
+      api.get('/api/masters/', { params: { page_size: 1000 } }),
       api.get('/api/masters/shifts/', { params: { date_from: dateFrom, date_to: dateTo, page_size: 1000 } }),
       api.get('/api/organization/')
     ])
