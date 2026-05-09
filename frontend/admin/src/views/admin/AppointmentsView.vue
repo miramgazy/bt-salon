@@ -372,14 +372,29 @@ const confirmDelete = async (appt) => {
 
 const formatDateShort = (iso) => {
     if (!iso) return ''
-    const datePart = iso.split('T')[0]
-    return format(new Date(datePart), 'dd.MM.yyyy')
+    try {
+        const date = new Date(iso)
+        return date.toLocaleDateString('ru-RU', { timeZone: 'Asia/Almaty' })
+    } catch (e) {
+        const datePart = iso.split('T')[0]
+        const [y, m, d] = datePart.split('-')
+        return `${d}.${m}.${y}`
+    }
 }
 
 const formatTimeSlot = (iso) => {
     if (!iso) return ''
     if (iso.includes('T')) {
-        return iso.split('T')[1].substring(0, 5)
+        try {
+            const date = new Date(iso)
+            return date.toLocaleTimeString('ru-RU', {
+                timeZone: 'Asia/Almaty',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+        } catch (e) {
+            return iso.split('T')[1].substring(0, 5)
+        }
     }
     return iso.substring(0, 5)
 }

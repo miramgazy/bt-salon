@@ -118,6 +118,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+import { format } from 'date-fns'
 import api from '../../api'
 
 const props = defineProps({
@@ -226,7 +227,7 @@ watch(() => props.show, (newVal) => {
   if (newVal) {
     // Clear selections to avoid state leakage between different days/masters
     Object.keys(selections).forEach(key => delete selections[key])
-    modalDate.value = props.date || new Date().toISOString().split('T')[0]
+    modalDate.value = props.date || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Almaty' })
     fetchData()
   }
 })

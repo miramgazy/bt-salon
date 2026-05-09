@@ -169,29 +169,33 @@
                       <div v-if="ms.shift && ms.shift.actual_start" class="mt-1 flex items-center gap-1.5">
                         <span class="flex h-2 w-2 rounded-full bg-success"></span>
                         <span class="text-[10px] font-bold text-success uppercase">Активен</span>
-                        <span class="text-[10px] text-body ml-1">с {{ ms.shift.actual_start.split('T')[1].substring(0,5) }}</span>
+                        <span class="text-[10px] text-body ml-1">с {{ formatTime(ms.shift.actual_start) }}</span>
                       </div>
                       <p v-if="ms.master.is_virtual" class="text-[10px] uppercase font-bold text-warning-600 mt-0.5">Очередь</p>
                     </div>
                   </div>
                 </div>
 
-                <!-- Slots Flex Container -->
+                  <!-- Slots Flex Container -->
                 <div class="flex-1">
-                  <div v-if="!ms.shift || !ms.shift.is_open" class="flex flex-col gap-2 py-2">
-                    <div class="text-sm text-body italic">
-                      {{ ms.shift && !ms.shift.is_open ? 'Смена закрыта' : 'Нет смены на этот день' }}
+                  <!-- Shift Status Indicator (if closed) -->
+                  <div v-if="(!ms.shift || !ms.shift.is_open) && !ms.master.is_virtual" class="mb-3">
+                    <div class="flex items-center gap-2 rounded-lg bg-warning/10 py-2 px-4 border border-warning/20">
+                      <div class="flex-1">
+                        <span class="text-sm font-bold text-warning-700">Смена не открыта</span>
+                        <p class="text-[10px] text-body">Записи видны, но создание новых ограничено</p>
+                      </div>
+                      <button 
+                        @click="openShiftModal(selectedDay.dateStr, ms.master.id)"
+                        class="rounded bg-success py-1 px-3 text-xs font-bold text-white hover:bg-opacity-90 transition-all"
+                      >
+                        Открыть смену
+                      </button>
                     </div>
-                    <button 
-                      @click="openShiftModal(selectedDay.dateStr, ms.master.id)"
-                      class="flex items-center justify-center gap-2 rounded-lg bg-success/10 py-2 px-4 text-sm font-bold text-success hover:bg-success/20 transition-all border border-success/20"
-                    >
-                      <Icon icon="mdi:calendar-plus" width="16" />
-                      Открыть смену мастеру
-                    </button>
                   </div>                   
+
                   <!-- Render each slot -->
-                  <div v-else class="flex flex-wrap gap-2">
+                  <div class="flex flex-wrap gap-2">
                     <div 
                       v-for="slot in ms.slots" 
                       :key="ms.master.id + slot.time"
@@ -391,8 +395,8 @@ const fetchAll = async () => {
     const lastDow = getDay(endOfMonthDate)
     if (lastDow !== 0) gridEndDate = addDays(endOfMonthDate, 7 - lastDow)
     
-    const dateFrom = format(gridStartDate, 'yyyy-MM-dd')
-    const dateTo = format(gridEndDate, 'yyyy-MM-dd')
+    const dateFrom = gridStartDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Almaty' })
+    const dateTo = gridEndDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Almaty' })
 
     const [apptRes, mastersRes, shiftsRes, orgRes] = await Promise.all([
       api.get('/api/appointments/', { params: { date_from: dateFrom, date_to: dateTo, page_size: 1000 } }),
@@ -438,9 +442,20 @@ const shiftsMap = computed(() => {
 const timeToMinutes = (timeStr) => {
   if (!timeStr) return 0
   if (timeStr.includes('T')) {
-    const timePart = timeStr.split('T')[1].substring(0, 5)
-    const [h, m] = timePart.split(':').map(Number)
-    return h * 60 + m
+    try {
+      const date = new Date(timeStr)
+      const timePart = date.toLocaleTimeString('ru-RU', {
+        timeZone: 'Asia/Almaty',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      const [h, m] = timePart.split(':').map(Number)
+      return h * 60 + m
+    } catch (e) {
+      const timePart = timeStr.split('T')[1].substring(0, 5)
+      const [h, m] = timePart.split(':').map(Number)
+      return h * 60 + m
+    }
   }
   const [h, m] = timeStr.slice(0, 5).split(':').map(Number)
   return h * 60 + m
@@ -449,16 +464,14 @@ const timeToMinutes = (timeStr) => {
 const hasAppt = (appts, slotStr) => {
   return appts.some(a => {
     if(!a.start_time) return false
-    const timePart = a.start_time.split('T')[1].substring(0, 5)
-    return timePart === slotStr
+    return formatTime(a.start_time) === slotStr
   })
 }
 
 const getApptAt = (appts, slotStr) => {
   return appts.find(a => {
     if(!a.start_time) return false
-    const timePart = a.start_time.split('T')[1].substring(0, 5)
-    return timePart === slotStr
+    return formatTime(a.start_time) === slotStr
   })
 }
 
@@ -552,12 +565,17 @@ const calendarDays = computed(() => {
   const days = eachDayOfInterval({ start: startDate, end: endDate })
 
   return days.map(date => {
-    const dateStr = format(date, 'yyyy-MM-dd')
+    const dateStr = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Almaty' })
 
     // appointments for this day
     const dayAppts = bookings.value.filter(b => {
       if (!b.start_time) return false
-      return b.start_time.split('T')[0] === dateStr
+      try {
+        const date = new Date(b.start_time)
+        return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Almaty' }) === dateStr
+      } catch (e) {
+        return b.start_time.split('T')[0] === dateStr
+      }
     })
 
     // Group by master
@@ -588,10 +606,11 @@ const calendarDays = computed(() => {
       }
     })
 
-    // Build full schedule for modal
+    // Build full schedule for modal - Include ALL active masters
     const allMastersOnDay = new Set([
       ...Object.keys(byMaster).map(Number),
-      ...shiftsToday.map(s => s.master)
+      ...shiftsToday.map(s => s.master),
+      ...masters.value.filter(m => m.is_active).map(m => m.id)
     ])
     const masterSchedules = [...allMastersOnDay].map(mid => {
       const master = mastersMap.value[mid]
@@ -617,7 +636,7 @@ const calendarDays = computed(() => {
         slots.push({
           time: timeStr,
           isLunch: isLunch(timeStr, shift),
-          isClosed: !shift || !shift.is_open
+          isClosed: master.is_virtual ? false : (!shift || !shift.is_open)
         })
       }
 
@@ -682,9 +701,18 @@ const openCreateModalWithPrefill = (masterId, timeStr) => {
 const formatTime = (timeStr) => {
   if (!timeStr) return ''
   if (timeStr.includes('T')) {
-    return timeStr.split('T')[1].substring(0, 5)
+    try {
+      const date = new Date(timeStr)
+      return date.toLocaleTimeString('ru-RU', {
+        timeZone: 'Asia/Almaty',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    } catch (e) {
+      return timeStr.split('T')[1].substring(0, 5)
+    }
   }
-  return timeStr
+  return timeStr.substring(0, 5)
 }
 
 const formatDateFull = (dateStr) => {

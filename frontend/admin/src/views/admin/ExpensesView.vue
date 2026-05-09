@@ -60,6 +60,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { Icon } from '@iconify/vue'
 import { useExpenses } from '../../composables/useExpenses'
 import { useExpenseCategories } from '../../composables/useExpenseCategories'
@@ -76,8 +77,8 @@ const toast = useToast()
 
 // Filters state
 const filters = reactive<IFilters>({
-  date_from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-  date_to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0],
+  date_from: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
+  date_to: format(endOfMonth(new Date()), 'yyyy-MM-dd'),
   search: '',
   category_id: '',
   page: 1,
@@ -102,8 +103,8 @@ const handleApplyFilters = (newFilters: Partial<IFilters>) => {
 }
 
 const handleResetFilters = () => {
-  filters.date_from = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
-  filters.date_to = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+  filters.date_from = format(startOfMonth(new Date()), 'yyyy-MM-dd')
+  filters.date_to = format(endOfMonth(new Date()), 'yyyy-MM-dd')
   filters.search = ''
   filters.category_id = ''
   filters.page = 1

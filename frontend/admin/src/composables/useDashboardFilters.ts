@@ -1,5 +1,6 @@
 import { reactive, watch, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { format, subDays } from 'date-fns'
 
 export function useDashboardFilters() {
   const router = useRouter()
@@ -7,8 +8,8 @@ export function useDashboardFilters() {
 
   // Default values
   const defaultFilters = {
-    date_from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-    date_to: new Date().toISOString().split('T')[0],
+    date_from: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+    date_to: format(new Date(), 'yyyy-MM-dd'),
     master_ids: [] as string[],
     service_ids: [] as string[],
     group_by: 'day'

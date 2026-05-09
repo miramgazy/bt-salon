@@ -143,6 +143,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { Icon } from '@iconify/vue'
+import { format } from 'date-fns'
 import api from '../../api'
 
 const props = defineProps({
@@ -183,7 +184,11 @@ watch(() => props.show, (val) => {
     fetchMasters()
     if (props.appointment?.start_time) {
       if (props.appointment.start_time.includes('T')) {
-        editedTime.value = props.appointment.start_time.split('T')[1].substring(0, 5)
+        try {
+          editedTime.value = format(new Date(props.appointment.start_time), 'HH:mm')
+        } catch (e) {
+          editedTime.value = props.appointment.start_time.split('T')[1].substring(0, 5)
+        }
       } else {
         editedTime.value = props.appointment.start_time.substring(0, 5)
       }
@@ -225,7 +230,13 @@ const save = async () => {
     loading.value = true
     
     // Construct new ISO datetime strings maintaining the existing date
-    const datePart = props.appointment.start_time.split('T')[0] // 'YYYY-MM-DD'
+    // Make sure we get the correct local date
+    const localDate = new Date(props.appointment.start_time)
+    const datePart = format(localDate, 'yyyy-MM-dd')
+    
+    // We append the local offset so the backend knows this is Almaty time
+    // But since the backend expects naive strings to be in the local timezone (Asia/Almaty), 
+    // sending 'YYYY-MM-DDTHH:mm:00' is generally parsed as local time by DRF.
     const newStart = `${datePart}T${editedTime.value}:00`
     const newEnd = `${datePart}T${calculatedEndTime.value}:00`
 

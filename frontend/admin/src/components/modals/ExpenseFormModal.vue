@@ -132,6 +132,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
+import { format } from 'date-fns'
 import { Icon } from '@iconify/vue'
 import expensesApi from '../../api/expenses'
 import { useToast } from '../../composables/useToast'
@@ -158,7 +159,7 @@ const saving = ref(false)
 const showManager = ref(false)
 
 const form = reactive({
-  date: new Date().toISOString().split('T')[0],
+  date: format(new Date(), 'yyyy-MM-dd'),
   name: '',
   category: '' as string | number,
   category_type: 'variable',
@@ -188,7 +189,7 @@ watch(() => props.show, (newVal) => {
       form.amount = props.expense.amount
       form.comment = props.expense.comment
     } else {
-      form.date = new Date().toISOString().split('T')[0]
+      form.date = format(new Date(), 'yyyy-MM-dd')
       form.name = ''
       form.category = ''
       form.category_type = 'variable'

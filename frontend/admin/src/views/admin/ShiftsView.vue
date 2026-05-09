@@ -196,6 +196,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import api from '../../api'
+import { format } from 'date-fns'
 import { Icon } from '@iconify/vue'
 import QuickShiftModal from '../../components/modals/QuickShiftModal.vue'
 
@@ -203,7 +204,7 @@ const loading = ref(true)
 const saving = ref(false)
 const showModal = ref(false)
 const showEditModal = ref(false)
-const selectedDate = ref(new Date().toISOString().split('T')[0])
+const selectedDate = ref(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Almaty' }))
 const shifts = ref([])
 const organization = ref(null)
 
@@ -267,10 +268,10 @@ const updateShift = async () => {
     try {
         saving.value = true
         await api.patch(`/api/masters/shifts/${editForm.id}/`, {
-            work_start: editForm.work_start,
-            work_end: editForm.work_end,
-            lunch_start: editForm.lunch_start,
-            lunch_end: editForm.lunch_end,
+            work_start: editForm.work_start || null,
+            work_end: editForm.work_end || null,
+            lunch_start: editForm.lunch_start || null,
+            lunch_end: editForm.lunch_end || null,
             comment: editForm.comment
         })
         showEditModal.value = false
