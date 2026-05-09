@@ -133,19 +133,67 @@
           </div>
         </div>
         
+        <!-- Filter Bar -->
+        <div class="px-6 py-3 bg-gray-50 dark:bg-meta-4 border-b border-stroke dark:border-strokedark flex flex-wrap items-center gap-4 shrink-0">
+          <div class="relative min-w-[200px] flex-1 sm:flex-none">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-body">
+              <Icon icon="mdi:magnify" width="18" />
+            </span>
+            <input 
+              v-model="searchQuery"
+              type="text" 
+              placeholder="Поиск мастера..." 
+              class="w-full rounded border border-stroke bg-white py-1.5 pl-10 pr-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-bg-dark-2 dark:text-white"
+            />
+          </div>
+          <div class="min-w-[200px] flex-1 sm:flex-none">
+            <select 
+              v-model="selectedCategoryId"
+              class="w-full rounded border border-stroke bg-white py-1.5 px-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-bg-dark-2 dark:text-white"
+            >
+              <option value="">Все категории услуг</option>
+              <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+                {{ cat.name }}
+              </option>
+            </select>
+          </div>
+          <button 
+            v-if="searchQuery || selectedCategoryId"
+            @click="searchQuery = ''; selectedCategoryId = ''"
+            class="text-xs font-medium text-primary hover:underline"
+          >
+            Сбросить
+          </button>
+          <div class="ml-auto text-xs text-body font-medium">
+            Найдено: {{ filteredMasterSchedules.length }} из {{ selectedDay.masterSchedules.length }}
+          </div>
+        </div>
+        
         <!-- Modal Body: Draggable Grid -->
         <div class="overflow-hidden flex-1 relative flex flex-col bg-gray-50 dark:bg-meta-4">
+          <!-- Case 1: No schedules at all on this day -->
           <div v-if="selectedDay.masterSchedules.length === 0" class="flex flex-col items-center justify-center py-16 text-center h-full">
             <Icon icon="mdi:calendar-blank-outline" width="48" class="text-body mb-3" />
             <p class="text-body">На этот день нет открытых смен или записей</p>
           </div>
 
+          <!-- Case 2: Schedules exist but are filtered out -->
+          <div v-else-if="filteredMasterSchedules.length === 0" class="flex flex-col items-center justify-center py-16 text-center h-full">
+            <Icon icon="mdi:account-search-outline" width="48" class="text-body mb-3" />
+            <p class="text-body font-medium text-black dark:text-white">Мастера не найдены</p>
+            <p class="text-sm text-body mt-1">Попробуйте изменить параметры поиска или фильтрации</p>
+            <button @click="searchQuery = ''; selectedCategoryId = ''" class="mt-4 text-sm font-bold text-primary hover:underline">
+              Сбросить все фильтры
+            </button>
+          </div>
+
+          <!-- Case 3: Display filtered schedules -->
           <div v-else class="flex-1 overflow-auto custom-scrollbar relative p-4 sm:p-6">
             <div class="flex flex-col gap-6">
               
               <!-- Masters Rows -->
               <div 
-                v-for="ms in selectedDay.masterSchedules" 
+                v-for="ms in filteredMasterSchedules" 
                 :key="ms.master.id" 
                 class="flex flex-col md:flex-row gap-4 bg-white dark:bg-bg-dark-2 rounded-xl border border-stroke dark:border-strokedark p-4 shadow-sm"
               >
@@ -160,9 +208,18 @@
                     </div>
                     <div>
                       <h4 class="font-bold text-black dark:text-white">{{ ms.master.first_name }}</h4>
-                      <p v-if="ms.shift" class="text-xs text-body mt-0.5">
-                        <Icon icon="mdi:clock-outline" class="inline" /> {{ ms.shift.work_start?.slice(0,5) }} - {{ ms.shift.work_end?.slice(0,5) }}
-                      </p>
+                      <div v-if="ms.shift" class="flex items-center gap-2 mt-0.5">
+                        <p class="text-xs text-body">
+                          <Icon icon="mdi:clock-outline" class="inline" /> {{ ms.shift.work_start?.slice(0,5) }} - {{ ms.shift.work_end?.slice(0,5) }}
+                        </p>
+                        <button 
+                          @click.stop="deleteShift(ms)" 
+                          class="text-body/40 hover:text-danger transition-colors p-0.5"
+                          title="Удалить смену"
+                        >
+                          <Icon icon="mdi:trash-can-outline" width="14" />
+                        </button>
+                      </div>
                       <p v-else-if="!ms.master.is_virtual" class="text-xs text-warning mt-0.5">
                         {{ ms.shift && ms.shift.actual_start ? 'На работе' : 'Смена закрыта' }}
                       </p>
@@ -313,8 +370,13 @@ import QuickShiftModal from '../../components/modals/QuickShiftModal.vue'
 const bookings = ref([])
 const masters = ref([])
 const shifts = ref([])
+const categories = ref([])
 const organization = ref(null)
 const loading = ref(true)
+
+// Filtering state for day modal
+const searchQuery = ref('')
+const selectedCategoryId = ref('')
 
 const currentDate = ref(new Date())
 const selectedMonth = ref(currentDate.value.getMonth())
@@ -398,16 +460,18 @@ const fetchAll = async () => {
     const dateFrom = gridStartDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Almaty' })
     const dateTo = gridEndDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Almaty' })
 
-    const [apptRes, mastersRes, shiftsRes, orgRes] = await Promise.all([
+    const [apptRes, mastersRes, shiftsRes, orgRes, catRes] = await Promise.all([
       api.get('/api/appointments/', { params: { date_from: dateFrom, date_to: dateTo, all: true } }),
       api.get('/api/masters/', { params: { all: true } }),
       api.get('/api/masters/shifts/', { params: { date_from: dateFrom, date_to: dateTo, all: true } }),
-      api.get('/api/organization/')
+      api.get('/api/organization/'),
+      api.get('/api/categories/', { params: { all: true } })
     ])
     bookings.value = apptRes.data.results || apptRes.data || []
     masters.value = mastersRes.data.results || mastersRes.data || []
     shifts.value = shiftsRes.data.results || shiftsRes.data || []
     organization.value = orgRes.data
+    categories.value = catRes.data.results || catRes.data || []
 
     // If day modal is open, refresh selected day
     if (showDayModal.value && selectedDay.value) {
@@ -551,7 +615,50 @@ const deleteAppt = async (appt) => {
   }
 }
 
+const deleteShift = async (ms) => {
+  if (ms.appointments && ms.appointments.length > 0) {
+    alert('Невозможно удалить смену: у мастера есть активные записи на этот день. Сначала перенесите эти записи к другому мастеру или отмените их.')
+    return
+  }
+  
+  if (!confirm(`Вы уверены, что хотите удалить смену мастера ${ms.master.first_name} на ${formatDateFull(selectedDay.value.dateStr)}?`)) {
+    return
+  }
+
+  try {
+    await api.delete(`/api/masters/shifts/${ms.shift.id}/`)
+    await fetchAll()
+  } catch (err) {
+    console.error('Ошибка удаления смены:', err)
+    const msg = err.response?.data?.message || 'Не удалось удалить смену. Попробуйте снова.'
+    alert(msg)
+  }
+}
+
 const onBookingSuccess = () => fetchAll()
+
+const filteredMasterSchedules = computed(() => {
+  if (!selectedDay.value) return []
+  let filtered = selectedDay.value.masterSchedules
+  
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(ms => 
+      ms.master.first_name.toLowerCase().includes(q) || 
+      ms.master.last_name?.toLowerCase().includes(q)
+    )
+  }
+  
+  if (selectedCategoryId.value) {
+    const catId = Number(selectedCategoryId.value)
+    filtered = filtered.filter(ms => {
+      // Check if master has any service in this category
+      return ms.master.services_detail?.some(s => s.category === catId)
+    })
+  }
+  
+  return filtered
+})
 
 const calendarDays = computed(() => {
   const start = startOfMonth(currentDate.value)

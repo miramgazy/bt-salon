@@ -296,6 +296,15 @@ class MasterShiftViewSet(viewsets.ModelViewSet):
         
         return super().create(request, *args, **kwargs)
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.appointment_set.exists():
+            return Response(
+                {'error': 'has_appointments', 'message': 'Невозможно удалить смену: у мастера есть активные записи на этот день. Сначала перенесите эти записи к другому мастеру или отмените их.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().destroy(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         org = self.request.user.organization
         # Set defaults from organization if not provided
