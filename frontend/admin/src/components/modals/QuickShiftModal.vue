@@ -14,9 +14,18 @@
             />
           </div>
         </div>
-        <button @click="$emit('close')" class="text-body hover:text-danger px-2 transition-colors">
-          <Icon icon="mdi:close" width="24" />
-        </button>
+        <div class="flex items-center gap-4">
+          <button 
+            v-if="!loading && masters.length > 0"
+            @click="toggleSelectAll" 
+            class="text-sm font-medium text-primary hover:text-opacity-80 transition-colors"
+          >
+            {{ isAllSelected ? 'Снять выделение' : 'Выбрать всех' }}
+          </button>
+          <button @click="$emit('close')" class="text-body hover:text-danger px-2 transition-colors">
+            <Icon icon="mdi:close" width="24" />
+          </button>
+        </div>
       </div>
 
       <!-- Body -->
@@ -129,6 +138,20 @@ const modalDate = ref('')
 const hasSelected = computed(() => {
   return Object.values(selections).some(s => s.selected)
 })
+
+const isAllSelected = computed(() => {
+  if (masters.value.length === 0) return false
+  return masters.value.every(m => selections[m.id]?.selected)
+})
+
+const toggleSelectAll = () => {
+  const target = !isAllSelected.value
+  masters.value.forEach(m => {
+    if (selections[m.id]) {
+      selections[m.id].selected = target
+    }
+  })
+}
 
 const initMasterSelections = () => {
   masters.value.forEach(m => {
