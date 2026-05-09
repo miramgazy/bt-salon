@@ -1,14 +1,14 @@
 <template>
   <div v-if="show" class="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" @click.self="$emit('close')">
-    <div class="w-full max-w-md rounded-xl bg-white dark:bg-bg-dark-2 shadow-2xl overflow-hidden flex flex-col">
+    <div class="w-full max-w-md rounded-xl bg-white dark:bg-bg-dark-2 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
        <!-- Header -->
-       <div class="px-6 py-4 border-b border-stroke dark:border-strokedark flex justify-between items-center bg-gray-50 dark:bg-meta-4">
+       <div class="px-6 py-4 border-b border-stroke dark:border-strokedark flex justify-between items-center bg-gray-50 dark:bg-meta-4 shrink-0">
          <h3 class="font-bold text-black dark:text-white">Редактирование записи</h3>
          <button @click="$emit('close')" class="text-body hover:text-danger"><Icon icon="mdi:close" width="24" /></button>
        </div>
        
        <!-- Body -->
-       <div class="p-6">
+       <div class="p-6 overflow-y-auto flex-1 custom-scrollbar">
          <!-- Client Info -->
          <div class="mb-4">
             <label class="text-xs text-body mb-1 block">Клиент</label>
@@ -129,7 +129,7 @@
        </div>
 
        <!-- Footer -->
-       <div class="px-6 py-4 border-t border-stroke dark:border-strokedark flex gap-3">
+       <div class="px-6 py-4 border-t border-stroke dark:border-strokedark flex gap-3 bg-white dark:bg-bg-dark-2 shrink-0">
          <button @click="$emit('close')" class="flex-1 rounded border border-stroke py-2 text-center font-medium hover:bg-gray-100 transition-colors dark:border-strokedark dark:hover:bg-meta-4 text-black dark:text-white">Отмена</button>
          <button @click="save" :disabled="loading" class="flex-1 rounded bg-primary py-2 text-center font-medium text-white hover:bg-opacity-90 transition-colors disabled:opacity-50">
            <Icon v-if="loading" icon="mdi:loading" class="animate-spin inline mr-1" />

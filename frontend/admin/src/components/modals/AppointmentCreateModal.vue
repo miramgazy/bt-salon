@@ -1,7 +1,8 @@
 <template>
   <div v-if="show" class="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-    <div class="w-full max-w-230 rounded-lg bg-white py-8 px-8 dark:bg-bg-dark-2 sm:px-12.5 overflow-y-auto max-h-[95vh]">
-      <div class="flex justify-between items-center mb-6">
+    <div class="w-full max-w-230 rounded-xl bg-white dark:bg-bg-dark-2 shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+      <!-- Header -->
+      <div class="px-8 pt-8 pb-4 flex justify-between items-center bg-white dark:bg-bg-dark-2 shrink-0">
           <h3 class="text-2xl font-bold text-black dark:text-white">
             Новая запись на {{ formatDate(date) }}
           </h3>
@@ -10,132 +11,136 @@
           </button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div>
-          <label class="mb-3 block text-sm font-medium text-black dark:text-white">
-            Имя клиента <span class="text-danger">*</span>
-          </label>
-          <input
-            v-model="clientName"
-            type="text"
-            placeholder="Введите имя"
-            class="w-full rounded border border-stroke bg-gray-50 py-3 px-5 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
-          />
-        </div>
-        <div>
-          <label class="mb-3 block text-sm font-medium text-black dark:text-white">
-            Номер телефона
-          </label>
-          <input
-            v-model="clientPhone"
-            type="text"
-            placeholder="+7 (___) ___-__-__"
-            class="w-full rounded border border-stroke bg-gray-50 py-3 px-5 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
-          />
-        </div>
-      </div>
-
-      <div class="mb-6">
-        <div class="mb-4">
-          <h4 class="font-bold text-black dark:text-white">Услуги и мастера</h4>
-          <p class="text-xs text-body">Первая услуга выбирается обязательно, остальные можно добавить при необходимости.</p>
+      <!-- Body -->
+      <div class="px-8 pb-4 flex-1 overflow-y-auto custom-scrollbar">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 mt-2">
+          <div>
+            <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+              Имя клиента <span class="text-danger">*</span>
+            </label>
+            <input
+              v-model="clientName"
+              type="text"
+              placeholder="Введите имя"
+              class="w-full rounded border border-stroke bg-gray-50 py-3 px-5 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
+            />
+          </div>
+          <div>
+            <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+              Номер телефона
+            </label>
+            <input
+              v-model="clientPhone"
+              type="text"
+              placeholder="+7 (___) ___-__-__"
+              class="w-full rounded border border-stroke bg-gray-50 py-3 px-5 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
+            />
+          </div>
         </div>
 
-        <div class="space-y-6">
-          <div 
-            v-for="(row, index) in selectedServices" 
-            :key="index"
-            class="rounded-lg border border-stroke p-4 dark:border-strokedark relative"
-          >
-            <button 
-              v-if="selectedServices.length > 1"
-              @click="removeServiceRow(index)"
-              class="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-danger text-white flex items-center justify-center hover:bg-opacity-90 shadow-md"
+        <div class="mb-6">
+          <div class="mb-4">
+            <h4 class="font-bold text-black dark:text-white">Услуги и мастера</h4>
+            <p class="text-xs text-body">Первая услуга выбирается обязательно, остальные можно добавить при необходимости.</p>
+          </div>
+
+          <div class="space-y-6">
+            <div 
+              v-for="(row, index) in selectedServices" 
+              :key="index"
+              class="rounded-lg border border-stroke p-4 dark:border-strokedark relative"
             >
-              <Icon icon="mdi:close" width="14" />
-            </button>
+              <button 
+                v-if="selectedServices.length > 1"
+                @click="removeServiceRow(index)"
+                class="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-danger text-white flex items-center justify-center hover:bg-opacity-90 shadow-md"
+              >
+                <Icon icon="mdi:close" width="14" />
+              </button>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label class="text-xs font-bold uppercase text-body mb-1 block">Услуга</label>
-                <select 
-                  v-model="row.service_id" 
-                  @change="onServiceChange(index)"
-                  class="w-full rounded border border-stroke bg-gray-50 py-2 px-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
-                >
-                  <option value="">Выберите услугу</option>
-                   <option v-for="s in allServices" :key="s.id" :value="s.id">
-                    {{ s.name }} ({{ s.duration_minutes }} мин) — 
-                    <template v-if="s.is_floating_price">{{ s.price_min }} — {{ s.price_max }} ₸</template>
-                    <template v-else>{{ s.total_price }} ₸</template>
-                  </option>
-                </select>
-              </div>
-              <div>
-                <label class="text-xs font-bold uppercase text-body mb-1 block">Мастер</label>
-                <div class="flex items-center gap-2">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="text-xs font-bold uppercase text-body mb-1 block">Услуга</label>
                   <select 
-                    v-model="row.master_id" 
-                    :disabled="!row.service_id"
-                    class="flex-1 rounded border border-stroke bg-gray-50 py-2 px-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
+                    v-model="row.service_id" 
+                    @change="onServiceChange(index)"
+                    class="w-full rounded border border-stroke bg-gray-50 py-2 px-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
                   >
-                    <option value="">Выберите мастера</option>
-                    <option v-for="m in getFilteredMasters(row.service_id)" :key="m.id" :value="m.id">
-                      {{ m.first_name }} {{ m.last_name }}
+                    <option value="">Выберите услугу</option>
+                     <option v-for="s in allServices" :key="s.id" :value="s.id">
+                      {{ s.name }} ({{ s.duration_minutes }} мин) — 
+                      <template v-if="s.is_floating_price">{{ s.price_min }} — {{ s.price_max }} ₸</template>
+                      <template v-else>{{ s.total_price }} ₸</template>
                     </option>
                   </select>
-                  <button 
-                    v-if="row.service_id"
-                    @click="openQuickShift"
-                    class="h-9 w-9 flex items-center justify-center rounded border border-stroke bg-white hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 transition-colors shrink-0"
-                    title="Открыть смену"
-                  >
-                     <Icon icon="mdi:calendar-plus" class="text-primary" width="20" />
-                  </button>
+                </div>
+                <div>
+                  <label class="text-xs font-bold uppercase text-body mb-1 block">Мастер</label>
+                  <div class="flex items-center gap-2">
+                    <select 
+                      v-model="row.master_id" 
+                      :disabled="!row.service_id"
+                      class="flex-1 rounded border border-stroke bg-gray-50 py-2 px-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
+                    >
+                      <option value="">Выберите мастера</option>
+                      <option v-for="m in getFilteredMasters(row.service_id)" :key="m.id" :value="m.id">
+                        {{ m.first_name }} {{ m.last_name }}
+                      </option>
+                    </select>
+                    <button 
+                      v-if="row.service_id"
+                      @click="openQuickShift"
+                      class="h-9 w-9 flex items-center justify-center rounded border border-stroke bg-white hover:bg-gray-50 dark:border-strokedark dark:bg-meta-4 transition-colors shrink-0"
+                      title="Открыть смену"
+                    >
+                       <Icon icon="mdi:calendar-plus" class="text-primary" width="20" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="row.master_id" class="animate-fadeIn">
+                <TimeSlotPicker 
+                  :master-id="row.master_id"
+                  :service-id="row.service_id"
+                  :service-duration="getDuration(row.service_id)"
+                  :date="date"
+                  v-model="row.start_time"
+                />
+                
+                <div class="mt-4">
+                  <label class="text-xs font-bold uppercase text-body mb-1 block">Комментарий к услуге</label>
+                  <textarea
+                    v-model="row.notes"
+                    rows="2"
+                    placeholder="Особые пожелания или детали..."
+                    class="w-full rounded border border-stroke bg-gray-50 py-2 px-3 text-sm text-black outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
+                  ></textarea>
                 </div>
               </div>
             </div>
-
-            <div v-if="row.master_id" class="animate-fadeIn">
-              <TimeSlotPicker 
-                :master-id="row.master_id"
-                :service-id="row.service_id"
-                :service-duration="getDuration(row.service_id)"
-                :date="date"
-                v-model="row.start_time"
-              />
-              
-              <div class="mt-4">
-                <label class="text-xs font-bold uppercase text-body mb-1 block">Комментарий к услуге</label>
-                <textarea
-                  v-model="row.notes"
-                  rows="2"
-                  placeholder="Особые пожелания или детали..."
-                  class="w-full rounded border border-stroke bg-gray-50 py-2 px-3 text-sm text-black outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
-                ></textarea>
-              </div>
-            </div>
+          </div>
+          <div class="mt-4 flex justify-center">
+            <button 
+              @click="addServiceRow"
+              class="flex items-center gap-2 rounded-md border border-primary border-dashed py-2 px-4 text-sm font-medium text-primary hover:bg-primary/5 transition-all"
+            >
+              <Icon icon="mdi:plus-circle" width="18" /> Добавить еще одну услугу
+            </button>
           </div>
         </div>
-        <div class="mt-4 flex justify-center">
-          <button 
-            @click="addServiceRow"
-            class="flex items-center gap-2 rounded-md border border-primary border-dashed py-2 px-4 text-sm font-medium text-primary hover:bg-primary/5 transition-all"
-          >
-            <Icon icon="mdi:plus-circle" width="18" /> Добавить еще одну услугу
-          </button>
+
+        <div v-if="availableMasters.length === 0" class="mb-6 p-4 rounded-lg bg-warning/10 border border-warning/20 flex items-center gap-3">
+          <Icon icon="mdi:alert-circle-outline" class="text-warning shrink-0" width="24" />
+          <p class="text-xs text-warning leading-tight">
+            На указанную дату ещё нет открытых смен у мастеров. 
+            Нажмите <Icon icon="mdi:calendar-plus" class="inline" /> рядом с полем мастера, чтобы открыть смену.
+          </p>
         </div>
       </div>
 
-      <div v-if="availableMasters.length === 0" class="mb-6 p-4 rounded-lg bg-warning/10 border border-warning/20 flex items-center gap-3">
-        <Icon icon="mdi:alert-circle-outline" class="text-warning shrink-0" width="24" />
-        <p class="text-xs text-warning leading-tight">
-          На указанную дату ещё нет открытых смен у мастеров. 
-          Нажмите <Icon icon="mdi:calendar-plus" class="inline" /> рядом с полем мастера, чтобы открыть смену.
-        </p>
-      </div>
-
-      <div class="flex gap-4">
+      <!-- Footer -->
+      <div class="px-8 py-6 border-t border-stroke dark:border-strokedark flex gap-4 bg-white dark:bg-bg-dark-2 shrink-0">
         <button
           @click="$emit('close')"
           class="flex-1 rounded border border-stroke py-3 px-6 text-center font-medium text-black transition hover:bg-gray-100 dark:border-strokedark dark:text-white dark:hover:bg-meta-4"
