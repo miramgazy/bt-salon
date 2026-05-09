@@ -185,129 +185,138 @@
 
     <!-- Main Modal Start -->
     <div v-if="showModal" class="fixed inset-0 z-100 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div class="w-full max-w-142.5 rounded-lg bg-white py-8 px-8 dark:bg-bg-dark-2 shadow-2xl relative">
-        <button @click="closeModal" class="absolute top-4 right-4 text-body hover:text-primary transition-colors">
-            <Icon icon="mdi:close" width="24" />
-        </button>
-        
-        <h3 class="pb-2 text-xl font-bold text-black dark:text-white sm:text-2xl border-b border-stroke dark:border-strokedark mb-6">
-          {{ isEditing ? 'Редактировать услугу' : 'Создать новую услугу' }}
-        </h3>
-        
-        <form @submit.prevent="saveService">
-          <!-- Basic Info -->
-          <div class="mb-4.5">
-            <label class="mb-2.5 block text-black dark:text-white font-medium">Название</label>
-            <input
-              v-model="form.name"
-              type="text"
-              placeholder="Например: Стрижка мужская"
-              class="w-full rounded border-[1.5px] border-stroke bg-gray-50 py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default dark:border-strokedark dark:bg-bg-dark dark:text-white"
-              required
-            />
-          </div>
-
-          <div class="mb-4.5 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="mb-2.5 block text-black dark:text-white font-medium">Категория</label>
-              <div class="flex gap-2">
-                <select
-                  v-model="form.category"
-                  class="w-full rounded border-[1.5px] border-stroke bg-gray-50 py-3 px-5 font-medium outline-none transition focus:border-primary dark:border-strokedark dark:bg-bg-dark dark:text-white"
-                  required
-                >
-                  <option value="" disabled>Выберите...</option>
-                  <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-                    {{ cat.name }}
-                  </option>
-                </select>
-                <button type="button" @click="openCategoryModal" class="flex items-center justify-center rounded bg-gray-200 dark:bg-meta-4 px-4 hover:bg-primary hover:text-white transition-all">
-                  <Icon icon="mdi:plus" width="20" />
-                </button>
-              </div>
-            </div>
-            <div>
-              <label class="mb-2.5 block text-black dark:text-white font-medium">Длительность (мин)</label>
-              <input v-model.number="form.duration_minutes" type="number" class="w-full rounded border-[1.5px] border-stroke bg-gray-50 py-3 px-5 font-medium outline-none transition focus:border-primary dark:border-strokedark dark:bg-bg-dark dark:text-white" required />
-            </div>
-          </div>
+      <div class="w-full max-w-142.5 rounded-lg bg-white dark:bg-bg-dark-2 shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden">
+        <!-- Modal Header -->
+        <div class="px-8 pt-8 pb-2 shrink-0">
+          <button @click="closeModal" class="absolute top-4 right-4 text-body hover:text-primary transition-colors">
+              <Icon icon="mdi:close" width="24" />
+          </button>
           
-          <!-- Floating Price Toggle -->
-          <div class="mb-6 flex items-center justify-between p-4 bg-gray-50 dark:bg-meta-4 rounded-xl border border-stroke dark:border-strokedark shadow-sm">
-            <div>
-                <label class="font-bold text-black dark:text-white block">Плавающая цена</label>
-                <span class="text-xs text-body">Клиент видит диапазон цен</span>
+          <h3 class="pb-4 text-xl font-bold text-black dark:text-white sm:text-2xl border-b border-stroke dark:border-strokedark mb-2">
+            {{ isEditing ? 'Редактировать услугу' : 'Создать новую услугу' }}
+          </h3>
+        </div>
+        
+        <form @submit.prevent="saveService" class="flex flex-col flex-1 overflow-hidden">
+          <!-- Modal Body (Scrollable) -->
+          <div class="flex-1 overflow-y-auto px-8 py-4 custom-scrollbar">
+            <!-- Basic Info -->
+            <div class="mb-4.5">
+              <label class="mb-2.5 block text-black dark:text-white font-medium">Название</label>
+              <input
+                v-model="form.name"
+                type="text"
+                placeholder="Например: Стрижка мужская"
+                class="w-full rounded border-[1.5px] border-stroke bg-gray-50 py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default dark:border-strokedark dark:bg-bg-dark dark:text-white"
+                required
+              />
             </div>
-            <label class="relative inline-flex cursor-pointer items-center">
-                <input type="checkbox" v-model="form.is_floating_price" class="sr-only peer" />
-                <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:border-gray-600 dark:bg-gray-700"></div>
-            </label>
-          </div>
 
-          <!-- New Flow: Total Price First -->
-          <div class="mb-6 p-5 bg-primary/5 rounded-2xl border-2 border-primary/20">
-            <label class="mb-3 block text-black dark:text-white font-black text-lg uppercase tracking-tight">Стоимость услуги (для клиента)</label>
-            <div v-if="form.is_floating_price" class="grid grid-cols-2 gap-4 animate-fadeIn">
+            <div class="mb-4.5 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="mb-2 block text-[10px] font-bold uppercase text-primary">Минимум (₸)</label>
-                <input v-model.number="form.price_min" type="number" class="w-full rounded-xl border-2 border-primary/20 bg-white py-3 px-5 text-xl font-black text-primary outline-none transition focus:border-primary dark:bg-bg-dark" required />
-              </div>
-              <div>
-                <label class="mb-2 block text-[10px] font-bold uppercase text-primary">Максимум (₸)</label>
-                <input v-model.number="form.price_max" type="number" class="w-full rounded-xl border-2 border-primary/20 bg-white py-3 px-5 text-xl font-black text-primary outline-none transition focus:border-primary dark:bg-bg-dark" required />
-              </div>
-            </div>
-            <div v-else class="animate-fadeIn">
-              <input v-model.number="form.total_price" type="number" class="w-full rounded-xl border-2 border-primary bg-white py-4 px-6 text-3xl font-black text-primary outline-none transition dark:bg-bg-dark" placeholder="0" required />
-            </div>
-          </div>
-
-          <!-- Margin Distribution -->
-          <div class="mb-8 p-5 bg-gray-50 dark:bg-meta-4 rounded-2xl border border-stroke dark:border-strokedark">
-            <label class="mb-4 block text-xs font-bold uppercase text-bodydark2 tracking-widest">Наценка салона</label>
-            <div class="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                  <label class="mb-2 block text-[10px] font-medium uppercase text-body">Тип</label>
-                  <select v-model="form.margin_type" class="w-full rounded-lg border border-stroke bg-white py-2.5 px-4 outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white">
-                      <option value="fixed">Фиксированная (₸)</option>
-                      <option value="percent">Процент от итога (%)</option>
+                <label class="mb-2.5 block text-black dark:text-white font-medium">Категория</label>
+                <div class="flex gap-2">
+                  <select
+                    v-model="form.category"
+                    class="w-full rounded border-[1.5px] border-stroke bg-gray-50 py-3 px-5 font-medium outline-none transition focus:border-primary dark:border-strokedark dark:bg-bg-dark dark:text-white"
+                    required
+                  >
+                    <option value="" disabled>Выберите...</option>
+                    <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+                      {{ cat.name }}
+                    </option>
                   </select>
+                  <button type="button" @click="openCategoryModal" class="flex items-center justify-center rounded bg-gray-200 dark:bg-meta-4 px-4 hover:bg-primary hover:text-white transition-all">
+                    <Icon icon="mdi:plus" width="20" />
+                  </button>
+                </div>
               </div>
               <div>
-                  <label class="mb-2 block text-[10px] font-medium uppercase text-body">Значение</label>
-                  <input v-model.number="form.margin_value" type="number" class="w-full rounded-lg border border-stroke bg-white py-2.5 px-4 outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white" />
+                <label class="mb-2.5 block text-black dark:text-white font-medium">Длительность (мин)</label>
+                <input v-model.number="form.duration_minutes" type="number" class="w-full rounded border-[1.5px] border-stroke bg-gray-50 py-3 px-5 font-medium outline-none transition focus:border-primary dark:border-strokedark dark:bg-bg-dark dark:text-white" required />
+              </div>
+            </div>
+            
+            <!-- Floating Price Toggle -->
+            <div class="mb-6 flex items-center justify-between p-4 bg-gray-50 dark:bg-meta-4 rounded-xl border border-stroke dark:border-strokedark shadow-sm">
+              <div>
+                  <label class="font-bold text-black dark:text-white block">Плавающая цена</label>
+                  <span class="text-xs text-body">Клиент видит диапазон цен</span>
+              </div>
+              <label class="relative inline-flex cursor-pointer items-center">
+                  <input type="checkbox" v-model="form.is_floating_price" class="sr-only peer" />
+                  <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:border-gray-600 dark:bg-gray-700"></div>
+              </label>
+            </div>
+
+            <!-- New Flow: Total Price First -->
+            <div class="mb-6 p-5 bg-primary/5 rounded-2xl border-2 border-primary/20">
+              <label class="mb-3 block text-black dark:text-white font-black text-lg uppercase tracking-tight">Стоимость услуги (для клиента)</label>
+              <div v-if="form.is_floating_price" class="grid grid-cols-2 gap-4 animate-fadeIn">
+                <div>
+                  <label class="mb-2 block text-[10px] font-bold uppercase text-primary">Минимум (₸)</label>
+                  <input v-model.number="form.price_min" type="number" class="w-full rounded-xl border-2 border-primary/20 bg-white py-3 px-5 text-xl font-black text-primary outline-none transition focus:border-primary dark:bg-bg-dark" required />
+                </div>
+                <div>
+                  <label class="mb-2 block text-[10px] font-bold uppercase text-primary">Максимум (₸)</label>
+                  <input v-model.number="form.price_max" type="number" class="w-full rounded-xl border-2 border-primary/20 bg-white py-3 px-5 text-xl font-black text-primary outline-none transition focus:border-primary dark:bg-bg-dark" required />
+                </div>
+              </div>
+              <div v-else class="animate-fadeIn">
+                <input v-model.number="form.total_price" type="number" class="w-full rounded-xl border-2 border-primary bg-white py-4 px-6 text-3xl font-black text-primary outline-none transition dark:bg-bg-dark" placeholder="0" required />
               </div>
             </div>
 
-            <!-- Master Share Preview -->
-            <div class="pt-4 border-t border-stroke dark:border-strokedark flex justify-between items-center">
-                <div class="text-xs font-bold text-body uppercase">Доля мастера:</div>
-                <div class="text-right">
-                    <div v-if="form.is_floating_price" class="font-bold text-black dark:text-white">
-                        {{ masterShareMin }} — {{ masterShareMax }} ₸
-                    </div>
-                    <div v-else class="font-black text-xl text-black dark:text-white">
-                        {{ masterShareTotal }} ₸
-                    </div>
+            <!-- Margin Distribution -->
+            <div class="mb-4 p-5 bg-gray-50 dark:bg-meta-4 rounded-2xl border border-stroke dark:border-strokedark">
+              <label class="mb-4 block text-xs font-bold uppercase text-bodydark2 tracking-widest">Наценка салона</label>
+              <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="mb-2 block text-[10px] font-medium uppercase text-body">Тип</label>
+                    <select v-model="form.margin_type" class="w-full rounded-lg border border-stroke bg-white py-2.5 px-4 outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white">
+                        <option value="fixed">Фиксированная (₸)</option>
+                        <option value="percent">Процент от итога (%)</option>
+                    </select>
                 </div>
+                <div>
+                    <label class="mb-2 block text-[10px] font-medium uppercase text-body">Значение</label>
+                    <input v-model.number="form.margin_value" type="number" class="w-full rounded-lg border border-stroke bg-white py-2.5 px-4 outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white" />
+                </div>
+              </div>
+
+              <!-- Master Share Preview -->
+              <div class="pt-4 border-t border-stroke dark:border-strokedark flex justify-between items-center">
+                  <div class="text-xs font-bold text-body uppercase">Доля мастера:</div>
+                  <div class="text-right">
+                      <div v-if="form.is_floating_price" class="font-bold text-black dark:text-white">
+                          {{ masterShareMin }} — {{ masterShareMax }} ₸
+                      </div>
+                      <div v-else class="font-black text-xl text-black dark:text-white">
+                          {{ masterShareTotal }} ₸
+                      </div>
+                  </div>
+              </div>
             </div>
           </div>
 
-          <div class="flex gap-4">
-            <button
-               type="button"
-               @click="closeModal"
-               class="flex w-full justify-center rounded border border-stroke py-3 font-medium text-black hover:bg-gray-100 dark:border-strokedark dark:text-white dark:hover:bg-meta-4"
-            >
-              Отмена
-            </button>
-            <button
-              type="submit"
-              class="flex w-full justify-center rounded bg-primary py-3 font-medium text-white hover:bg-opacity-90 transition-all active:scale-95"
-              :disabled="saving"
-            >
-              {{ saving ? 'Сохранение...' : 'Сохранить' }}
-            </button>
+          <!-- Modal Footer (Fixed) -->
+          <div class="px-8 pb-8 pt-4 shrink-0">
+            <div class="flex gap-4">
+              <button
+                 type="button"
+                 @click="closeModal"
+                 class="flex-1 justify-center rounded border border-stroke py-3 font-medium text-black hover:bg-gray-100 dark:border-strokedark dark:text-white dark:hover:bg-meta-4 transition-all"
+              >
+                Отмена
+              </button>
+              <button
+                type="submit"
+                class="flex-1 justify-center rounded bg-primary py-3 font-medium text-white hover:bg-opacity-90 transition-all active:scale-95 disabled:opacity-50"
+                :disabled="saving"
+              >
+                {{ saving ? 'Сохранение...' : 'Сохранить' }}
+              </button>
+            </div>
           </div>
         </form>
       </div>

@@ -112,17 +112,21 @@
 
     <!-- Master Modal -->
     <div v-if="showModal" class="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div class="w-full max-w-180 rounded-lg bg-white py-8 px-8 dark:bg-bg-dark-2 sm:px-12.5 overflow-y-auto max-h-[95vh]">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-2xl font-bold text-black dark:text-white">
-              {{ isEditing ? 'Редактировать сотрудника' : 'Добавить сотрудника' }}
-            </h3>
-            <button @click="showModal = false" class="text-body hover:text-danger">
-              <Icon icon="mdi:close" width="24" />
-            </button>
+      <div class="w-full max-w-180 rounded-lg bg-white dark:bg-bg-dark-2 shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden">
+        <div class="px-8 pt-8 pb-2 shrink-0">
+          <div class="flex justify-between items-center mb-4">
+              <h3 class="text-2xl font-bold text-black dark:text-white">
+                {{ isEditing ? 'Редактировать сотрудника' : 'Добавить сотрудника' }}
+              </h3>
+              <button @click="showModal = false" class="text-body hover:text-danger">
+                <Icon icon="mdi:close" width="24" />
+              </button>
+          </div>
+          <div class="border-b border-stroke dark:border-strokedark mb-2"></div>
         </div>
 
-        <form @submit.prevent="saveMaster">
+        <form @submit.prevent="saveMaster" class="flex flex-col flex-1 overflow-hidden">
+          <div class="flex-1 overflow-y-auto px-8 sm:px-12.5 py-4 custom-scrollbar">
           <!-- Photo Upload -->
           <div class="mb-6 flex flex-col items-center">
             <div 
@@ -282,16 +286,20 @@
             </div>
           </template>
 
-          <div class="flex gap-4">
-            <button type="button" @click="showModal = false"
-              class="flex-1 rounded border border-stroke py-3 px-6 text-center font-medium text-black transition hover:border-danger hover:bg-danger hover:text-white dark:border-strokedark dark:text-white">
-              Отмена
-            </button>
-            <button type="submit" :disabled="saving"
-              class="flex-1 rounded bg-primary py-3 px-6 text-center font-medium text-white transition hover:bg-opacity-90 active:scale-95 disabled:opacity-50">
-              <Icon v-if="saving" icon="mdi:loading" class="animate-spin inline mr-2" />
-              {{ isEditing ? 'Обновить' : 'Добавить' }}
-            </button>
+          </div>
+
+          <div class="px-8 sm:px-12.5 pb-8 pt-4 shrink-0 border-t border-stroke dark:border-strokedark">
+            <div class="flex gap-4">
+              <button type="button" @click="showModal = false"
+                class="flex-1 rounded border border-stroke py-3 px-6 text-center font-medium text-black transition hover:border-danger hover:bg-danger hover:text-white dark:border-strokedark dark:text-white">
+                Отмена
+              </button>
+              <button type="submit" :disabled="saving"
+                class="flex-1 rounded bg-primary py-3 px-6 text-center font-medium text-white transition hover:bg-opacity-90 active:scale-95 disabled:opacity-50">
+                <Icon v-if="saving" icon="mdi:loading" class="animate-spin inline mr-2" />
+                {{ isEditing ? 'Обновить' : 'Добавить' }}
+              </button>
+            </div>
           </div>
         </form>
       </div>
