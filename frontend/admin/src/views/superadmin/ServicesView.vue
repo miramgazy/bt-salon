@@ -436,7 +436,7 @@
       :show="showComboModal"
       :combo="editingCombo"
       :categories="categories"
-      :services="services"
+      :services="allServices"
       @close="closeComboModal"
       @success="fetchData"
     />
@@ -450,6 +450,7 @@ import { Icon } from '@iconify/vue'
 import ComboCreateModal from '../../components/modals/ComboCreateModal.vue'
 
 const services = ref([])
+const allServices = ref([])
 const categories = ref([])
 const loading = ref(true)
 const saving = ref(false)
@@ -636,9 +637,10 @@ const fetchData = async () => {
       search: searchQuery.value,
       category: selectedCategoryFilter.value
     }
-    const [servRes, catRes] = await Promise.all([
+    const [servRes, catRes, allServRes] = await Promise.all([
       api.get('/api/services/', { params }),
-      api.get('/api/categories/')
+      api.get('/api/categories/'),
+      api.get('/api/services/', { params: { all: 'true' } })
     ])
     
     if (servRes.data.results) {
@@ -649,6 +651,7 @@ const fetchData = async () => {
         totalCount.value = Array.isArray(servRes.data) ? servRes.data.length : 0
     }
     
+    allServices.value = allServRes.data.results || allServRes.data || []
     categories.value = catRes.data.results || catRes.data
   } catch (error) {
     console.error('Error fetching data:', error)
