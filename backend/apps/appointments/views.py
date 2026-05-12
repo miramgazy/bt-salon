@@ -40,6 +40,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         date_to = self.request.query_params.get('date_to')
         master_id = self.request.query_params.get('master_id')
         service_id = self.request.query_params.get('service_id')
+        payment_status = self.request.query_params.get('payment_status')
         my = self.request.query_params.get('my')
 
         if date_from:
@@ -50,6 +51,8 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             qs = qs.filter(master_id=master_id)
         if service_id:
             qs = qs.filter(service_id=service_id)
+        if payment_status:
+            qs = qs.filter(payment_status=payment_status)
             
         if my == 'true':
             from apps.masters.models import Master

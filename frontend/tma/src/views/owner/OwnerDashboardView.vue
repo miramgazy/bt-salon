@@ -100,6 +100,33 @@
         </div>
       </div>
 
+      <!-- ══ PENDING INVOICES SECTION ══ -->
+      <div v-if="activeTab === 'overview' && pendingInvoices.length > 0" class="section fade-up mt-6" style="padding: 0 16px;">
+        <div class="sec-title flex-between">
+           <span>{{ $t('admin.pendingInvoices') }} ({{ pendingInvoices.length }})</span>
+           <Icon icon="mdi:alert-circle-outline" width="20" class="gold" />
+        </div>
+        <div class="pending-invoices-list mt-3 flex flex-col gap-3">
+          <div v-for="inv in pendingInvoices" :key="inv.id" class="card glass p-4" style="background: var(--tg-theme-bg-color); border-radius: 12px; border: 1px solid var(--border); border-left: 4px solid var(--gold);">
+             <div class="flex-between mb-2">
+                <div class="font-bold text-sm" style="color: var(--tg-theme-text-color)">{{ inv.client_detail?.full_name }}</div>
+                <div class="text-gold font-bold">{{ inv.prepayment_amount_required }} ₸</div>
+             </div>
+             <div class="text-xs text-muted mb-4">
+                {{ inv.service_detail?.name }} · {{ formatDateShort(inv.start_time) }} {{ formatTime(inv.start_time) }}
+                <div class="mt-1 flex items-center gap-1 text-text" style="color: var(--tg-theme-text-color)">
+                   <Icon icon="mdi:phone-outline" width="14" />
+                   {{ inv.client_phone_for_invoice || inv.client_detail?.phone }}
+                </div>
+             </div>
+             <button class="btn-geo-action primary py-2" @click="confirmManualPayment(inv)" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--gold-gradient); border: none; border-radius: 8px; color: #fff; font-weight: 700; padding: 10px; cursor: pointer;">
+                <Icon icon="mdi:cash-check" width="18" />
+                <span>{{ $t('owner.paymentReceived') }}</span>
+             </button>
+          </div>
+        </div>
+      </div>
+
       <!-- ══ MASTERS ══ -->
       <div v-if="activeTab === 'masters'" class="fade-up">
         <div class="kpi-grid" style="margin-bottom: 12px;">
@@ -463,12 +490,23 @@ const geoSuccessMsg = ref('')
 const data = ref({
   summary: {},
   timeline: [],
-  expenses_timeline: [],
   masters: [],
   services: [],
   expenses_fixed: [],
   expenses_variable: []
 })
+
+const pendingInvoices = ref([])
+const formatTime = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+const formatDateShort = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return d.toLocaleDateString([], { day: 'numeric', month: 'short' })
+}
 
 const periods = [
   { id: 'this_month', key: 'owner.periods.thisMonth' },
@@ -531,6 +569,11 @@ const areaChartOptions = computed(() => ({
   grid: { borderColor: 'var(--border)', strokeDashArray: 4 },
   legend: { labels: { colors: 'var(--tg-theme-text-color)' } }
 }))
+
+const areaChartSeries = computed(() => [
+  { name: t('owner.revenue'), data: (data.value.timeline || []).map(t => ({ x: t.day, y: Number(t.revenue) || 0 })) },
+  { name: t('owner.expenses'), data: (data.value.timeline || []).map(t => ({ x: t.day, y: Number(t.expenses) || 0 })) }
+])
 
 // Overview Profit Bar
 const profitBarSeries = computed(() => [
@@ -668,7 +711,10 @@ const compareProfitOptions = computed(() => ({
 
 // Actions
 const handlePeriodChange = () => {
-    if (periodId.value !== 'custom') fetchData()
+    if (periodId.value !== 'custom') {
+        fetchData()
+        fetchPendingInvoices()
+    }
 }
 
 const fetchData = async () => {
@@ -686,6 +732,35 @@ const fetchData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const fetchPendingInvoices = async () => {
+    try {
+        const res = await api.get('/appointments/', {
+            params: {
+                payment_status: 'pending_manual_invoice',
+                page_size: 100
+            }
+        })
+        pendingInvoices.value = res.data.results || []
+    } catch (e) { console.error(e) }
+}
+
+const confirmManualPayment = async (inv) => {
+    const name = inv.client_detail?.full_name || t('common.client')
+    if (!confirm(t('admin.confirmPaymentPrompt', { amount: inv.prepayment_amount_required, name }))) return
+    try {
+        await api.patch(`/appointments/${inv.id}/`, {
+            payment_status: 'paid',
+            status: 'confirmed',
+            is_paid: true,
+            prepayment_received: inv.prepayment_amount_required
+        })
+        await fetchPendingInvoices()
+        await fetchData()
+    } catch (e) {
+        alert('Ошибка при подтверждении оплаты')
+    }
 }
 
 const fetchExpCategories = async () => {
@@ -862,6 +937,7 @@ onMounted(async () => {
       }
   }
   fetchData()
+  fetchPendingInvoices()
 })
 </script>
 

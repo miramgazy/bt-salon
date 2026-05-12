@@ -20,14 +20,17 @@ def track_appointment_changes(sender, instance, **kwargs):
             instance._old_master_id = old_instance.master_id
             instance._old_start_time = old_instance.start_time
             instance._old_status = old_instance.status
+            instance._old_payment_status = old_instance.payment_status
         except Appointment.DoesNotExist:
             instance._old_master_id = None
             instance._old_start_time = None
             instance._old_status = None
+            instance._old_payment_status = None
     else:
         instance._old_master_id = None
         instance._old_start_time = None
         instance._old_status = None
+        instance._old_payment_status = None
 
 @receiver(post_save, sender=Appointment)
 def broadcast_appointment_update(sender, instance, created, **kwargs):
@@ -54,10 +57,19 @@ def broadcast_appointment_update(sender, instance, created, **kwargs):
     )
 
     # 2. Master Notifications
+    # Skip if prepayment required but not yet paid
+    if instance.service.is_prepayment_required and instance.payment_status != Appointment.PAYMENT_PAID:
+        return
+
     if created:
         # New appointment notification
         notify_master_new_appointment(instance)
     else:
+        # Check if it was just paid (trigger initial notification)
+        if instance._old_payment_status and instance._old_payment_status != Appointment.PAYMENT_PAID and instance.payment_status == Appointment.PAYMENT_PAID:
+            notify_master_new_appointment(instance)
+            return
+
         # Check if master changed
         if instance._old_master_id and instance.master_id != instance._old_master_id:
             # Notify old master about removal

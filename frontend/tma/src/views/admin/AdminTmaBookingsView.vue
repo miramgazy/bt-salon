@@ -130,12 +130,44 @@
        <div class="spinner"></div>
     </div>
 
-    <div v-else-if="appointments.length === 0" class="empty-state">
+    <div v-else-if="appointments.length === 0 && pendingInvoices.length === 0" class="empty-state">
        <div class="empty-icon">📅</div>
        <p>{{ $t('admin.noSlots') }}</p>
     </div>
 
     <div v-else class="bookings-list">
+       <!-- ══ PENDING INVOICES SECTION ══ -->
+       <div v-if="pendingInvoices.length > 0" class="pending-section mb-6">
+          <div class="section-title flex items-center justify-between mb-3">
+             <span class="text-sm font-bold uppercase tracking-wider text-muted">{{ $t('admin.pendingInvoices') }} ({{ pendingInvoices.length }})</span>
+             <Icon icon="mdi:alert-circle-outline" width="18" class="text-gold" />
+          </div>
+          <div class="flex flex-col gap-3">
+             <div v-for="inv in pendingInvoices" :key="inv.id" class="booking-card pending-invoice-card border-l-4 border-gold">
+                <div class="booking-info" style="flex: 1">
+                   <div class="client-name font-bold">{{ inv.client_detail?.full_name }}</div>
+                   <div class="service-name text-xs text-muted">
+                      {{ inv.service_detail?.name }} • {{ formatDateShort(inv.start_time) }} {{ formatStartTime(inv.start_time) }}
+                   </div>
+                   <div class="mt-1 flex items-center gap-1 text-[11px] text-gold font-bold">
+                      <Icon icon="mdi:phone" width="12" />
+                      {{ inv.client_phone_for_invoice || inv.client_detail?.phone }}
+                   </div>
+                </div>
+                <div class="flex flex-col items-end gap-2 shrink-0">
+                   <div class="text-gold font-black text-lg">{{ inv.prepayment_amount_required }} ₸</div>
+                   <button class="confirm-pay-btn" @click.stop="confirmManualPayment(inv)">
+                      <Icon icon="mdi:cash-check" width="18" />
+                   </button>
+                </div>
+             </div>
+          </div>
+       </div>
+
+       <!-- ══ REGULAR BOOKINGS ══ -->
+       <div class="section-title text-sm font-bold uppercase tracking-wider text-muted mb-3" v-if="pendingInvoices.length > 0">
+          Записи на {{ activeTab === 'today' ? $t('master.today') : (activeTab === 'tomorrow' ? $t('master.tomorrow') : formatDateShort(selectedDate)) }}
+       </div>
        <div v-for="apt in filteredAppointments" :key="apt.id" class="booking-card" @click="openActions(apt)">
           <div class="booking-time">
              <div class="time-main">{{ formatStartTime(apt.start_time) }}</div>
@@ -189,6 +221,22 @@
         <div class="sheet-title mb-4">{{ $t('admin.editBooking') }} #{{ activeApt.id }}</div>
         
         <div v-if="!showCancelPrompt">
+          <!-- Payment Info -->
+          <div v-if="activeApt.payment_status !== 'no_payment_required'" class="payment-info-box mb-4">
+             <div class="info-row">
+                <span>{{ $t('admin.totalPrice') }}:</span>
+                <span class="font-bold">{{ activeApt.total_price }} ₸</span>
+             </div>
+             <div v-if="activeApt.prepayment_received > 0" class="info-row text-success">
+                <span>{{ $t('admin.prepayment') }}:</span>
+                <span class="font-bold">{{ activeApt.prepayment_received }} ₸</span>
+             </div>
+             <div v-if="activeApt.remaining_balance > 0" class="info-row total-row">
+                <span>{{ $t('admin.remainingBalance') }}:</span>
+                <span class="font-bold">{{ activeApt.remaining_balance }} ₸</span>
+             </div>
+          </div>
+
           <div v-if="(activeApt.status === 'pending' || activeApt.status === 'confirmed') && activeApt.service_detail?.is_floating_price" class="mb-4 animate-fadeIn">
             <label class="form-label">Итоговая цена ({{ activeApt.service_detail.price_min }} — {{ activeApt.service_detail.price_max }} ₸)</label>
             <input 
@@ -464,6 +512,38 @@ const editForm = ref({
 })
 
 const finalPrice = ref(null)
+const pendingInvoices = ref([])
+
+const fetchPendingInvoices = async () => {
+    try {
+        const res = await api.get('/appointments/', {
+            params: {
+                payment_status: 'pending_manual_invoice',
+                all: true
+            }
+        })
+        pendingInvoices.value = res.data.results || res.data || []
+    } catch (e) { console.error('Fetch pending invoices error', e) }
+}
+
+const confirmManualPayment = async (inv) => {
+    const name = inv.client_detail?.full_name || t('common.client')
+    if (!confirm(t('admin.confirmPaymentPrompt', { amount: inv.prepayment_amount_required, name }))) return
+    try {
+        await api.patch(`/appointments/${inv.id}/`, {
+            payment_status: 'paid',
+            status: 'confirmed',
+            is_paid: true,
+            prepayment_received: inv.prepayment_amount_required
+        })
+        successMsg.value = 'Оплата подтверждена'
+        setTimeout(() => successMsg.value = '', 3000)
+        fetchPendingInvoices()
+        fetchAppointments()
+    } catch (e) {
+        alert(t('common.error'))
+    }
+}
 
 const toggleFilterMode = () => {
     isFilterMode.value = !isFilterMode.value
@@ -781,10 +861,12 @@ const saveAptChanges = async () => {
 
 watch(selectedDate, () => {
   fetchAppointments()
+  fetchPendingInvoices()
 })
 
 onMounted(() => {
   fetchAppointments()
+  fetchPendingInvoices()
   fetchInitialData()
 })
 </script>
@@ -1033,6 +1115,56 @@ onMounted(() => {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000;
   display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px);
 }
+
+.pending-section {
+  background: var(--gold-glow);
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid var(--gold-glow);
+}
+.pending-invoice-card {
+  background: var(--tg-bg) !important;
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.1);
+  margin-bottom: 10px !important;
+}
+.confirm-pay-btn {
+  background: var(--gold-gradient);
+  color: white;
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px var(--gold-glow);
+}
+.confirm-pay-btn:active { transform: scale(0.9); }
+
+.payment-info-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+}
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+.info-row:last-child { margin-bottom: 0; }
+.info-row.total-row {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  color: var(--text);
+  font-size: 16px;
+}
+.info-row.text-success { color: #22a060; }
+
 .sheet {
   background: var(--tg-bg); width: 100%; border-radius: 24px 24px 0 0; padding: 24px;
   box-shadow: 0 -10px 40px rgba(0,0,0,0.2); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);

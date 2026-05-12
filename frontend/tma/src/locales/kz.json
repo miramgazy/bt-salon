@@ -216,7 +216,8 @@
     "determineCoords": "Координаттарды анықтау",
     "saveCoords": "Координаттарды сақтау",
     "geoSuccess": "Салон координаттары сәтті сақталды!",
-    "geoError": "Координаттарды анықтау мүмкін болмады"
+    "geoError": "Координаттарды анықтау мүмкін болмады",
+    "paymentReceived": "Төлем қабылданды"
   },
   "admin": {
     "nav": {
@@ -322,7 +323,12 @@
     "searchPlaceholder": "Клиенттің аты немесе телефоны...",
     "noMastersForService": "Таңдалған қызметке қолжетімді шеберлер жоқ.",
     "selectAll": "Барлығын таңдау",
-    "deselectAll": "Барлығын алып тастау"
+    "deselectAll": "Барлығын алып тастау",
+    "totalPrice": "Жалпы сома",
+    "prepayment": "Алдын ала төлем",
+    "pendingInvoices": "Шот күтілуде",
+    "remainingBalance": "Төлеуге қалғаны",
+    "confirmPaymentPrompt": "Төлемді қабылдауды растау: {amount} ₸, клиент {name}?"
   },
   "appointments": {
     "title": "Менің жазбаларым",
@@ -366,7 +372,25 @@
     "masterNotWorkingYet": "Шебер әлі жұмысқа кіріскен жоқ. Кейінірек көріңіз немесе басқа шеберді таңдаңыз.",
     "confirmBooking": "Жазылу мәліметтері",
     "masterProfile": "Шебер профилі",
-    "aboutMaster": "Шебер туралы"
+    "aboutMaster": "Шебер туралы",
+    "prepayment": {
+      "title": "Алдын ала төлем",
+      "requiredText": "Бұл қызмет үшін <b>{amount} ₸</b> мөлшерінде алдын ала төлем қажет.",
+      "invoiceToPhone": "Шотты осы нөмірге жіберу керек пе?",
+      "yesThisOne": "Иә, осыған",
+      "otherPhone": "Басқа нөмір",
+      "phoneLabel": "Шот жіберуге арналған телефон нөмірі",
+      "bookingCreated": "Жазылу сәтті өтті",
+      "kaspiInvoiceText": "Растау үшін сізге Kaspi.kz қосымшасында <b>{phone}</b> нөміріне шот жіберіледі.",
+      "amount": "Сомасы: <b>{amount} ₸</b>.",
+      "autoConfirmText": "Төлем жасалғаннан кейін жазылу автоматты түрде расталады."
+    },
+    "paymentStatus": {
+      "pending_manual_invoice": "Шот күтілуде",
+      "paid": "Төленді",
+      "pending": "Төлем күтілуде",
+      "no_payment_required": "Келгенде төлеу"
+    }
   },
   "shift": {
     "date": "Ауысым күні"

@@ -7,6 +7,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
     client_detail = serializers.SerializerMethodField()
     is_combo = serializers.SerializerMethodField()
     display_title = serializers.SerializerMethodField()
+    remaining_balance = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    prepayment_amount_required = serializers.SerializerMethodField()
 
     class Meta:
         model = Appointment
@@ -53,7 +55,13 @@ class AppointmentSerializer(serializers.ModelSerializer):
             'is_floating_price': obj.service.is_floating_price,
             'price_min': obj.service.price_min,
             'price_max': obj.service.price_max,
+            'is_prepayment_required': obj.service.is_prepayment_required,
+            'prepayment_type': obj.service.prepayment_type,
+            'prepayment_value': obj.service.prepayment_value,
         }
+
+    def get_prepayment_amount_required(self, obj):
+        return obj.calculate_prepayment_amount()
 
     def get_display_title(self, obj):
         if obj.appointment_type == 'combo_master':

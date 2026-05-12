@@ -55,6 +55,8 @@ INSTALLED_APPS = [
     'apps.appointments',
     'apps.dashboard',
     'apps.expenses',
+    'apps.payments',
+    'encrypted_model_fields',
 ]
 
 MIDDLEWARE = [
@@ -167,3 +169,6 @@ CORS_ALLOW_ALL_ORIGINS = True  # For dev, restrict in production
 
 csrf_trusted_env = os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', 'http://localhost:3059,http://127.0.0.1:3059,http://localhost:30596,https://bt.mevent.kz')
 CSRF_TRUSTED_ORIGINS = [url.strip() for url in csrf_trusted_env.split(',') if url.strip()]
+
+# Encryption Settings
+FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY')

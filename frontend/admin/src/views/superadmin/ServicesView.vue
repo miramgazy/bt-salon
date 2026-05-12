@@ -297,6 +297,39 @@
                   </div>
               </div>
             </div>
+
+            <!-- Prepayment Settings -->
+            <div class="mb-6 p-5 bg-warning/5 rounded-2xl border border-warning/30">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <label class="font-black text-black dark:text-white block uppercase tracking-tight">Предоплата</label>
+                  <span class="text-[10px] text-body">Обязательна для бронирования</span>
+                </div>
+                <label class="relative inline-flex cursor-pointer items-center">
+                  <input type="checkbox" v-model="form.is_prepayment_required" class="sr-only peer" />
+                  <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-warning peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:border-gray-600 dark:bg-gray-700"></div>
+                </label>
+              </div>
+
+              <div v-if="form.is_prepayment_required" class="grid grid-cols-2 gap-4 animate-fadeIn">
+                <div>
+                  <label class="mb-2 block text-[10px] font-bold uppercase text-body">Тип</label>
+                  <select v-model="form.prepayment_type" class="w-full rounded-lg border border-stroke bg-white py-2.5 px-4 outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white">
+                    <option value="fixed">Фикс (₸)</option>
+                    <option value="percent">Процент (%)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="mb-2 block text-[10px] font-bold uppercase text-body">Значение</label>
+                  <input v-model.number="form.prepayment_value" type="number" class="w-full rounded-lg border border-stroke bg-white py-2.5 px-4 outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white" />
+                </div>
+              </div>
+
+              <div v-if="form.is_prepayment_required" class="mt-4 pt-3 border-t border-warning/20 flex justify-between items-center text-sm font-bold text-warning">
+                <span>Сумма к оплате:</span>
+                <span>{{ calculatedPrepayment }} ₸</span>
+              </div>
+            </div>
           </div>
 
           <!-- Modal Footer (Fixed) -->
@@ -542,7 +575,21 @@ const form = ref({
   margin_value: 0,
   is_floating_price: false,
   price_min: 0,
-  price_max: 0
+  price_max: 0,
+  is_prepayment_required: false,
+  prepayment_type: 'fixed',
+  prepayment_value: 0
+})
+
+const calculatedPrepayment = computed(() => {
+  if (!form.value.is_prepayment_required) return 0
+  const total = form.value.is_floating_price ? form.value.price_min : form.value.total_price
+  const val = parseFloat(form.value.prepayment_value) || 0
+  if (form.value.prepayment_type === 'fixed') {
+    return val.toFixed(0)
+  } else {
+    return (total * (val / 100)).toFixed(0)
+  }
 })
 
 const masterShareTotal = computed(() => {
@@ -623,7 +670,10 @@ const openCreateModal = () => {
     margin_value: 0,
     is_floating_price: false,
     price_min: 0,
-    price_max: 0
+    price_max: 0,
+    is_prepayment_required: false,
+    prepayment_type: 'fixed',
+    prepayment_value: 0
   }
   showModal.value = true
 }

@@ -240,6 +240,53 @@
                 </div>
               </div>
 
+              <!-- Kaspi Prepayment Settings -->
+              <h3 class="mb-5 mt-10 font-medium text-black dark:text-white border-b border-stroke pb-2 dark:border-strokedark text-lg">
+                Интеграция Kaspi QR (Предоплата)
+              </h3>
+              
+              <div class="mb-5.5">
+                <label class="flex items-center cursor-pointer">
+                  <div class="relative">
+                    <input type="checkbox" v-model="org.is_prepayment_enabled" class="sr-only" />
+                    <div :class="org.is_prepayment_enabled ? 'bg-primary' : 'bg-gray-400'" class="block h-8 w-14 rounded-full transition"></div>
+                    <div :class="org.is_prepayment_enabled ? 'translate-x-full' : ''" class="absolute left-1 top-1 h-6 w-6 rounded-full bg-white transition shadow-sm border border-gray-100"></div>
+                  </div>
+                  <div class="ml-3 font-medium text-black dark:text-white">
+                    Включить предоплату через Kaspi QR
+                  </div>
+                </label>
+              </div>
+
+              <div v-if="org.is_prepayment_enabled" class="mb-5.5 p-5 bg-gray-50 dark:bg-bg-dark border border-stroke dark:border-strokedark rounded-md">
+                <div class="flex items-center justify-between mb-4">
+                  <h4 class="text-sm font-bold text-black dark:text-white flex items-center gap-2">
+                    <Icon icon="mdi:credit-card-outline" class="text-primary" width="20" />
+                    Статус конфигурации Kaspi
+                  </h4>
+                  <span 
+                    :class="org.has_kaspi_config ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'"
+                    class="rounded-full py-1 px-3 text-xs font-medium"
+                  >
+                    {{ org.has_kaspi_config ? 'Настроено' : 'Не настроено' }}
+                  </span>
+                </div>
+                
+                <p class="text-xs text-body mb-4">
+                  Настройка ключей (ApiKey) производится супер-администратором через панель управления Django. 
+                  Здесь отображается только статус готовности системы.
+                </p>
+
+                <div v-if="org.has_kaspi_config" class="flex items-center gap-2 text-xs text-success bg-success/5 p-3 rounded">
+                  <Icon icon="mdi:check-decagram" width="16" />
+                  Система готова к приему платежей. Ссылки будут генерироваться автоматически.
+                </div>
+                <div v-else class="flex items-center gap-2 text-xs text-danger bg-danger/5 p-3 rounded">
+                  <Icon icon="mdi:alert-circle-outline" width="16" />
+                  Внимание: ApiKey или DeviceToken не установлены. Предоплата работать не будет.
+                </div>
+              </div>
+
               <!-- Map Coordinates Settings -->
               <h3 class="mb-5 mt-10 font-medium text-black dark:text-white border-b border-stroke pb-2 dark:border-strokedark text-lg">
                 Координаты (Карта)
@@ -454,7 +501,9 @@ const org = ref({
   reminder_template_ru: '',
   reminder_template_kz: '',
   slot_duration: 30,
-  has_lunch_break: true
+  has_lunch_break: true,
+  is_prepayment_enabled: false,
+  has_kaspi_config: false
 })
 
 watch(() => org.value.is_reminders_enabled, (newVal) => {

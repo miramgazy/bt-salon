@@ -9,6 +9,10 @@ class Service(models.Model):
     MARGIN_FIXED = 'fixed'
     MARGIN_PERCENT = 'percent'
     MARGIN_TYPES = [(MARGIN_FIXED, 'Фикс'), (MARGIN_PERCENT, 'Процент')]
+    
+    PREPAY_FIXED = 'fixed'
+    PREPAY_PERCENT = 'percent'
+    PREPAY_TYPES = [(PREPAY_FIXED, 'Фикс'), (PREPAY_PERCENT, 'Процент')]
 
     organization = models.ForeignKey('organization.Organization', on_delete=models.CASCADE, related_name='services', null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.PROTECT)
@@ -33,6 +37,10 @@ class Service(models.Model):
     price_min = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     price_max = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     discount_strategy = models.CharField(max_length=20, choices=DISCOUNT_STRATEGIES, default=STRATEGY_OWNER)
+
+    is_prepayment_required = models.BooleanField(default=False)
+    prepayment_type = models.CharField(max_length=10, choices=PREPAY_TYPES, default=PREPAY_FIXED)
+    prepayment_value = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def save(self, *args, **kwargs):
         if not self.is_combo:

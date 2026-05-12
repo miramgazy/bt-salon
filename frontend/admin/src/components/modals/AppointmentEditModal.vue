@@ -31,6 +31,52 @@
              </div>
           </div>
 
+         <!-- Payment Status -->
+         <div class="mb-4">
+            <label class="text-xs text-body mb-1 block">Статус оплаты</label>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                 <Icon 
+                   :icon="paymentStatusInfo.icon" 
+                   :class="paymentStatusInfo.class"
+                   width="18" 
+                 />
+                 <span class="text-sm font-medium" :class="paymentStatusInfo.class">
+                   {{ paymentStatusInfo.label }}
+                 </span>
+              </div>
+              <div v-if="appointment?.prepayment_received > 0" class="text-xs font-bold text-success">
+                Получено: {{ appointment.prepayment_received }} ₸
+              </div>
+            </div>
+
+            <!-- Payment Breakdown -->
+            <div v-if="appointment?.payment_status !== 'no_payment_required'" class="mt-3 space-y-2">
+               <div v-if="appointment?.prepayment_received > 0" class="flex justify-between items-center text-xs p-2 bg-gray-50 dark:bg-meta-4 rounded-lg">
+                  <span class="text-body">Предоплата:</span>
+                  <span class="font-bold text-success">{{ appointment.prepayment_received }} ₸</span>
+               </div>
+               <div v-if="appointment?.remaining_balance > 0" class="flex justify-between items-center text-xs p-2 bg-primary/5 rounded-lg border border-primary/20">
+                  <span class="text-primary font-medium">Остаток к оплате:</span>
+                  <span class="font-bold text-primary">{{ appointment.remaining_balance }} ₸</span>
+               </div>
+            </div>
+            
+            <!-- Manual Confirmation Button -->
+            <div v-if="appointment?.payment_status === 'pending_manual_invoice'" class="mt-3">
+               <button 
+                 @click="confirmManualPayment"
+                 class="w-full flex items-center justify-center gap-2 rounded-lg bg-success/10 py-2 text-sm font-bold text-success hover:bg-success/20 transition-all border border-success/30"
+               >
+                  <Icon icon="mdi:cash-check" width="18" />
+                  Подтвердить получение оплаты
+               </button>
+               <p v-if="appointment?.client_phone_for_invoice" class="mt-2 text-[10px] text-body text-center">
+                 Счет ожидается на номер: <span class="font-bold text-black dark:text-white">{{ appointment.client_phone_for_invoice }}</span>
+               </p>
+            </div>
+         </div>
+
          <!-- Service Info -->
          <div class="mb-6">
             <label class="text-xs text-body mb-1 block">Услуга</label>
@@ -168,6 +214,37 @@ const filteredMasters = computed(() => {
     m.is_virtual || (m.services && m.services.includes(serviceId))
   )
 })
+
+const paymentStatusInfo = computed(() => {
+  const status = props.appointment?.payment_status
+  switch(status) {
+    case 'paid': return { label: 'Оплачено', icon: 'mdi:check-decagram', class: 'text-success' }
+    case 'pending_auto': return { label: 'Ожидает Kaspi QR', icon: 'mdi:qrcode-scan', class: 'text-warning' }
+    case 'pending_manual': return { label: 'Ожидает оплаты (вручную)', icon: 'mdi:clock-alert-outline', class: 'text-warning' }
+    case 'pending_manual_invoice': return { label: 'Нужно выставить счет', icon: 'mdi:file-document-edit-outline', class: 'text-danger' }
+    case 'no_required': return { label: 'Предоплата не требуется', icon: 'mdi:cash-off', class: 'text-body opacity-50' }
+    default: return { label: 'Неизвестно', icon: 'mdi:help-circle-outline', class: 'text-body' }
+  }
+})
+
+const confirmManualPayment = async () => {
+    if (!confirm(`Подтвердить получение оплаты ${props.appointment.prepayment_amount_required} ₸?`)) return
+    try {
+        loading.value = true
+        await api.patch(`/api/appointments/${props.appointment.id}/`, {
+            payment_status: 'paid',
+            status: 'confirmed',
+            is_paid: true,
+            prepayment_received: props.appointment.prepayment_amount_required
+        })
+        emit('success')
+        emit('close')
+    } catch (e) {
+        alert('Ошибка при подтверждении оплаты')
+    } finally {
+        loading.value = false
+    }
+}
 
 const fetchMasters = async () => {
   try {

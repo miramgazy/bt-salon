@@ -8,6 +8,37 @@
       <button class="btn-secondary" style="margin-top: 40px; width: 100%" @click="goHome">{{ $t('tma.goHome') }}</button>
     </div>
 
+    <!-- ══ PAYMENT PENDING ══ -->
+    <div v-else-if="state.showPaymentPending" class="success fade-up" style="padding-top: 40px;">
+      <div class="success-icon">💳</div>
+      <div class="success-title header-font">Ожидаем оплату</div>
+      <div class="success-sub">Пожалуйста, завершите оплату в приложении Kaspi Pay. Мы автоматически подтвердим вашу запись, как только получим подтверждение.</div>
+      
+      <div v-if="state.paymentError" class="card glass mt-6" style="border-color: #ef4444; color: #ef4444; padding: 16px;">
+        {{ state.paymentError }}
+      </div>
+
+      <div class="flex flex-col gap-4 mt-10 w-full">
+        <button class="btn-kaspi" @click="window.Telegram?.WebApp?.openLink(state.paymentLink)">
+          <div class="kaspi-logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="24" height="24" rx="6" fill="#F14635"/>
+              <path d="M7 17V7H9.5V10.5L13.5 7H16.5L12 11.5L16.5 17H13.5L10 12.5L9.5 13V17H7Z" fill="white"/>
+            </svg>
+          </div>
+          <span>Оплатить с Kaspi.kz</span>
+        </button>
+        <button class="btn-secondary" @click="cancelPaymentPending">
+          {{ $t('common.cancel') }}
+        </button>
+      </div>
+      
+      <div class="mt-8 text-xs text-muted opacity-50 flex items-center justify-center gap-2">
+        <div class="spinner-mini"></div>
+        Проверка статуса платежа...
+      </div>
+    </div>
+
     <!-- ══ HOME PAGE ══ -->
     <div v-else-if="state.page === 'home'" class="fade-up">
 
@@ -386,13 +417,79 @@
               </div>
          </div>
          
-         <button class="btn-confirm" @click="handleConfirm">
-           {{ $t('tma.book') }}
+         <button v-if="auth.organizationSettings?.is_prepayment_enabled" 
+                 class="btn-kaspi" 
+                 @click="handleConfirm" 
+                 :disabled="state.paymentLoading"
+                 style="margin-top: 24px;">
+            <template v-if="state.paymentLoading">
+              <div class="spinner-mini" style="display:inline-block; margin-right: 8px;"></div>
+              Загрузка...
+            </template>
+            <template v-else>
+              <div class="kaspi-logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="24" height="24" rx="6" fill="#F14635"/>
+                  <path d="M7 17V7H9.5V10.5L13.5 7H16.5L12 11.5L16.5 17H13.5L10 12.5L9.5 13V17H7Z" fill="white"/>
+                </svg>
+              </div>
+              <span>Оплатить с Kaspi.kz</span>
+            </template>
          </button>
+         <button v-else class="btn-confirm" @click="handleConfirm">
+            {{ $t('tma.book') }}
+          </button>
          <button class="btn-secondary" style="margin-top: 12px; width: 100%" @click="state.showModal = false">
            {{ $t('common.cancel') }}
          </button>
       </div>
+    </div>
+
+    <!-- ══ PHONE CONFIRMATION MODAL ══ -->
+    <div v-if="state.showPhoneConfirm" class="modal-overlay" @click.self="state.showPhoneConfirm = false">
+       <div class="modal">
+         <div class="modal-title header-font">{{ $t('tma.prepayment.title') }}</div>
+         <p class="text-center text-muted mb-6" v-html="$t('tma.prepayment.requiredText', { amount: state.prepaymentAmount })"></p>
+         
+         <div v-if="auth.user?.phone && !state.editingPhone" class="card glass mb-6 text-center">
+            <p class="text-xs uppercase tracking-widest opacity-50 mb-2">{{ $t('tma.prepayment.invoiceToPhone') }}</p>
+            <p class="text-xl font-bold">{{ auth.user.phone }}</p>
+            <div class="flex gap-2 mt-4">
+               <button class="btn-confirm" style="margin-top:0" @click="confirmWithCurrentPhone">{{ $t('tma.prepayment.yesThisOne') }}</button>
+               <button class="btn-secondary" style="margin-top:0" @click="state.editingPhone = true">{{ $t('tma.prepayment.otherPhone') }}</button>
+            </div>
+         </div>
+
+         <div v-else class="w-full">
+            <label class="block text-xs font-bold uppercase mb-2">{{ $t('tma.prepayment.phoneLabel') }}</label>
+            <input 
+              v-model="state.clientPhone" 
+              type="tel" 
+              class="filter-input-compact" 
+              placeholder="+7 (___) ___-__-__"
+              style="padding-left: 12px; height: 50px; font-size: 18px;"
+            />
+            <button class="btn-confirm" @click="confirmWithNewPhone" :disabled="!state.clientPhone">
+               {{ $t('common.continue') }}
+            </button>
+         </div>
+         
+         <button class="btn-secondary mt-2 w-full" @click="state.showPhoneConfirm = false">
+           {{ $t('common.cancel') }}
+         </button>
+       </div>
+    </div>
+
+    <!-- ══ MANUAL PAYMENT SUCCESS ══ -->
+    <div v-if="state.showManualSuccess" class="success fade-up">
+      <div class="success-icon">📜</div>
+      <div class="success-title header-font">{{ $t('tma.prepayment.bookingCreated') }}</div>
+      <div class="success-sub">
+        <div v-html="$t('tma.prepayment.kaspiInvoiceText', { phone: state.clientPhone })"></div>
+        <div v-html="$t('tma.prepayment.amount', { amount: state.prepaymentAmount })" class="mt-2"></div>
+        <div class="mt-2">{{ $t('tma.prepayment.autoConfirmText') }}</div>
+      </div>
+      <button class="btn-secondary" style="margin-top: 40px; width: 100%" @click="goHome">{{ $t('tma.goHome') }}</button>
     </div>
     
     <!-- ══ MASTER PROFILE MODAL ══ -->
@@ -479,10 +576,19 @@ const state = reactive({
   selectedMaster: null,
   selectedSlot: null,
   masterFilter: null,
-  showModal: false,
-  showSuccess: false,
   showProfileModal: false,
-  profileMaster: null
+  profileMaster: null,
+  // Payment state
+  paymentLoading: false,
+  paymentLink: null,
+  paymentId: null,
+  paymentError: null,
+  showPaymentPending: false,
+  // Prepayment mode state
+  showPhoneConfirm: false,
+  prepaymentAmount: 0,
+  clientPhone: '',
+  showManualSuccess: false
 })
 
 const categories = ref([])
@@ -798,19 +904,105 @@ const handleConfirm = async () => {
         endTime = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00+05:00`
     }
 
-    await api.post('/appointments/', {
+    const res = await api.post('/appointments/', {
       master: master.id,
       service: service.id,
       start_time: startTime,
       end_time: endTime
     })
     
+    const appointmentId = res.data.id
+    
+    // Check if prepayment is required for this SERVICE
+    if (service.is_prepayment_required) {
+      state.showModal = false
+      state.prepaymentAmount = res.data.prepayment_amount_required || 0
+      state.currentAppointmentId = appointmentId
+      state.showPhoneConfirm = true
+      return
+    }
+
     state.showModal = false
     state.showSuccess = true
   } catch (error) {
     const errorMsg = error.response?.data?.error || error.response?.data?.detail || t('tma.error')
     alert(errorMsg)
   }
+}
+
+let paymentPollInterval = null
+const startPaymentPolling = () => {
+  if (paymentPollInterval) clearInterval(paymentPollInterval)
+  paymentPollInterval = setInterval(async () => {
+    if (!state.paymentId || !state.showPaymentPending) {
+      clearInterval(paymentPollInterval)
+      return
+    }
+    
+    try {
+      const res = await api.get(`/payments/status/${state.paymentId}/`)
+      if (res.data.status === 'paid') {
+        clearInterval(paymentPollInterval)
+        state.showPaymentPending = false
+        state.showSuccess = true
+      } else if (res.data.status === 'Error') {
+        clearInterval(paymentPollInterval)
+        state.paymentError = 'Ошибка оплаты. Попробуйте еще раз или свяжитесь с нами.'
+      }
+    } catch (e) {
+      console.error('Poll error', e)
+    }
+  }, 3000) // Poll every 3 seconds
+}
+
+const confirmWithCurrentPhone = () => {
+  state.clientPhone = auth.user.phone
+  initiatePayment()
+}
+
+const confirmWithNewPhone = () => {
+  if (!state.clientPhone) return
+  initiatePayment()
+}
+
+const initiatePayment = async () => {
+  try {
+    state.paymentLoading = true
+    const payRes = await api.post('/payments/create-link/', { 
+        appointment_id: state.currentAppointmentId,
+        client_phone: state.clientPhone
+    })
+    
+    state.showPhoneConfirm = false
+    
+    if (payRes.data.manual_mode) {
+        state.showManualSuccess = true
+    } else {
+        state.paymentLink = payRes.data.payment_link
+        state.paymentId = payRes.data.payment_id
+        
+        if (window.Telegram?.WebApp) {
+          window.Telegram.WebApp.openLink(state.paymentLink)
+        } else {
+          window.open(state.paymentLink, '_blank')
+        }
+        
+        state.showPaymentPending = true
+        startPaymentPolling()
+    }
+  } catch (payErr) {
+    console.error('Payment link creation failed', payErr)
+    alert('Не удалось создать ссылку на оплату. Пожалуйста, обратитесь в салон.')
+    goHome()
+  } finally {
+    state.paymentLoading = false
+  }
+}
+
+const cancelPaymentPending = () => {
+  state.showPaymentPending = false
+  if (paymentPollInterval) clearInterval(paymentPollInterval)
+  goHome()
 }
 </script>
 
@@ -998,6 +1190,15 @@ const handleConfirm = async () => {
   transform: scale(0.98);
   border-color: var(--gold);
 }
+.spinner {
+  width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--gold);
+  border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto;
+}
+.spinner-mini {
+  width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.1); border-top-color: var(--gold);
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 .service-card-content {
   display: flex;
   flex-direction: column;
@@ -1128,6 +1329,34 @@ const handleConfirm = async () => {
   width: 100%; margin-top: 24px; padding: 16px; border-radius: var(--radius-sm);
   background: var(--gold-gradient); color: #000; border: none; font-size: 16px;
   font-weight: 700; cursor: pointer; box-shadow: 0 6px 20px var(--gold-glow);
+}
+
+.btn-kaspi {
+  width: 100%;
+  height: 54px;
+  background: #FFFFFF;
+  border: 1px solid #E5E5E5;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.btn-kaspi:active {
+  transform: scale(0.98);
+  background: #F9F9F9;
+}
+.btn-kaspi span {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000000;
+}
+.kaspi-logo {
+  display: flex;
+  align-items: center;
 }
 
 .success { text-align: center; padding: 60px 20px; }

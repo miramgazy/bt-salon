@@ -1,4 +1,5 @@
 from django.db import models
+from encrypted_model_fields.fields import EncryptedCharField
 
 class Organization(models.Model):
     name = models.CharField(max_length=255)
@@ -45,6 +46,24 @@ class Organization(models.Model):
     slot_duration = models.PositiveIntegerField(
         default=30,
         help_text="Базовая длительность слота в минутах (шаг записи)"
+    )
+
+    # Kaspi QR Prepayment Settings
+    is_prepayment_enabled = models.BooleanField(
+        default=False, 
+        help_text="Включить предоплату через Kaspi QR"
+    )
+    kaspi_api_key = EncryptedCharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        help_text="Kaspi ApiKey (хранится в зашифрованном виде)"
+    )
+    kaspi_device_token = EncryptedCharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        help_text="Kaspi DeviceToken (хранится в зашифрованном виде)"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

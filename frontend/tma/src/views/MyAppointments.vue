@@ -25,6 +25,10 @@
           <div style="flex: 1">
              <h3 class="apt-service">{{ apt.display_title || apt.service_detail?.name }}</h3>
              <div class="apt-master">{{ $t('tma.masters') }}: {{ apt.master_detail?.first_name }}</div>
+             <div v-if="apt.payment_status !== 'no_payment_required'" :class="['apt-payment-badge', apt.payment_status]">
+               <Icon :icon="apt.payment_status === 'paid' ? 'mdi:check-decagram' : 'mdi:clock-alert-outline'" width="14" />
+               {{ $t(`tma.paymentStatus.${apt.payment_status}`) }}
+             </div>
            </div>
           <div :class="['status-badge', apt.status.toLowerCase()]">
             {{ formatStatus(apt.status) }}
@@ -36,7 +40,12 @@
             <Icon icon="mdi:calendar-clock" width="18" :style="{ color: 'var(--gold)' }" />
             <span>{{ formatDate(apt.start_time) }}</span>
           </div>
-          <div class="apt-price">{{ apt.service_detail?.total_price }} ₸</div>
+          <div class="apt-price-row">
+             <div v-if="apt.prepayment_received > 0" class="apt-prepaid text-success">
+                {{ $t('admin.prepayment') }}: {{ apt.prepayment_received }} ₸
+             </div>
+             <div class="apt-price">{{ apt.service_detail?.total_price }} ₸</div>
+          </div>
         </div>
         
          <button v-if="['pending', 'confirmed'].includes(apt.status.toLowerCase())" 
@@ -153,11 +162,41 @@ const cancelApt = async (id) => {
   margin-top: 4px;
 }
 
+.apt-payment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+.apt-payment-badge.paid {
+  background: rgba(34, 160, 96, 0.1);
+  color: #22a060;
+}
+.apt-payment-badge.pending_manual_invoice {
+  background: rgba(201, 168, 76, 0.1);
+  color: var(--gold);
+}
+
 .apt-details {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+}
+
+.apt-price-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.apt-prepaid {
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 2px;
 }
 
 .apt-time {

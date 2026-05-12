@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/appointments/', include('apps.appointments.urls')),
     path('api/dashboard/', include('apps.dashboard.urls')),
     path('api/expenses/', include('apps.expenses.urls')),
+    path('api/payments/', include('apps.payments.urls')),
     path('api/', include('apps.services.urls')),
     path('api/', include('apps.appointments.calendar_urls')), # for /api/calendar/
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -216,7 +216,8 @@
     "determineCoords": "Определить координаты",
     "saveCoords": "Сохранить координаты",
     "geoSuccess": "Координаты салона успешно обновлены!",
-    "geoError": "Не удалось определить координаты"
+    "geoError": "Не удалось определить координаты",
+    "paymentReceived": "Оплата получена"
   },
   "admin": {
     "nav": {
@@ -321,7 +322,12 @@
     "searchPlaceholder": "Имя или телефон клиента...",
     "noMastersForService": "На выбранную услугу нет доступных мастеров.",
     "selectAll": "Выделить все",
-    "deselectAll": "Снять все"
+    "deselectAll": "Снять все",
+    "totalPrice": "Общая сумма",
+    "prepayment": "Предоплата",
+    "pendingInvoices": "Ожидают счета",
+    "remainingBalance": "Остаток к оплате",
+    "confirmPaymentPrompt": "Подтвердить получение оплаты {amount} ₸ от {name}?"
   },
   "appointments": {
     "title": "Мои записи",
@@ -365,7 +371,25 @@
     "masterNotWorkingYet": "Мастер еще не начал работу. Пожалуйста, загляните позже или выберите другого мастера.",
     "confirmBooking": "Детали записи",
     "masterProfile": "Профиль мастера",
-    "aboutMaster": "О мастере"
+    "aboutMaster": "О мастерах",
+    "prepayment": {
+      "title": "Предоплата",
+      "requiredText": "Для этой услуги требуется предоплата в размере <b>{amount} ₸</b>.",
+      "invoiceToPhone": "Выставить счет на номер?",
+      "yesThisOne": "Да, на этот",
+      "otherPhone": "Другой",
+      "phoneLabel": "Номер телефона для счета",
+      "bookingCreated": "Запись создана",
+      "kaspiInvoiceText": "Для подтверждения вам будет выставлен счет в приложении Kaspi.kz на номер <b>{phone}</b>.",
+      "amount": "Сумма: <b>{amount} ₸</b>.",
+      "autoConfirmText": "Запись будет подтверждена автоматически после оплаты."
+    },
+    "paymentStatus": {
+      "pending_manual_invoice": "Ожидание счета",
+      "paid": "Оплачено",
+      "pending": "Ожидает оплаты",
+      "no_payment_required": "Оплата при визите"
+    }
   },
   "shift": {
     "date": "Дата смены"

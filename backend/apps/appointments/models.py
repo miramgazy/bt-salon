@@ -14,6 +14,17 @@ class Appointment(models.Model):
         (STATUS_DONE, 'Завершена'),
     ]
 
+    PAYMENT_NO_REQUIRED = 'no_payment_required'
+    PAYMENT_PENDING_AUTO = 'pending_auto_payment'
+    PAYMENT_PENDING_MANUAL = 'pending_manual_invoice'
+    PAYMENT_PAID = 'paid'
+    PAYMENT_STATUSES = [
+        (PAYMENT_NO_REQUIRED, 'Предоплата не требуется'),
+        (PAYMENT_PENDING_AUTO, 'Ожидает авто-оплаты'),
+        (PAYMENT_PENDING_MANUAL, 'Ожидает выставления счета'),
+        (PAYMENT_PAID, 'Оплачено'),
+    ]
+
     organization = models.ForeignKey('organization.Organization', on_delete=models.CASCADE, related_name='appointments', null=True, blank=True)
     client = models.ForeignKey('clients.Client', on_delete=models.CASCADE)
     master = models.ForeignKey('masters.Master', on_delete=models.CASCADE)
@@ -66,6 +77,25 @@ class Appointment(models.Model):
     master_net_income = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     salon_net_income = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     is_overflow = models.BooleanField(default=False)
+
+    # Payment fields
+    is_paid = models.BooleanField(default=False)
+    payment_status = models.CharField(max_length=30, choices=PAYMENT_STATUSES, default=PAYMENT_NO_REQUIRED)
+    client_phone_for_invoice = models.CharField(max_length=20, blank=True, null=True)
+    prepayment_received = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    kaspi_payment_id = models.CharField(max_length=100, blank=True, null=True)
+
+    @property
+    def remaining_balance(self):
+        return self.total_price - self.prepayment_received
+
+    def calculate_prepayment_amount(self):
+        if not self.service.is_prepayment_required:
+            return 0
+        if self.service.prepayment_type == 'fixed':
+            return self.service.prepayment_value
+        else: # percent
+            return self.total_price * (self.service.prepayment_value / 100)
 
     def __str__(self):
         return f"{self.start_time} - {self.client.full_name} - {self.service.name}"
@@ -191,6 +221,17 @@ class Appointment(models.Model):
                 self.total_price = self.service.price_min
             else:
                 self.total_price = self.service.total_price
+
+        # 1.5 Set Initial Payment Status
+        if is_new and self.appointment_type != self.TYPE_COMBO_SUB:
+            if self.service.is_prepayment_required:
+                if self.organization.is_prepayment_enabled and self.organization.kaspi_api_key and self.organization.kaspi_device_token:
+                    self.payment_status = self.PAYMENT_PENDING_AUTO
+                else:
+                    self.payment_status = self.PAYMENT_PENDING_MANUAL
+            else:
+                self.payment_status = self.PAYMENT_NO_REQUIRED
+                self.is_paid = True # No payment needed, considered "paid" for flow purposes
 
         # 2. Financial calculation
         # Snapshot service values if not already set (at creation)

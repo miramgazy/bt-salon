@@ -3,6 +3,7 @@ from .models import Organization
 
 class OrganizationSerializer(serializers.ModelSerializer):
     logo_url = serializers.SerializerMethodField()
+    has_kaspi_config = serializers.SerializerMethodField()
     
     class Meta:
         model = Organization
@@ -12,8 +13,12 @@ class OrganizationSerializer(serializers.ModelSerializer):
             'instagram_link', 'whatsapp_number', 'greeting_text',
             'design_color', 'logo', 'logo_url', 'slot_duration', 
             'latitude', 'longitude', 'is_reminders_enabled', 
-            'reminder_hours_before', 'reminder_template_ru', 'reminder_template_kz'
+            'reminder_hours_before', 'reminder_template_ru', 'reminder_template_kz',
+            'is_prepayment_enabled', 'has_kaspi_config'
         ]
+
+    def get_has_kaspi_config(self, obj):
+        return bool(obj.kaspi_api_key and obj.kaspi_device_token)
 
     def get_logo_url(self, obj):
         if obj.logo:

@@ -65,3 +65,6 @@ static/
 # IDE/AI
 .agent/
 .gemini/
+
+# Documentation and examples
+examples/
