@@ -21,6 +21,20 @@ services:
     depends_on: [postgres, redis]
     env_file: .env
 
+  celery:
+    build: ./backend
+    command: celery -A config worker -l info
+    volumes: [./backend:/app, ./media:/app/media]
+    depends_on: [postgres, redis]
+    env_file: .env
+
+  celery-beat:
+    build: ./backend
+    command: celery -A config beat -l info
+    volumes: [./backend:/app]
+    depends_on: [postgres, redis]
+    env_file: .env
+
   nginx:
     build: ./frontend
     ports:

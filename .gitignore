@@ -19,6 +19,7 @@ Thumbs.db
 .vscode/
 
 # Python
+celerybeat-schedule*
 __pycache__/
 *.py[cod]
 *$py.class

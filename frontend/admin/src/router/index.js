@@ -55,6 +55,11 @@ const routes = [
         path: 'superadmin/services',
         name: 'services',
         component: () => import('../views/superadmin/ServicesView.vue')
+      },
+      {
+        path: 'admin/mailings',
+        name: 'mailings',
+        component: () => import('../views/admin/MailingsView.vue')
       }
     ]
   }

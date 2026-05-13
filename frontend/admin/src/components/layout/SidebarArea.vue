@@ -98,6 +98,16 @@
                 Расходы
               </router-link>
             </li>
+            <li>
+              <router-link
+                to="/admin/mailings"
+                class="group relative flex items-center gap-2.5 rounded-sm py-2 px-4 font-medium text-bodydark1 duration-300 ease-in-out hover:bg-bg-dark dark:hover:bg-meta-4"
+                active-class="bg-bg-dark dark:bg-meta-4"
+              >
+                <Icon icon="mdi:message-fast-outline" width="22" />
+                Рассылки
+              </router-link>
+            </li>
           </ul>
         </div>
 

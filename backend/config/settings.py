@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'apps.dashboard',
     'apps.expenses',
     'apps.payments',
+    'apps.mailing',
     'encrypted_model_fields',
 ]
 
@@ -172,3 +173,18 @@ CSRF_TRUSTED_ORIGINS = [url.strip() for url in csrf_trusted_env.split(',') if ur
 
 # Encryption Settings
 FIELD_ENCRYPTION_KEY = os.environ.get('FIELD_ENCRYPTION_KEY')
+
+# Celery Configuration
+CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_BEAT_SCHEDULE = {
+    'check-scheduled-mailings-every-minute': {
+        'task': 'apps.mailing.tasks.check_scheduled_mailings',
+        'schedule': 60.0,
+    },
+}
