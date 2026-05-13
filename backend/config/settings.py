@@ -183,8 +183,8 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
 CELERY_BEAT_SCHEDULE = {
-    'check-scheduled-mailings-every-minute': {
+    'check-scheduled-mailings-every-10-minutes': {
         'task': 'apps.mailing.tasks.check_scheduled_mailings',
-        'schedule': 60.0,
+        'schedule': 600.0,  # Каждые 10 минут
     },
 }
