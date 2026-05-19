@@ -428,7 +428,7 @@ class Appointment(models.Model):
                     )
                     
                     inline_kb = []
-                    tma_url = f"https://t.me/{org.bot_username}/{org.tma_name}" if org.bot_username and org.tma_name else None
+                    tma_url = org.get_tma_link()
                     if tma_url:
                         inline_kb.append([{"text": "📱 Қайта жазылу" if is_kz else "📱 Записаться заново", "url": tma_url}])
                     

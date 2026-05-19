@@ -67,9 +67,10 @@ class CreatePaymentLinkView(views.APIView):
                 if org.kaspi_payment_link:
                     inline_kb.append([{"text": "📱 Оплатить в Kaspi", "url": org.kaspi_payment_link}])
                 
-                tma_url = f"https://t.me/{org.bot_username}/{org.tma_name}" if org.bot_username and org.tma_name else None
+                tma_url = org.get_tma_link()
                 if tma_url:
-                    inline_kb.append([{"text": "📱 Вернуться в приложение", "url": tma_url}])
+                    btn_return = "📱 Қосымшаға оралу" if is_kz else "📱 Вернуться в приложение"
+                    inline_kb.append([{"text": btn_return, "url": tma_url}])
                     
                 res = send_telegram_message(
                     bot_token=org.bot_token,

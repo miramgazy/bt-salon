@@ -505,7 +505,7 @@ class TmaWebhookView(APIView):
                     )
                     
                     btn_return = "📱 Қосымшаға оралу" if is_kz else "📱 Вернуться в приложение"
-                    tma_url = f"https://t.me/{org.bot_username}/{org.tma_name}" if org.bot_username and org.tma_name else None
+                    tma_url = org.get_tma_link()
                     
                     markup = None
                     if tma_url:
@@ -539,7 +539,7 @@ class TmaWebhookView(APIView):
                     answer_telegram_callback(token, callback_query.get('id'))
                     
                     btn_return = "📱 Қосымшаға оралу" if is_kz else "📱 Вернуться в приложение"
-                    tma_url = f"https://t.me/{user.organization.bot_username}/{user.organization.tma_name}" if user.organization and user.organization.bot_username and user.organization.tma_name else None
+                    tma_url = user.organization.get_tma_link() if user.organization else ""
                     
                     markup = None
                     if tma_url:
