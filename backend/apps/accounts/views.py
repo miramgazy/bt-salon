@@ -561,15 +561,18 @@ class TmaWebhookView(APIView):
                 try:
                     appt = Appointment.objects.select_related('master__user').get(id=appt_id)
                     
-                    # Security check: only the master of this appointment can update it
-                    if appt.master.user.telegram_id != chat_id:
+                    master_user = appt.master.user if appt.master else None
+                    master_tg_id = master_user.telegram_id if master_user else None
+                    
+                    if not master_tg_id or str(master_tg_id) != str(chat_id):
+                        logger.warning(f"[Master Callback] Forbidden. Master TG ID: {master_tg_id}, Chat TG ID: {chat_id}")
                         answer_telegram_callback(token, callback_query.get('id'), text="Ошибка доступа")
                         return Response({'status': 'error', 'message': 'Forbidden'})
                         
                     # Status check: avoid double updates or conflicting states
                     if appt.status == Appointment.STATUS_DONE:
                         answer_telegram_callback(token, callback_query.get('id'), text="Запись уже завершена")
-                        send_telegram_message(token, chat_id, "✅ Эта запись уже отмечена как выполненная.")
+                        send_telegram_message(token, chat_id, "✅ Эта запись уже отмечена как завершенная.")
                         return Response({'status': 'ok'})
                     
                     if appt.status == Appointment.STATUS_CANCELLED:
@@ -579,11 +582,11 @@ class TmaWebhookView(APIView):
 
                     answer_telegram_callback(token, callback_query.get('id'))
                     
-                    is_kz = appt.master.user.language == 'kz'
+                    is_kz = appt.master.user.language == 'kz' if appt.master.user else False
                     
                     if action == 'done':
                         appt.status = Appointment.STATUS_DONE
-                        action_text = "орындады" if is_kz else "выполнил(а)"
+                        action_text = "аяқтады" if is_kz else "завершил(а)"
                     else:
                         appt.status = Appointment.STATUS_CANCELLED
                         action_text = "бас тартты" if is_kz else "отменил(а)"

@@ -36,7 +36,7 @@ def notify_master_new_appointment(appointment):
             f"👤 Клиент: {client_name}\n\n"
             f"<i>Қызмет көрсетілгеннен кейін төмендегі батырманы басыңыз.</i>"
         )
-        btn_done = "✅ Орындалды"
+        btn_done = "✅ Аяқталды"
         btn_cancel = "❌ Бас тарту"
     else:
         text = (
@@ -47,7 +47,7 @@ def notify_master_new_appointment(appointment):
             f"👤 Имя клиента: {client_name}\n\n"
             f"<i>После оказания услуг нажмите кнопку ниже.</i>"
         )
-        btn_done = "✅ Выполнено"
+        btn_done = "✅ Завершено"
         btn_cancel = "❌ Отменено"
         
     markup = {
