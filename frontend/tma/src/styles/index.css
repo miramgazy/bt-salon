@@ -25,6 +25,7 @@
   --border: rgba(0, 0, 0, 0.08);
   --card-bg: var(--tg-secondary-bg);
   --glass: rgba(255, 255, 255, 0.7);
+  --text-error: #ef4444;
   
   /* Shapes & Effects */
   --radius: 18px;
