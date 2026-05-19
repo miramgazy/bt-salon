@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import PaymentInstructionView from '../views/PaymentInstructionView.vue'
 
 const routes = [
   {
@@ -119,7 +118,7 @@ const routes = [
       {
         path: 'payment-instruction/:appointmentId',
         name: 'payment-instruction',
-        component: PaymentInstructionView
+        component: () => import('../views/PaymentInstructionView.vue')
       },
       {
         path: 'profile',
