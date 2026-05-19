@@ -17,11 +17,15 @@ class Appointment(models.Model):
     PAYMENT_NO_REQUIRED = 'no_payment_required'
     PAYMENT_PENDING_AUTO = 'pending_auto_payment'
     PAYMENT_PENDING_MANUAL = 'pending_manual_invoice'
+    PAYMENT_PENDING_RECEIPT = 'pending_receipt'
+    PAYMENT_REVIEW = 'review'
     PAYMENT_PAID = 'paid'
     PAYMENT_STATUSES = [
         (PAYMENT_NO_REQUIRED, 'Предоплата не требуется'),
         (PAYMENT_PENDING_AUTO, 'Ожидает авто-оплаты'),
         (PAYMENT_PENDING_MANUAL, 'Ожидает выставления счета'),
+        (PAYMENT_PENDING_RECEIPT, 'Ожидает квитанцию'),
+        (PAYMENT_REVIEW, 'На проверке админа'),
         (PAYMENT_PAID, 'Оплачено'),
     ]
 
@@ -84,6 +88,7 @@ class Appointment(models.Model):
     client_phone_for_invoice = models.CharField(max_length=20, blank=True, null=True)
     prepayment_received = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     kaspi_payment_id = models.CharField(max_length=100, blank=True, null=True)
+    receipt_file = models.FileField(upload_to='receipts/', blank=True, null=True, help_text="Файл PDF-квитанции или фото чека предоплаты")
 
     @property
     def remaining_balance(self):
@@ -225,8 +230,14 @@ class Appointment(models.Model):
         # 1.5 Set Initial Payment Status
         if is_new and self.appointment_type != self.TYPE_COMBO_SUB:
             if self.service.is_prepayment_required:
-                if self.organization.is_prepayment_enabled and self.organization.kaspi_api_key and self.organization.kaspi_device_token:
-                    self.payment_status = self.PAYMENT_PENDING_AUTO
+                if self.organization.is_prepayment_enabled:
+                    method = getattr(self.organization, 'payment_method', 'MANUAL')
+                    if method == 'AUTOMATIC' and self.organization.kaspi_api_key and self.organization.kaspi_device_token:
+                        self.payment_status = self.PAYMENT_PENDING_AUTO
+                    elif method == 'SEMI_AUTOMATIC':
+                        self.payment_status = self.PAYMENT_PENDING_RECEIPT
+                    else:
+                        self.payment_status = self.PAYMENT_PENDING_MANUAL
                 else:
                     self.payment_status = self.PAYMENT_PENDING_MANUAL
             else:
@@ -374,3 +385,61 @@ class Appointment(models.Model):
 
                         self.calculate_financials()
                         super().save(update_fields=['end_time', 'master_net_income', 'salon_net_income', 'is_overflow'])
+
+    @classmethod
+    def cancel_expired_appointments(cls):
+        from django.utils import timezone
+        from datetime import timedelta
+        threshold = timezone.now() - timedelta(minutes=5)
+        # Select appointments on SEMI_AUTOMATIC payment method
+        # (indicated by payment_status='pending_receipt' or 'review')
+        # that are pending and created more than 5 minutes ago.
+        expired_apts = cls.objects.filter(
+            payment_status__in=[cls.PAYMENT_PENDING_RECEIPT, cls.PAYMENT_REVIEW],
+            status=cls.STATUS_PENDING,
+            created_at__lte=threshold
+        )
+        for apt in expired_apts:
+            apt.status = cls.STATUS_CANCELLED
+            apt.cancellation_reason = "Превышено время ожидания предоплаты (5 минут)"
+            apt.save(update_fields=['status', 'cancellation_reason'])
+
+            # Send Telegram notification to client
+            org = apt.organization
+            client = apt.client
+            if org and client:
+                tg_id = client.telegram_id or (client.user.telegram_id if client.user else None)
+                if tg_id and org.bot_token:
+                    from apps.accounts.utils import send_telegram_message
+                    is_kz = False
+                    if client.user and getattr(client.user, 'language', 'ru') == 'kz':
+                        is_kz = True
+                    
+                    service_name = apt.service.name if apt.service else ""
+                    
+                    cancel_msg = (
+                        f"⚠️ <b>Төлем мерзімі аяқталды</b>\n\n"
+                        f"Сіздің <b>{service_name}</b> қызметіне жазылуыңыз бойынша 5 минут ішінде төлем расталмады, сондықтан брондау автоматты түрде жойылды.\n\n"
+                        f"Жазылуды қайтадан рәсімдеп, квитанцияны уақытылы жіберуіңізді сұраймыз."
+                        if is_kz else
+                        f"⚠️ <b>Время ожидания предоплаты истекло</b>\n\n"
+                        f"Время ожидания квитанции для вашей записи на услугу <b>{service_name}</b> истекло (5 минут). Бронирование было автоматически отменено.\n\n"
+                        f"Пожалуйста, повторите запись в приложении и отправьте квитанцию заново."
+                    )
+                    
+                    inline_kb = []
+                    tma_url = f"https://t.me/{org.bot_username}/{org.tma_name}" if org.bot_username and org.tma_name else None
+                    if tma_url:
+                        inline_kb.append([{"text": "📱 Қайта жазылу" if is_kz else "📱 Записаться заново", "url": tma_url}])
+                    
+                    try:
+                        send_telegram_message(
+                            bot_token=org.bot_token,
+                            chat_id=tg_id,
+                            text=cancel_msg,
+                            reply_markup={"inline_keyboard": inline_kb} if inline_kb else None
+                        )
+                    except Exception as e:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.error(f"Failed to send cancellation notification to tg_id {tg_id}: {e}")

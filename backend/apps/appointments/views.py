@@ -33,6 +33,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if not self.request.user.is_authenticated or not self.request.user.organization:
             return Appointment.objects.none()
             
+        Appointment.cancel_expired_appointments()
         qs = Appointment.objects.filter(organization=self.request.user.organization)
         
         # Filtering

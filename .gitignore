@@ -69,3 +69,6 @@ static/
 
 # Documentation and examples
 examples/
+
+# Landing Page website folder
+website_landing/

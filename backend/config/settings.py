@@ -187,4 +187,8 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.mailing.tasks.check_scheduled_mailings',
         'schedule': 600.0,  # Каждые 10 минут
     },
+    'cancel-expired-appointments-every-3-minutes': {
+        'task': 'apps.appointments.tasks.cancel_expired_appointments_task',
+        'schedule': 180.0,  # Каждые 3 минуты
+    },
 }

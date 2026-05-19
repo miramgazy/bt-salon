@@ -14,7 +14,8 @@ class OrganizationSerializer(serializers.ModelSerializer):
             'design_color', 'logo', 'logo_url', 'slot_duration', 
             'latitude', 'longitude', 'is_reminders_enabled', 
             'reminder_hours_before', 'reminder_template_ru', 'reminder_template_kz',
-            'is_prepayment_enabled', 'has_kaspi_config'
+            'is_prepayment_enabled', 'has_kaspi_config',
+            'payment_method', 'kaspi_payment_link', 'bin_iin'
         ]
 
     def get_has_kaspi_config(self, obj):

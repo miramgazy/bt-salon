@@ -89,6 +89,7 @@ class MasterViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'], url_path='available-slots')
     def available_slots(self, request, pk=None):
+        Appointment.cancel_expired_appointments()
         master = self.get_object()
         date_str = request.query_params.get('date')
         service_id = request.query_params.get('service_id')

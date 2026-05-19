@@ -287,6 +287,156 @@ class TmaWebhookView(APIView):
                 send_telegram_message(token, tg_id, response_text)
             return Response({'status': 'ok'})
 
+        # Handle Receipt Document / Photo Upload
+        document = message.get('document')
+        photo = message.get('photo')
+
+        if document or photo:
+            tg_id = message.get('from', {}).get('id')
+            if tg_id:
+                from django.db.models import Q
+                from apps.appointments.models import Appointment
+                
+                appointment = Appointment.objects.filter(
+                    Q(client__telegram_id=tg_id) | Q(client__user__telegram_id=tg_id),
+                    organization=org,
+                    payment_status=Appointment.PAYMENT_PENDING_RECEIPT
+                ).order_by('-created_at').first()
+                
+                if appointment:
+                    # Resolve user context safely
+                    user = appointment.client.user if appointment.client else None
+                    if not user:
+                        user = User.objects.filter(organization=org, telegram_id=tg_id).first()
+                        
+                    file_id = None
+                    is_pdf = False
+                    file_name = "receipt.pdf"
+                    
+                    if document:
+                        if document.get('mime_type') == 'application/pdf':
+                            file_id = document.get('file_id')
+                            file_name = document.get('file_name', 'receipt.pdf')
+                            is_pdf = True
+                    elif photo:
+                        file_id = photo[-1].get('file_id')
+                        file_name = "receipt.jpg"
+                        is_pdf = False
+                    
+                    if file_id:
+                        send_telegram_message(token, tg_id, "⏳ <b>Проверяю вашу квитанцию...</b> Пожалуйста, подождите несколько секунд.")
+                        
+                        from apps.accounts.utils import download_file_from_telegram
+                        file_path = download_file_from_telegram(token, file_id)
+                        if file_path:
+                            from django.core.files import File
+                            import os
+                            
+                            with open(file_path, 'rb') as f:
+                                django_file = File(f, name=file_name)
+                                appointment.receipt_file.save(file_name, django_file, save=False)
+                            
+                            success = False
+                            parse_error = None
+                            
+                            if is_pdf:
+                                from apps.payments.receipt_parser import parse_kaspi_receipt
+                                parsed_data = parse_kaspi_receipt(file_path)
+                                if parsed_data:
+                                    bin_iin = parsed_data.get('bin_iin')
+                                    amount = parsed_data.get('amount')
+                                    receipt_number = parsed_data.get('receipt_number')
+                                    
+                                    expected_amount = float(appointment.calculate_prepayment_amount())
+                                    expected_bin = org.bin_iin
+                                    
+                                    is_duplicate = False
+                                    if receipt_number:
+                                        from apps.payments.models import UsedReceipt
+                                        is_duplicate = UsedReceipt.objects.filter(organization=org, receipt_number=receipt_number).exists()
+                                        
+                                    if is_duplicate:
+                                        parse_error = f"Этот чек уже был использован ранее (номер чека: {receipt_number})."
+                                    elif expected_bin and bin_iin != expected_bin:
+                                        parse_error = f"Не совпадает БИН получателя. В чеке: {bin_iin}, ожидалось: {expected_bin}."
+                                    elif expected_amount and (amount is None or amount < expected_amount):
+                                        parse_error = f"Не совпадает сумма оплаты. В чеке: {amount} ₸, ожидалось не менее: {expected_amount} ₸."
+                                    else:
+                                        success = True
+                                        from apps.payments.models import UsedReceipt
+                                        UsedReceipt.objects.create(
+                                            organization=org,
+                                            receipt_number=receipt_number or f"UNKNOWN_{appointment.id}",
+                                            appointment=appointment
+                                        )
+                                else:
+                                    parse_error = "Не удалось распознать данные квитанции. Убедитесь, что вы отправили оригинальную PDF-квитанцию Kaspi."
+                            else:
+                                parse_error = "Вы отправили фото чека. Мы передали его администратору для ручной проверки."
+                            
+                            try:
+                                os.remove(file_path)
+                            except Exception:
+                                pass
+                            
+                            if success:
+                                appointment.is_paid = True
+                                appointment.payment_status = Appointment.PAYMENT_PAID
+                                appointment.prepayment_received = appointment.calculate_prepayment_amount()
+                                appointment.status = Appointment.STATUS_CONFIRMED
+                                appointment.save()
+                                
+                                is_kz = getattr(user, 'language', 'ru') == 'kz'
+                                msg = (
+                                    f"✅ <b>Төлем сәтті қабылданды!</b>\n\nСіздің жазбаңыз <b>{appointment.service.name}</b> расталды.\nШебер: {appointment.master.user.first_name}\nУақыты: {appointment.start_time.strftime('%d.%m.%Y %H:%M')}"
+                                    if is_kz else
+                                    f"✅ <b>Оплата успешно подтверждена!</b>\n\nВаша запись на <b>{appointment.service.name}</b> подтверждена.\nМастер: {appointment.master.user.first_name}\nВремя: {appointment.start_time.strftime('%d.%m.%Y %H:%M')}"
+                                )
+                                send_telegram_message(token, tg_id, msg)
+                                try:
+                                    channel_layer = get_channel_layer()
+                                    notify_uid = user.id if user else (appointment.client.user_id if appointment.client else None)
+                                    if notify_uid:
+                                        async_to_sync(channel_layer.group_send)(
+                                            f"user_{notify_uid}",
+                                            {
+                                                "type": "user_update",
+                                                "message": {"event": "payment_confirmed", "appointment_id": appointment.id}
+                                            }
+                                        )
+                                except Exception as ws_err:
+                                    logger.error(f"WebSocket notification failed: {ws_err}")
+                            else:
+                                appointment.payment_status = Appointment.PAYMENT_REVIEW
+                                appointment.save()
+                                
+                                is_kz = getattr(user, 'language', 'ru') == 'kz'
+                                msg = (
+                                    f"⚠️ <b>Төлемді автоматты түрде растау мүмкін болмады.</b>\n\nСебебі: {parse_error}\nБіз квитанцияны әкімшіге қолмен тексеруге жібердік. Жазбаңыз қаралуда."
+                                    if is_kz else
+                                    f"⚠️ <b>Автоматическое подтверждение не удалось.</b>\n\nПричина: {parse_error}\nМы передали вашу квитанцию администратору для ручной проверки. Запись пока находится на рассмотрении."
+                                )
+                                send_telegram_message(token, tg_id, msg)
+                                
+                                admins = User.objects.filter(organization=org, role__in=['admin', 'owner']).exclude(telegram_id__isnull=True)
+                                admin_msg = (
+                                    f"🔔 <b>Требуется ручная проверка оплаты!</b>\n\n"
+                                    f"Клиент: <b>{appointment.client.full_name}</b> ({appointment.client.phone})\n"
+                                    f"Услуга: {appointment.service.name}\n"
+                                    f"Необходимая предоплата: {appointment.calculate_prepayment_amount()} ₸\n"
+                                    f"Причина неудачи: {parse_error}\n\n"
+                                    f"Проверьте чек в панели администратора."
+                                )
+                                for admin in admins:
+                                    send_telegram_message(token, admin.telegram_id, admin_msg)
+                        else:
+                            send_telegram_message(token, tg_id, "❌ Не удалось загрузить файл из Telegram. Пожалуйста, попробуйте еще раз.")
+                    else:
+                        send_telegram_message(token, tg_id, "❌ Пожалуйста, отправьте квитанцию в формате PDF или фото.")
+                else:
+                    send_telegram_message(token, tg_id, "У вас нет активных записей, ожидающих оплаты квитанцией.")
+            return Response({'status': 'ok'})
+
         # Handle Contact sharing
         if contact:
             tg_id = contact.get('user_id')

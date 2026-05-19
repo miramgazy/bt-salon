@@ -116,3 +116,38 @@ def normalize_phone(phone):
         return '+7' + digits
         
     return '+' + digits if digits else ""
+
+def download_file_from_telegram(bot_token, file_id):
+    """
+    Downloads a file from Telegram Bot API and returns its local temporary path.
+    """
+    import urllib.request
+    import json
+    import tempfile
+    
+    # 1. Get file path
+    url = f"https://api.telegram.org/bot{bot_token}/getFile?file_id={file_id}"
+    try:
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req) as response:
+            res_data = json.loads(response.read().decode('utf-8'))
+            if not res_data.get('ok'):
+                return None
+            file_path_tg = res_data['result']['file_path']
+            
+        # 2. Download file
+        download_url = f"https://api.telegram.org/file/bot{bot_token}/{file_path_tg}"
+        
+        # Create temp file
+        ext = '.' + file_path_tg.split('.')[-1] if '.' in file_path_tg else ''
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
+        temp_path = temp_file.name
+        
+        with urllib.request.urlopen(download_url) as response_dl:
+            with open(temp_path, 'wb') as out_file:
+                out_file.write(response_dl.read())
+                
+        return temp_path
+    except Exception as e:
+        print(f"Error downloading file from Telegram: {e}")
+        return None

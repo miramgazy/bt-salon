@@ -259,7 +259,55 @@
               </div>
 
               <div v-if="org.is_prepayment_enabled" class="mb-5.5 p-5 bg-gray-50 dark:bg-bg-dark border border-stroke dark:border-strokedark rounded-md">
-                <div class="flex items-center justify-between mb-4">
+                <div class="mb-4.5">
+                  <label class="mb-2.5 block text-black dark:text-white font-medium text-sm">
+                    Способ приема предоплаты
+                  </label>
+                  <div class="relative z-20 bg-white dark:bg-form-input">
+                    <select v-model="org.payment_method" class="relative z-20 w-full appearance-none rounded border border-stroke bg-transparent py-3 px-5 outline-none transition focus:border-primary active:border-primary dark:border-form-strokedark dark:bg-form-input">
+                      <option value="AUTOMATIC">Автоматический (через Kaspi Pay API с выставлением счета)</option>
+                      <option value="SEMI_AUTOMATIC">Полуавтоматический (клиент платит по QR и загружает PDF-чек)</option>
+                      <option value="MANUAL">Ручной режим (выставление счетов администратором вручную)</option>
+                    </select>
+                    <span class="absolute top-1/2 right-4 z-10 -translate-y-1/2">
+                      <Icon icon="mdi:chevron-down" width="24" />
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Fields for SEMI_AUTOMATIC / AUTOMATIC -->
+                <div v-if="org.payment_method === 'SEMI_AUTOMATIC' || org.payment_method === 'AUTOMATIC'" class="mb-4.5">
+                  <label class="mb-2.5 block text-black dark:text-white font-medium text-sm">
+                    Ссылка на Kaspi QR / Ссылка на оплату
+                  </label>
+                  <input
+                    type="url"
+                    v-model="org.kaspi_payment_link"
+                    placeholder="https://pay.kaspi.kz/pay/..."
+                    class="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                  />
+                  <p class="text-xs text-body mt-1">
+                    Ваша статическая QR-ссылка Kaspi Pay для оплаты клиентами.
+                  </p>
+                </div>
+
+                <div v-if="org.payment_method === 'SEMI_AUTOMATIC'" class="mb-4.5">
+                  <label class="mb-2.5 block text-black dark:text-white font-medium text-sm">
+                    БИН / ИИН получателя (для проверки чеков)
+                  </label>
+                  <input
+                    type="text"
+                    v-model="org.bin_iin"
+                    placeholder="123456789012"
+                    maxlength="12"
+                    class="w-full rounded border-[1.5px] border-stroke bg-transparent py-3 px-5 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                  />
+                  <p class="text-xs text-body mt-1">
+                    12-значный БИН или ИИН вашей организации, указанный в Kaspi квитанциях. Используется для автоматической валидации чеков.
+                  </p>
+                </div>
+
+                <div class="flex items-center justify-between mb-4 mt-6">
                   <h4 class="text-sm font-bold text-black dark:text-white flex items-center gap-2">
                     <Icon icon="mdi:credit-card-outline" class="text-primary" width="20" />
                     Статус конфигурации Kaspi
@@ -273,17 +321,24 @@
                 </div>
                 
                 <p class="text-xs text-body mb-4">
-                  Настройка ключей (ApiKey) производится супер-администратором через панель управления Django. 
-                  Здесь отображается только статус готовности системы.
+                  Настройка API-ключей для автоматического режима производится супер-администратором через панель Django.
                 </p>
 
-                <div v-if="org.has_kaspi_config" class="flex items-center gap-2 text-xs text-success bg-success/5 p-3 rounded">
+                <div v-if="org.payment_method === 'AUTOMATIC' && org.has_kaspi_config" class="flex items-center gap-2 text-xs text-success bg-success/5 p-3 rounded">
                   <Icon icon="mdi:check-decagram" width="16" />
-                  Система готова к приему платежей. Ссылки будут генерироваться автоматически.
+                  Автоматический прием платежей готов к использованию.
                 </div>
-                <div v-else class="flex items-center gap-2 text-xs text-danger bg-danger/5 p-3 rounded">
+                <div v-else-if="org.payment_method === 'AUTOMATIC'" class="flex items-center gap-2 text-xs text-danger bg-danger/5 p-3 rounded">
                   <Icon icon="mdi:alert-circle-outline" width="16" />
-                  Внимание: ApiKey или DeviceToken не установлены. Предоплата работать не будет.
+                  Внимание: Автоматический режим требует ApiKey/DeviceToken, которые не настроены. Будет выполнен автоматический переход на Полуавтоматический или Ручной режим.
+                </div>
+                <div v-else-if="org.payment_method === 'SEMI_AUTOMATIC'" class="flex items-center gap-2 text-xs text-success bg-success/5 p-3 rounded">
+                  <Icon icon="mdi:check-decagram" width="16" />
+                  Полуавтоматический режим активен. Система будет распознавать PDF квитанции клиентов.
+                </div>
+                <div v-else class="flex items-center gap-2 text-xs text-success bg-success/5 p-3 rounded">
+                  <Icon icon="mdi:check-decagram" width="16" />
+                  Ручной режим активен. Администраторы будут выставлять счета вручную.
                 </div>
               </div>
 
@@ -503,7 +558,10 @@ const org = ref({
   slot_duration: 30,
   has_lunch_break: true,
   is_prepayment_enabled: false,
-  has_kaspi_config: false
+  has_kaspi_config: false,
+  payment_method: 'MANUAL',
+  kaspi_payment_link: '',
+  bin_iin: ''
 })
 
 watch(() => org.value.is_reminders_enabled, (newVal) => {

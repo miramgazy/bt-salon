@@ -48,11 +48,26 @@
           </div>
         </div>
         
-         <button v-if="['pending', 'confirmed'].includes(apt.status.toLowerCase())" 
-                 class="btn-cancel" 
-                 @click="cancelApt(apt.id)">
-           {{ $t('tma.cancelApt') }}
-         </button>
+         <div class="apt-actions">
+           <!-- Кнопка "Оплатить" — для записей ожидающих квитанцию -->
+           <button v-if="apt.payment_status === 'pending_receipt' && apt.status === 'pending'"
+                   class="btn-pay"
+                   @click="$router.push({ name: 'payment-instruction', params: { appointmentId: apt.id } })">
+             💳 {{ $t('tma.payButton', { amount: apt.prepayment_amount_required || apt.service_detail?.prepayment_value || 0 }) }}
+           </button>
+           <!-- Кнопка "Подробнее" — для записей на проверке -->
+           <button v-else-if="apt.payment_status === 'review'"
+                   class="btn-details"
+                   @click="$router.push({ name: 'payment-instruction', params: { appointmentId: apt.id } })">
+             {{ $t('tma.moreDetails') }}
+           </button>
+           <!-- Кнопка "Отменить" — только для активных, не отменённых и не завершённых -->
+           <button v-if="['pending', 'confirmed'].includes(apt.status.toLowerCase()) && apt.payment_status !== 'pending_receipt'"
+                   class="btn-cancel" 
+                   @click="cancelApt(apt.id)">
+             {{ $t('tma.cancelApt') }}
+           </button>
+         </div>
       </div>
     </div>
   </div>
@@ -76,7 +91,16 @@ const fetchAppointments = async () => {
     const res = await api.get('/appointments/', { 
       params: { my: 'true' }
     })
-    appointments.value = res.data.results || res.data
+    let data = res.data.results || res.data
+    // Sort so that 'pending_receipt' and 'review' are always at the top, then by creation date descending
+    appointments.value = data.sort((a, b) => {
+      const aPriority = ['pending_receipt', 'review'].includes(a.payment_status) ? 1 : 0
+      const bPriority = ['pending_receipt', 'review'].includes(b.payment_status) ? 1 : 0
+      if (aPriority !== bPriority) {
+        return bPriority - aPriority
+      }
+      return new Date(b.created_at || b.start_time) - new Date(a.created_at || a.start_time)
+    })
   } catch (err) {
     console.error('Fetch appointments error:', err)
   } finally {
@@ -84,8 +108,11 @@ const fetchAppointments = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   fetchAppointments()
+  if (!auth.organizationSettings) {
+    await auth.fetchCurrentUser()
+  }
 })
 
 const formatDate = (iso) => {
@@ -180,6 +207,14 @@ const cancelApt = async (id) => {
   background: rgba(201, 168, 76, 0.1);
   color: var(--gold);
 }
+.apt-payment-badge.pending_receipt {
+  background: rgba(234, 179, 8, 0.1);
+  color: #eab308;
+}
+.apt-payment-badge.review {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
 
 .apt-details {
   display: flex;
@@ -215,8 +250,53 @@ const cancelApt = async (id) => {
   color: var(--gold);
 }
 
-.btn-cancel {
+.apt-actions {
+  display: flex;
+  gap: 8px;
   width: 100%;
+}
+
+.btn-details {
+  flex: 1;
+  padding: 12px;
+  background: var(--gold-gradient);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  box-shadow: 0 4px 12px var(--gold-glow);
+}
+
+.btn-details:active {
+  transform: scale(0.98);
+}
+
+.btn-pay {
+  flex: 1;
+  padding: 12px;
+  background: var(--gold-gradient);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  box-shadow: 0 4px 12px var(--gold-glow);
+}
+
+.btn-pay:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.btn-cancel {
+  flex: 1;
   padding: 12px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
@@ -226,6 +306,7 @@ const cancelApt = async (id) => {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
+  text-align: center;
 }
 
 .btn-cancel:active {
@@ -241,5 +322,75 @@ const cancelApt = async (id) => {
   font-size: 64px;
   margin-bottom: 20px;
   filter: grayscale(1) opacity(0.2);
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 500;
+  display: flex; align-items: flex-end; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.modal {
+  background: var(--bg); border-radius: 28px 28px 0 0; width: 100%; max-width: 450px;
+  padding: 32px 20px 40px; border-top: 1px solid var(--border);
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.3);
+  max-height: 90vh; display: flex; flex-direction: column;
+}
+.modal-header-actions {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px;
+}
+.modal-title {
+  font-size: 20px; font-weight: 700; color: var(--text); font-family: var(--font-header);
+}
+.close-modal-btn {
+  background: none; border: none; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.modal-scroll-content {
+  flex: 1; overflow-y: auto; padding-right: 4px;
+}
+.modal-scroll-content::-webkit-scrollbar { width: 4px; }
+.modal-scroll-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.modal-row {
+  display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+}
+.modal-label { color: var(--muted); font-weight: 500; }
+.modal-value { font-weight: 600; color: var(--text); }
+.modal-value.gold { color: var(--gold); font-size: 18px; font-family: var(--font-header); }
+
+.btn-kaspi {
+  width: 100%;
+  height: 54px;
+  background: #FFFFFF;
+  border: 1px solid #E5E5E5;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.btn-kaspi:active {
+  transform: scale(0.98);
+  background: #F9F9F9;
+}
+.btn-kaspi span {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000000;
+}
+.kaspi-logo {
+  display: flex;
+  align-items: center;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 </style>

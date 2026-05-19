@@ -62,6 +62,12 @@ const applyThemeFromBot = () => {
     webApp.setHeaderColor(webApp.themeParams.header_bg_color || 'bg_color')
     webApp.setBackgroundColor(webApp.themeParams.bg_color || 'bg_color')
 
+    if (webApp.colorScheme === 'dark') {
+      root.classList.add('dark')
+    } else {
+      root.classList.remove('dark')
+    }
+
     if (auth.organizationSettings?.design_color) {
       root.style.setProperty('--gold', auth.organizationSettings.design_color)
     }

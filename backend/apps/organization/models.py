@@ -66,4 +66,31 @@ class Organization(models.Model):
         help_text="Kaspi DeviceToken (хранится в зашифрованном виде)"
     )
 
+    PAYMENT_AUTOMATIC = 'AUTOMATIC'
+    PAYMENT_SEMI_AUTOMATIC = 'SEMI_AUTOMATIC'
+    PAYMENT_MANUAL = 'MANUAL'
+    PAYMENT_METHODS = [
+        (PAYMENT_AUTOMATIC, 'Kaspi API (Автоматический)'),
+        (PAYMENT_SEMI_AUTOMATIC, 'Kaspi QR Link (Полуавтоматический)'),
+        (PAYMENT_MANUAL, 'Выставление счета (Ручной)'),
+    ]
+    payment_method = models.CharField(
+        max_length=20, 
+        choices=PAYMENT_METHODS, 
+        default=PAYMENT_MANUAL,
+        help_text="Способ оплаты предоплаты"
+    )
+    kaspi_payment_link = models.URLField(
+        max_length=500, 
+        blank=True, 
+        null=True, 
+        help_text="Статическая ссылка на Kaspi QR"
+    )
+    bin_iin = models.CharField(
+        max_length=12, 
+        blank=True, 
+        null=True, 
+        help_text="БИН/ИИН продавца для проверки квитанции"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)

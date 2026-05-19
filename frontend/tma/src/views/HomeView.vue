@@ -9,7 +9,7 @@
     </div>
 
     <!-- ══ PAYMENT PENDING ══ -->
-    <div v-else-if="state.showPaymentPending" class="success fade-up" style="padding-top: 40px;">
+    <div v-else-if="state.showPaymentPending" class="success fade-up" style="padding-top: 20px;">
       <div class="success-icon">💳</div>
       <div class="success-title header-font">Ожидаем оплату</div>
       <div class="success-sub">Пожалуйста, завершите оплату в приложении Kaspi Pay. Мы автоматически подтвердим вашу запись, как только получим подтверждение.</div>
@@ -19,22 +19,19 @@
       </div>
 
       <div class="flex flex-col gap-4 mt-10 w-full">
-        <button class="btn-kaspi" @click="window.Telegram?.WebApp?.openLink(state.paymentLink)">
+        <button class="btn-kaspi" @click="openPaymentLink">
           <div class="kaspi-logo">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="24" height="24" rx="6" fill="#F14635"/>
-              <path d="M7 17V7H9.5V10.5L13.5 7H16.5L12 11.5L16.5 17H13.5L10 12.5L9.5 13V17H7Z" fill="white"/>
-            </svg>
+            <KaspiQrLogo :white="true" />
           </div>
-          <span>Оплатить с Kaspi.kz</span>
+          <span>{{ $t('tma.payWithKaspi', 'Оплатить с Kaspi.kz') }}</span>
         </button>
         <button class="btn-secondary" @click="cancelPaymentPending">
           {{ $t('common.cancel') }}
         </button>
       </div>
-      
+
       <div class="mt-8 text-xs text-muted opacity-50 flex items-center justify-center gap-2">
-        <div class="spinner-mini"></div>
+        <div class="spinner-mini" style="border-radius: 50%; border: 2px solid rgba(0,0,0,0.1); border-top-color: var(--gold); width: 14px; height: 14px; animation: spin 1s linear infinite;"></div>
         Проверка статуса платежа...
       </div>
     </div>
@@ -417,23 +414,20 @@
               </div>
          </div>
          
-         <button v-if="auth.organizationSettings?.is_prepayment_enabled" 
+         <button v-if="auth.organizationSettings?.is_prepayment_enabled && state.selectedService?.is_prepayment_required" 
                  class="btn-kaspi" 
                  @click="handleConfirm" 
                  :disabled="state.paymentLoading"
                  style="margin-top: 24px;">
             <template v-if="state.paymentLoading">
               <div class="spinner-mini" style="display:inline-block; margin-right: 8px;"></div>
-              Загрузка...
+              {{ $t('common.loading') }}
             </template>
             <template v-else>
               <div class="kaspi-logo">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="24" height="24" rx="6" fill="#F14635"/>
-                  <path d="M7 17V7H9.5V10.5L13.5 7H16.5L12 11.5L16.5 17H13.5L10 12.5L9.5 13V17H7Z" fill="white"/>
-                </svg>
+                <KaspiQrLogo :white="true" />
               </div>
-              <span>Оплатить с Kaspi.kz</span>
+              <span>{{ $t('tma.payWithKaspi', 'Оплатить с Kaspi.kz') }}</span>
             </template>
          </button>
          <button v-else class="btn-confirm" @click="handleConfirm">
@@ -545,11 +539,14 @@
 
 <script setup>
 import { reactive, ref, onMounted, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '@/api'
 import { Icon } from '@iconify/vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
+import KaspiQrLogo from '@/components/common/KaspiQrLogo.vue'
 
+const router = useRouter()
 const auth = useAuthStore()
 
 const getTodayStr = () => new Date().toISOString().slice(0,10)
@@ -584,6 +581,8 @@ const state = reactive({
   paymentId: null,
   paymentError: null,
   showPaymentPending: false,
+  paymentMethod: null,
+  paymentStatus: 'pending_receipt',
   // Prepayment mode state
   showPhoneConfirm: false,
   prepaymentAmount: 0,
@@ -918,7 +917,14 @@ const handleConfirm = async () => {
       state.showModal = false
       state.prepaymentAmount = res.data.prepayment_amount_required || 0
       state.currentAppointmentId = appointmentId
-      state.showPhoneConfirm = true
+      
+      const method = auth.organizationSettings?.payment_method || 'MANUAL'
+      if (method === 'SEMI_AUTOMATIC') {
+        state.clientPhone = auth.user?.phone || ''
+        await initiatePayment()
+      } else {
+        state.showPhoneConfirm = true
+      }
       return
     }
 
@@ -941,6 +947,8 @@ const startPaymentPolling = () => {
     
     try {
       const res = await api.get(`/payments/status/${state.paymentId}/`)
+      state.paymentStatus = res.data.status
+      
       if (res.data.status === 'paid') {
         clearInterval(paymentPollInterval)
         state.showPaymentPending = false
@@ -952,7 +960,7 @@ const startPaymentPolling = () => {
     } catch (e) {
       console.error('Poll error', e)
     }
-  }, 3000) // Poll every 3 seconds
+  }, 180000) // Poll every 3 minutes
 }
 
 const confirmWithCurrentPhone = () => {
@@ -977,18 +985,41 @@ const initiatePayment = async () => {
     
     if (payRes.data.manual_mode) {
         state.showManualSuccess = true
+    } else if (payRes.data.payment_method === 'SEMI_AUTOMATIC') {
+        router.push({ name: 'payment-instruction', params: { appointmentId: state.currentAppointmentId } })
+        
+        if (payRes.data.payment_link) {
+          try {
+            if (window.Telegram?.WebApp && typeof window.Telegram.WebApp.openLink === 'function') {
+              window.Telegram.WebApp.openLink(payRes.data.payment_link)
+            } else {
+              window.open(payRes.data.payment_link, '_blank')
+            }
+          } catch (openErr) {
+            console.error('Failed to open payment link:', openErr)
+          }
+        }
     } else {
         state.paymentLink = payRes.data.payment_link
         state.paymentId = payRes.data.payment_id
-        
-        if (window.Telegram?.WebApp) {
-          window.Telegram.WebApp.openLink(state.paymentLink)
-        } else {
-          window.open(state.paymentLink, '_blank')
-        }
+        state.paymentMethod = payRes.data.payment_method
+        state.prepaymentAmount = payRes.data.prepayment_amount
+        state.paymentStatus = 'pending_receipt'
         
         state.showPaymentPending = true
         startPaymentPolling()
+
+        if (state.paymentLink) {
+          try {
+            if (window.Telegram?.WebApp && typeof window.Telegram.WebApp.openLink === 'function') {
+              window.Telegram.WebApp.openLink(state.paymentLink)
+            } else {
+              window.open(state.paymentLink, '_blank')
+            }
+          } catch (openErr) {
+            console.error('Failed to open payment link:', openErr)
+          }
+        }
     }
   } catch (payErr) {
     console.error('Payment link creation failed', payErr)
@@ -996,6 +1027,19 @@ const initiatePayment = async () => {
     goHome()
   } finally {
     state.paymentLoading = false
+  }
+}
+
+const openPaymentLink = () => {
+  if (!state.paymentLink) return
+  try {
+    if (window.Telegram?.WebApp && typeof window.Telegram.WebApp.openLink === 'function') {
+      window.Telegram.WebApp.openLink(state.paymentLink)
+    } else {
+      window.open(state.paymentLink, '_blank')
+    }
+  } catch (openErr) {
+    console.error('Failed to open payment link in button click:', openErr)
   }
 }
 
@@ -1334,8 +1378,8 @@ const cancelPaymentPending = () => {
 .btn-kaspi {
   width: 100%;
   height: 54px;
-  background: #FFFFFF;
-  border: 1px solid #E5E5E5;
+  background: #F14635;
+  border: none;
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -1343,16 +1387,16 @@ const cancelPaymentPending = () => {
   gap: 10px;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(241, 70, 53, 0.2);
 }
 .btn-kaspi:active {
   transform: scale(0.98);
-  background: #F9F9F9;
+  background: #D63425;
 }
 .btn-kaspi span {
   font-size: 16px;
   font-weight: 700;
-  color: #000000;
+  color: #FFFFFF;
 }
 .kaspi-logo {
   display: flex;

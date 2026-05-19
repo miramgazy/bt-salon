@@ -36,9 +36,24 @@
 /* Dark mode semantic overrides */
 @media (prefers-color-scheme: dark) {
   :root {
+    --tg-bg: var(--tg-theme-bg-color, #181818);
+    --tg-text: var(--tg-theme-text-color, #f3f4f6);
+    --tg-hint: var(--tg-theme-hint-color, #9ca3af);
+    --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #242424);
+    --tg-header-bg: var(--tg-theme-header-bg-color, #181818);
     --border: rgba(255, 255, 255, 0.1);
-    --glass: rgba(15, 15, 15, 0.7);
+    --glass: rgba(30, 30, 30, 0.75);
   }
+}
+
+html.dark {
+  --tg-bg: var(--tg-theme-bg-color, #181818);
+  --tg-text: var(--tg-theme-text-color, #f3f4f6);
+  --tg-hint: var(--tg-theme-hint-color, #9ca3af);
+  --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #242424);
+  --tg-header-bg: var(--tg-theme-header-bg-color, #181818);
+  --border: rgba(255, 255, 255, 0.1);
+  --glass: rgba(30, 30, 30, 0.75);
 }
 
 * {

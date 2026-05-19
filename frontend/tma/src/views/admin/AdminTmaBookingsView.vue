@@ -136,6 +136,42 @@
     </div>
 
     <div v-else class="bookings-list">
+       <!-- ══ PDF CHECKS REVIEW QUEUE ══ -->
+       <div v-if="reviewInvoices.length > 0" class="pending-section mb-6">
+          <div class="section-title flex items-center justify-between mb-3">
+             <span class="text-sm font-bold uppercase tracking-wider" style="color: #3b82f6;">Проверка PDF квитанций ({{ reviewInvoices.length }})</span>
+             <Icon icon="mdi:file-document-alert-outline" width="18" style="color: #3b82f6;" />
+          </div>
+          <div class="flex flex-col gap-3">
+             <div v-for="rev in reviewInvoices" :key="rev.id" class="booking-card" style="border-left: 4px solid #3b82f6; background: rgba(59, 130, 246, 0.05); display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 8px;">
+                <div class="booking-info" style="flex: 1">
+                   <div class="client-name font-bold">{{ rev.client_detail?.full_name }}</div>
+                   <div class="service-name text-xs text-muted">
+                      {{ rev.service_detail?.name }} • {{ formatDateShort(rev.start_time) }} {{ formatStartTime(rev.start_time) }}
+                   </div>
+                   <div class="mt-2 flex items-center gap-2 flex-wrap">
+                      <span class="rounded py-0.5 px-1.5 text-[10px] font-bold" style="color: #3b82f6; background: rgba(59, 130, 246, 0.1);">
+                        Предоплата: {{ rev.prepayment_amount_required }} ₸
+                      </span>
+                      <a v-if="rev.receipt_file" :href="rev.receipt_file" target="_blank" class="flex items-center gap-1 text-[11px] font-bold text-primary underline" style="color: #3b82f6;">
+                        <Icon icon="mdi:file-pdf-box" width="14" />
+                        Открыть чек
+                      </a>
+                      <span v-else class="text-[10px] text-muted italic">Чек не загружен</span>
+                   </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                   <button class="confirm-pay-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); margin: 0; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: none; color: white; cursor: pointer; width: 32px; height: 32px;" @click.stop="approveReceipt(rev)">
+                      <Icon icon="mdi:check" width="18" />
+                   </button>
+                   <button class="confirm-pay-btn" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); margin: 0; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: none; color: white; cursor: pointer; width: 32px; height: 32px;" @click.stop="rejectReceipt(rev)">
+                      <Icon icon="mdi:close" width="18" />
+                   </button>
+                </div>
+             </div>
+          </div>
+       </div>
+
        <!-- ══ PENDING INVOICES SECTION ══ -->
        <div v-if="pendingInvoices.length > 0" class="pending-section mb-6">
           <div class="section-title flex items-center justify-between mb-3">
@@ -513,6 +549,7 @@ const editForm = ref({
 
 const finalPrice = ref(null)
 const pendingInvoices = ref([])
+const reviewInvoices = ref([])
 
 const fetchPendingInvoices = async () => {
     try {
@@ -524,6 +561,18 @@ const fetchPendingInvoices = async () => {
         })
         pendingInvoices.value = res.data.results || res.data || []
     } catch (e) { console.error('Fetch pending invoices error', e) }
+}
+
+const fetchReviewInvoices = async () => {
+    try {
+        const res = await api.get('/appointments/', {
+            params: {
+                payment_status: 'review',
+                all: true
+            }
+        })
+        reviewInvoices.value = res.data.results || res.data || []
+    } catch (e) { console.error('Fetch review invoices error', e) }
 }
 
 const confirmManualPayment = async (inv) => {
@@ -538,6 +587,46 @@ const confirmManualPayment = async (inv) => {
         })
         successMsg.value = 'Оплата подтверждена'
         setTimeout(() => successMsg.value = '', 3000)
+        fetchPendingInvoices()
+        fetchReviewInvoices()
+        fetchAppointments()
+    } catch (e) {
+        alert(t('common.error'))
+    }
+}
+
+const approveReceipt = async (inv) => {
+    const name = inv.client_detail?.full_name || t('common.client')
+    if (!confirm(`Подтвердить оплату и квитанцию для ${name} на сумму ${inv.prepayment_amount_required} ₸?`)) return
+    try {
+        await api.patch(`/appointments/${inv.id}/`, {
+            payment_status: 'paid',
+            status: 'confirmed',
+            is_paid: true,
+            prepayment_received: inv.prepayment_amount_required
+        })
+        successMsg.value = 'Чек подтвержден!'
+        setTimeout(() => successMsg.value = '', 3000)
+        fetchReviewInvoices()
+        fetchPendingInvoices()
+        fetchAppointments()
+    } catch (e) {
+        alert(t('common.error'))
+    }
+}
+
+const rejectReceipt = async (inv) => {
+    const name = inv.client_detail?.full_name || t('common.client')
+    const reason = prompt(`Отклонить квитанцию для ${name}? Введите причину (клиент получит уведомление в боте):`)
+    if (reason === null) return
+    try {
+        await api.patch(`/appointments/${inv.id}/`, {
+            payment_status: 'pending_receipt',
+            rejection_reason: reason // We can pass this to custom save method/signal if needed
+        })
+        successMsg.value = 'Квитанция отклонена'
+        setTimeout(() => successMsg.value = '', 3000)
+        fetchReviewInvoices()
         fetchPendingInvoices()
         fetchAppointments()
     } catch (e) {
@@ -862,11 +951,13 @@ const saveAptChanges = async () => {
 watch(selectedDate, () => {
   fetchAppointments()
   fetchPendingInvoices()
+  fetchReviewInvoices()
 })
 
 onMounted(() => {
   fetchAppointments()
   fetchPendingInvoices()
+  fetchReviewInvoices()
   fetchInitialData()
 })
 </script>
