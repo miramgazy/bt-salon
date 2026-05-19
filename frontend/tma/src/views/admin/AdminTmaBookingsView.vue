@@ -281,6 +281,13 @@
               class="form-input text-lg bold text-gold" 
               :placeholder="`Например: ${activeApt.service_detail.price_min}`"
             />
+            <div 
+              v-if="parseFloat(activeApt.prepayment_received || 0) > 0" 
+              class="text-xs text-gold mt-1.5 cursor-pointer underline hover:text-white transition-colors text-right"
+              @click="finalPrice = parseFloat(activeApt.service_detail.price_min) - parseFloat(activeApt.prepayment_received)"
+            >
+              Ввести остаток за вычетом предоплаты ({{ parseFloat(activeApt.service_detail.price_min) - parseFloat(activeApt.prepayment_received) }} ₸)
+            </div>
           </div>
           <button v-if="activeApt.status === 'pending' || activeApt.status === 'confirmed'" class="btn-sheet" @click="markAsDone">{{ $t('admin.finishService') }}</button>
           <button v-if="activeApt.status === 'pending'" class="btn-sheet bg-secondary mt-2" @click="confirmApt">{{ $t('admin.status.confirmed') }}</button>
@@ -797,8 +804,14 @@ const markAsDone = async () => {
             alert('Пожалуйста, введите итоговую цену')
             return
         }
-        if (finalPrice.value < activeApt.value.service_detail.price_min || finalPrice.value > activeApt.value.service_detail.price_max) {
-            alert(`Цена должна быть в диапазоне от ${activeApt.value.service_detail.price_min} до ${activeApt.value.service_detail.price_max} ₸`)
+        const prepayment = parseFloat(activeApt.value.prepayment_received || 0)
+        const priceMin = parseFloat(activeApt.value.service_detail.price_min || 0)
+        const priceMax = parseFloat(activeApt.value.service_detail.price_max || 0)
+        const minPrice = priceMin - prepayment
+        const maxPrice = priceMax
+
+        if (finalPrice.value < minPrice || finalPrice.value > maxPrice) {
+            alert(`Цена должна быть в диапазоне от ${minPrice} до ${maxPrice} ₸`)
             return
         }
     }
