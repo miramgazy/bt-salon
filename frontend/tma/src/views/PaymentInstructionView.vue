@@ -167,7 +167,7 @@ const goHome = () => {
       </div>
 
       <!-- Booking Info Card -->
-      <div class="card glass text-left w-full mb-6" style="padding: 18px;">
+      <div class="card glass instruction-card">
         <div class="modal-row" style="padding-top: 0;">
           <span class="modal-label">{{ $t('tma.services') }}</span>
           <span class="modal-value font-bold" style="color: var(--text);">
@@ -195,37 +195,37 @@ const goHome = () => {
       </div>
 
       <!-- Prepayment Instruction Block -->
-      <div class="card glass text-left w-full mb-6" style="padding: 18px;">
-        <h4 class="font-bold text-sm mb-3 flex items-center gap-2" style="color: var(--text);">
+      <div class="card glass instruction-card">
+        <h4 class="instruction-title">
           <span>📋</span> {{ $t('tma.instruction.title') }}
         </h4>
-        <ol class="text-xs flex flex-col gap-3" style="list-style-type: decimal; padding-left: 16px; color: var(--text); opacity: 0.9;">
+        <ol class="instruction-list">
           <li v-html="$t('tma.instruction.step1', { amount: appointment?.prepayment_amount_required || appointment?.service_detail?.prepayment_value || 0 })"></li>
           <li v-html="$t('tma.instruction.step2')"></li>
           <li v-html="$t('tma.instruction.step3')"></li>
           <li v-html="$t('tma.instruction.step4', { bot: auth.organizationSettings?.bot_username || 'bot' })"></li>
         </ol>
-        <div class="mt-4 pt-3 border-t text-xs font-semibold" style="border-color: var(--border); color: #ef4444;" v-html="$t('tma.instruction.timeoutWarning')"></div>
+        <div class="timeout-warning" v-html="$t('tma.instruction.timeoutWarning')"></div>
       </div>
 
       <!-- Payment Status Block -->
-      <div v-if="appointment?.payment_status === 'pending_receipt'" class="flex items-center justify-center gap-2.5 text-xs text-warning bg-warning/10 py-3 px-4 rounded-xl w-full mb-6" style="color: #eab308; background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.15);">
+      <div v-if="appointment?.payment_status === 'pending_receipt'" class="status-banner pending">
         <div class="spinner-mini animate-spin" style="border-top-color: #eab308; width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(234, 179, 8, 0.2); border-top-color: #eab308;"></div>
         <span class="font-semibold">{{ $t('tma.waitingReceipt') }}</span>
       </div>
       
-      <div v-else-if="appointment?.payment_status === 'review'" class="flex items-center justify-center gap-2.5 text-xs text-primary bg-primary/10 py-3 px-4 rounded-xl w-full mb-6" style="color: #3b82f6; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.15);">
+      <div v-else-if="appointment?.payment_status === 'review'" class="status-banner review">
         <div class="spinner-mini animate-spin" style="border-top-color: #3b82f6; width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(59, 130, 246, 0.2); border-top-color: #3b82f6;"></div>
         <span class="font-semibold">{{ $t('tma.reviewReceipt') }}</span>
       </div>
 
       <!-- Action Buttons -->
-      <div class="flex flex-col gap-3.5 mt-6 w-full">
+      <div class="action-buttons">
         <button class="btn-kaspi" @click="openPaymentLink">
           <span>{{ $t('tma.payButton', { amount: appointment?.prepayment_amount_required || appointment?.service_detail?.prepayment_value || 0 }) }}</span>
         </button>
         
-        <div class="flex gap-3 w-full">
+        <div class="button-row">
           <button class="btn-secondary" style="flex: 1; padding: 14px; border-radius: 12px;" @click="router.push('/tma-appointments')">
             {{ $t('tma.closeButton') }}
           </button>
@@ -247,6 +247,83 @@ const goHome = () => {
 <style scoped>
 .payment-instruction-view {
   padding: 20px 16px 100px;
+}
+
+.instruction-card {
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 18px;
+}
+
+.instruction-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.instruction-list {
+  list-style-type: decimal;
+  padding-left: 20px;
+  color: var(--text);
+  opacity: 0.95;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  line-height: 1.5;
+}
+
+.timeout-warning {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-error);
+  line-height: 1.4;
+}
+
+.status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 13px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  width: 100%;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.status-banner.pending {
+  color: #eab308;
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.15);
+}
+
+.status-banner.review {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 24px;
+  width: 100%;
+}
+
+.button-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
 }
 
 .modal-row {
