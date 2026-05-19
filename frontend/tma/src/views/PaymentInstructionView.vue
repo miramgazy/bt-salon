@@ -17,6 +17,7 @@ const loading = ref(true)
 const error = ref(null)
 const showSuccess = ref(false)
 const showCancelled = ref(false)
+const showCopiedToast = ref(false)
 
 let pollInterval = null
 
@@ -90,6 +91,20 @@ const formatDate = (iso) => {
 const openPaymentLink = () => {
   const link = auth.organizationSettings?.kaspi_payment_link
   if (!link) return
+
+  // Copy bot username to clipboard
+  const botUsername = auth.organizationSettings?.bot_username
+  if (botUsername) {
+    navigator.clipboard.writeText(`@${botUsername}`).then(() => {
+      showCopiedToast.value = true
+      setTimeout(() => {
+        showCopiedToast.value = false
+      }, 2500)
+    }).catch(err => {
+      console.error('Failed to copy bot username to clipboard:', err)
+    })
+  }
+
   try {
     if (window.Telegram?.WebApp && typeof window.Telegram.WebApp.openLink === 'function') {
       window.Telegram.WebApp.openLink(link)
@@ -241,12 +256,40 @@ const goHome = () => {
     <div v-else style="text-align: center; padding: 60px;">
       <div class="spinner"></div>
     </div>
+    <!-- ══ TOAST COPIED ══ -->
+    <div v-if="showCopiedToast" class="toast-copied">
+      {{ $t('tma.botCopied') }}
+    </div>
   </div>
 </template>
 
 <style scoped>
 .payment-instruction-view {
   padding: 20px 16px 100px;
+}
+
+.toast-copied {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  animation: fadeInOut 2.5s ease-in-out forwards;
+  white-space: nowrap;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, 10px); }
+  15% { opacity: 1; transform: translate(-50%, 0); }
+  85% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
 }
 
 .instruction-card {
