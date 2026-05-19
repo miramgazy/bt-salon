@@ -386,11 +386,13 @@ class TmaWebhookView(APIView):
                                 appointment.status = Appointment.STATUS_CONFIRMED
                                 appointment.save()
                                 
+                                from django.utils import timezone
+                                local_time = timezone.localtime(appointment.start_time)
                                 is_kz = getattr(user, 'language', 'ru') == 'kz'
                                 msg = (
-                                    f"✅ <b>Төлем сәтті қабылданды!</b>\n\nСіздің жазбаңыз <b>{appointment.service.name}</b> расталды.\nШебер: {appointment.master.user.first_name}\nУақыты: {appointment.start_time.strftime('%d.%m.%Y %H:%M')}"
+                                    f"✅ <b>Төлем сәтті қабылданды!</b>\n\nСіздің жазбаңыз <b>{appointment.service.name}</b> расталды.\nШебер: {appointment.master.user.first_name}\nУақыты: {local_time.strftime('%d.%m.%Y %H:%M')}"
                                     if is_kz else
-                                    f"✅ <b>Оплата успешно подтверждена!</b>\n\nВаша запись на <b>{appointment.service.name}</b> подтверждена.\nМастер: {appointment.master.user.first_name}\nВремя: {appointment.start_time.strftime('%d.%m.%Y %H:%M')}"
+                                    f"✅ <b>Оплата успешно подтверждена!</b>\n\nВаша запись на <b>{appointment.service.name}</b> подтверждена.\nМастер: {appointment.master.user.first_name}\nВремя: {local_time.strftime('%d.%m.%Y %H:%M')}"
                                 )
                                 send_telegram_message(token, tg_id, msg)
                                 try:
