@@ -249,6 +249,15 @@ class MasterShiftViewSet(viewsets.ModelViewSet):
         if master and (self.request.user.role == User.ROLE_MASTER or self.request.query_params.get('my') == 'true'):
             qs = qs.filter(master=master)
 
+        master_id = self.request.query_params.get('master_id')
+        if master_id:
+            qs = qs.filter(master_id=master_id)
+
+        is_open = self.request.query_params.get('is_open')
+        if is_open:
+            val = is_open.lower() in ('true', '1', 'yes')
+            qs = qs.filter(is_open=val)
+
         # Filter by single date
         date = self.request.query_params.get('date')
         if date:

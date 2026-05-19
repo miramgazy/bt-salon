@@ -49,6 +49,7 @@
                 <th class="py-4 px-4 font-medium text-black dark:text-white">Контакты</th>
                 <th class="py-4 px-4 font-medium text-black dark:text-white">Цвет</th>
                 <th class="py-4 px-4 font-medium text-black dark:text-white">Статус</th>
+                <th class="py-4 px-4 font-medium text-black dark:text-white">Прямая ссылка</th>
                 <th class="py-4 px-4 font-medium text-black dark:text-white text-right">Действия</th>
               </tr>
             </thead>
@@ -87,6 +88,18 @@
                   >
                     {{ master.is_active ? 'Активен' : 'Неактивен' }}
                   </span>
+                </td>
+                <td class="py-5 px-4">
+                  <button 
+                    v-if="master.role === 'master' && master.master_id" 
+                    @click="copyLink('mas', master.master_id)" 
+                    class="flex items-center gap-1 text-primary hover:underline text-sm font-medium"
+                    title="Копировать прямую ссылку на мастера"
+                  >
+                    <Icon icon="mdi:link" width="16" />
+                    <span>Скопировать</span>
+                  </button>
+                  <span v-else class="text-xs text-body dark:text-bodydark2">—</span>
                 </td>
                 <td class="py-5 px-4">
                   <div class="flex items-center justify-end space-x-3.5">
@@ -311,7 +324,10 @@
 import { ref, onMounted, reactive, computed, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import api from '../../api'
+import { useToast } from '../../composables/useToast'
 
+const toast = useToast()
+const org = ref(null)
 const masters = ref([])
 const services = ref([])
 const categories = ref([])
@@ -548,10 +564,44 @@ const insertMd = (prefix, suffix) => {
     }, 0)
 }
 
-onMounted(() => {
+const copyLink = async (type, id) => {
+  if (!org.value) {
+    try {
+      const orgRes = await api.get('/api/organization/')
+      org.value = orgRes.data
+    } catch (err) {
+      console.error('Error fetching organization info:', err)
+      toast.error('Не удалось загрузить настройки организации для генерации ссылки')
+      return
+    }
+  }
+  const baseLink = org.value.tma_link || (org.value.bot_username && org.value.tma_name ? `https://t.me/${org.value.bot_username}/${org.value.tma_name}` : '')
+  if (!baseLink) {
+    toast.error('Базовая ссылка на Mini App не настроена в профиле организации!')
+    return
+  }
+  const separator = baseLink.includes('?') ? '&' : '?'
+  const link = `${baseLink}${separator}startapp=${type}_${id}`
+  
+  try {
+    await navigator.clipboard.writeText(link)
+    toast.success('Ссылка скопирована! Теперь вы можете использовать её в Instagram')
+  } catch (err) {
+    console.error('Failed to copy', err)
+    toast.error('Не удалось скопировать ссылку в буфер обмена')
+  }
+}
+
+onMounted(async () => {
     fetchMasters()
     fetchServices()
     fetchCategories()
+    try {
+        const orgRes = await api.get('/api/organization/')
+        org.value = orgRes.data
+    } catch (err) {
+        console.error('Failed to load org details', err)
+    }
 })
 </script>
 

@@ -66,9 +66,35 @@ class TmaAuthView(APIView):
 
             # B. Check by ID if provided
             if not org and org_id:
-                org = Organization.objects.filter(id=org_id).first()
-                if org and not validate_hash(org.bot_token, data_check_string, hash_param):
-                    org = None
+                resolved_org_id = None
+                if isinstance(org_id, str):
+                    if org_id.startswith('cat_'):
+                        from apps.services.models import Category
+                        try:
+                            resolved_org_id = Category.objects.filter(id=org_id.split('_')[1]).values_list('organization_id', flat=True).first()
+                        except (ValueError, IndexError):
+                            pass
+                    elif org_id.startswith('ser_'):
+                        from apps.services.models import Service
+                        try:
+                            resolved_org_id = Service.objects.filter(id=org_id.split('_')[1]).values_list('organization_id', flat=True).first()
+                        except (ValueError, IndexError):
+                            pass
+                    elif org_id.startswith('mas_'):
+                        from apps.masters.models import Master
+                        try:
+                            resolved_org_id = Master.objects.filter(id=org_id.split('_')[1]).values_list('organization_id', flat=True).first()
+                        except (ValueError, IndexError):
+                            pass
+                    else:
+                        resolved_org_id = org_id
+                else:
+                    resolved_org_id = org_id
+
+                if resolved_org_id:
+                    org = Organization.objects.filter(id=resolved_org_id).first()
+                    if org and not validate_hash(org.bot_token, data_check_string, hash_param):
+                        org = None
 
             # C. Fallback: Iterate all orgs (last resort)
             if not org:

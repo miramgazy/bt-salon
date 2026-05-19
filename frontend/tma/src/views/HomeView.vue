@@ -358,7 +358,13 @@
       <div v-else-if="shiftClosed" class="card glass fade-up" style="text-align: center; border-color: #ef4444; padding: 32px 20px;">
          <div style="font-size: 40px; margin-bottom: 16px">🚫</div>
          <div style="font-weight: 700; font-size: 18px; margin-bottom: 8px;">{{ $t('tma.shiftNotStarted') }}</div>
-         <div style="color: var(--muted); font-size: 14px;">{{ $t('tma.masterNotWorkingYet') }}</div>
+         <div style="color: var(--muted); font-size: 14px; margin-bottom: 16px;">{{ $t('tma.masterNotWorkingYet') }}</div>
+         <div v-if="suggestedDate" class="fade-up">
+           <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--gold); letter-spacing: 0.5px; margin-bottom: 8px;">Ближайший рабочий день:</div>
+           <button class="btn-primary" style="margin: 0 auto; width: auto; font-size: 13px; padding: 8px 16px;" @click="state.selectedDate = suggestedDate">
+             Посмотреть {{ formatDateShort(suggestedDate) }}
+           </button>
+         </div>
       </div>
 
       <div v-else-if="slots.length === 0" style="text-align:center; padding: 40px; color: var(--muted)">
@@ -598,6 +604,7 @@ const loading = ref(true)
 const slots = ref([])
 const slotsLoading = ref(false)
 const shiftClosed = ref(false)
+const suggestedDate = ref(null)
 
 // ── Filters State ──────────────────────────────────────────────
 const isSearchMode = ref(false)
@@ -675,6 +682,60 @@ const fetchData = async () => {
 
     if (!auth.organizationSettings) {
       await auth.fetchCurrentUser()
+    }
+
+    // Parse startapp / start_param for deep links
+    let startParam = null
+    if (window.Telegram && window.Telegram.WebApp) {
+      startParam = window.Telegram.WebApp.initDataUnsafe?.start_param || null
+    } else {
+      const urlParams = new URLSearchParams(window.location.search)
+      startParam = urlParams.get('startapp') || urlParams.get('start_param')
+    }
+
+    if (startParam) {
+      if (startParam.startsWith('cat_')) {
+        const catId = parseInt(startParam.split('_')[1], 10)
+        const category = categories.value.find(c => c.id === catId)
+        if (category) {
+          state.selectedCat = category
+          state.page = 'home'
+          state.activeTab = 'services'
+          showCategoryGrid.value = false
+        }
+      } else if (startParam.startsWith('ser_')) {
+        const serId = parseInt(startParam.split('_')[1], 10)
+        let service = services.value.find(s => s.id === serId)
+        if (!service) {
+          try {
+            const res = await api.get(`/services/${serId}/`)
+            service = res.data
+          } catch (err) {
+            console.error('Failed to fetch service for deep link', err)
+          }
+        }
+        if (service) {
+          state.selectedService = service
+          state.page = 'master-select'
+        }
+      } else if (startParam.startsWith('mas_')) {
+        const masId = parseInt(startParam.split('_')[1], 10)
+        let master = masters.value.find(m => m.id === masId)
+        if (!master) {
+          try {
+            const res = await api.get(`/masters/${masId}/`)
+            master = res.data
+          } catch (err) {
+            console.error('Failed to fetch master for deep link', err)
+          }
+        }
+        if (master) {
+          state.selectedMaster = master
+          state.profileMaster = master
+          state.showProfileModal = true
+          state.page = 'service-list'
+        }
+      }
     }
   } catch (err) {
     console.error('General Fetch error:', err)
@@ -817,6 +878,7 @@ const fetchSlots = async () => {
   try {
     slotsLoading.value = true
     shiftClosed.value = false
+    suggestedDate.value = null
     slots.value = []
     
     const res = await api.get(`/masters/${state.selectedMaster.id}/available-slots/`, {
@@ -828,9 +890,31 @@ const fetchSlots = async () => {
     slots.value = res.data
   } catch (err) {
     if (err.response?.status === 400 && err.response?.data?.error === 'shift_closed') {
-       shiftClosed.value = true
+        shiftClosed.value = true
+        try {
+          const today = new Date().toISOString().slice(0, 10)
+          const shiftsRes = await api.get('/master-shifts/', {
+            params: {
+              master_id: state.selectedMaster.id,
+              date_from: today,
+              is_open: 'true',
+              page_size: 10
+            }
+          })
+          const shifts = shiftsRes.data.results || shiftsRes.data || []
+          if (shifts.length > 0) {
+            const sortedShifts = shifts.filter(s => s.date > state.selectedDate).sort((a, b) => a.date.localeCompare(b.date))
+            if (sortedShifts.length > 0) {
+              suggestedDate.value = sortedShifts[0].date
+            } else {
+              suggestedDate.value = shifts[0].date
+            }
+          }
+        } catch (shiftErr) {
+          console.error('Failed to load next master shifts:', shiftErr)
+        }
     } else {
-       console.error('Fetch slots error:', err)
+        console.error('Fetch slots error:', err)
     }
   } finally {
     slotsLoading.value = false

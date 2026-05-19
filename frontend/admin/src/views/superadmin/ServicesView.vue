@@ -129,6 +129,9 @@
               </td>
               <td class="border-b border-[#eee] py-5 px-4 dark:border-strokedark text-right" :class="{'bg-warning/5': service.is_combo}">
                 <div class="flex items-center justify-end gap-3.5">
+                  <button @click="copyLink('ser', service.id)" class="hover:text-primary transition-colors" title="Копировать прямую ссылку">
+                    <Icon icon="mdi:link" width="18" />
+                  </button>
                   <button @click="service.is_combo ? openEditCombo(service) : openEditModal(service)" class="hover:text-primary transition-colors" title="Редактировать">
                     <Icon icon="mdi:pencil" width="18" />
                   </button>
@@ -385,9 +388,14 @@
             <div class="max-h-60 overflow-y-auto space-y-2 mb-6 pr-2 custom-scrollbar">
                 <div v-for="cat in categories" :key="cat.id" class="flex items-center justify-between rounded bg-gray-50 p-3 dark:bg-bg-dark border border-stroke dark:border-strokedark">
                     <span class="font-medium text-black dark:text-white">{{ cat.name }}</span>
-                    <button @click="deleteCategory(cat.id)" class="text-body hover:text-danger transition-colors">
-                        <Icon icon="mdi:close-circle-outline" width="20" />
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button @click="copyLink('cat', cat.id)" class="text-body hover:text-primary transition-colors" title="Копировать прямую ссылку">
+                            <Icon icon="mdi:link" width="18" />
+                        </button>
+                        <button @click="deleteCategory(cat.id)" class="text-body hover:text-danger transition-colors">
+                            <Icon icon="mdi:close-circle-outline" width="20" />
+                        </button>
+                    </div>
                 </div>
                 <div v-if="categories.length === 0" class="text-center py-4 text-bodydark2 italic">Категорий пока нет</div>
             </div>
@@ -448,7 +456,10 @@ import { ref, computed, onMounted } from 'vue'
 import api from '../../api'
 import { Icon } from '@iconify/vue'
 import ComboCreateModal from '../../components/modals/ComboCreateModal.vue'
+import { useToast } from '../../composables/useToast'
 
+const toast = useToast()
+const org = ref(null)
 const services = ref([])
 const allServices = ref([])
 const categories = ref([])
@@ -637,10 +648,14 @@ const fetchData = async () => {
       search: searchQuery.value,
       category: selectedCategoryFilter.value
     }
-    const [servRes, catRes, allServRes] = await Promise.all([
+    const [servRes, catRes, allServRes, orgRes] = await Promise.all([
       api.get('/api/services/', { params }),
       api.get('/api/categories/'),
-      api.get('/api/services/', { params: { all: 'true' } })
+      api.get('/api/services/', { params: { all: 'true' } }),
+      api.get('/api/organization/').catch(err => {
+        console.error('Failed to load org settings for deep linking', err)
+        return { data: null }
+      })
     ])
     
     if (servRes.data.results) {
@@ -653,10 +668,41 @@ const fetchData = async () => {
     
     allServices.value = allServRes.data.results || allServRes.data || []
     categories.value = catRes.data.results || catRes.data
+    if (orgRes && orgRes.data) {
+      org.value = orgRes.data
+    }
   } catch (error) {
     console.error('Error fetching data:', error)
   } finally {
     loading.value = false
+  }
+}
+
+const copyLink = async (type, id) => {
+  if (!org.value) {
+    try {
+      const orgRes = await api.get('/api/organization/')
+      org.value = orgRes.data
+    } catch (err) {
+      console.error('Error fetching organization info:', err)
+      toast.error('Не удалось загрузить настройки организации для генерации ссылки')
+      return
+    }
+  }
+  const baseLink = org.value.tma_link || (org.value.bot_username && org.value.tma_name ? `https://t.me/${org.value.bot_username}/${org.value.tma_name}` : '')
+  if (!baseLink) {
+    toast.error('Базовая ссылка на Mini App не настроена в профиле организации!')
+    return
+  }
+  const separator = baseLink.includes('?') ? '&' : '?'
+  const link = `${baseLink}${separator}startapp=${type}_${id}`
+  
+  try {
+    await navigator.clipboard.writeText(link)
+    toast.success('Ссылка скопирована! Теперь вы можете использовать её в Instagram')
+  } catch (err) {
+    console.error('Failed to copy', err)
+    toast.error('Не удалось скопировать ссылку в буфер обмена')
   }
 }
 

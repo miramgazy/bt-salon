@@ -15,7 +15,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
             'latitude', 'longitude', 'is_reminders_enabled', 
             'reminder_hours_before', 'reminder_template_ru', 'reminder_template_kz',
             'is_prepayment_enabled', 'has_kaspi_config',
-            'payment_method', 'kaspi_payment_link', 'bin_iin'
+            'payment_method', 'kaspi_payment_link', 'bin_iin', 'tma_link'
         ]
 
     def get_has_kaspi_config(self, obj):

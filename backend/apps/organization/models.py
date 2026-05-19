@@ -12,6 +12,23 @@ class Organization(models.Model):
     bot_token = models.CharField(max_length=255)
     bot_username = models.CharField(max_length=100, blank=True, null=True, help_text="Username of the bot (without @)")
     tma_name = models.CharField(max_length=100, blank=True, null=True, help_text="Short name of the Mini App in BotFather")
+    tma_link = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="Базовая ссылка на Mini App (например, https://t.me/jazoo_bot/app)"
+    )
+
+    def get_tma_link(self, start_param=None):
+        base_link = self.tma_link
+        if not base_link and self.bot_username and self.tma_name:
+            base_link = f"https://t.me/{self.bot_username}/{self.tma_name}"
+        if not base_link:
+            return ""
+        if start_param:
+            separator = "&" if "?" in base_link else "?"
+            return f"{base_link}{separator}startapp={start_param}"
+        return base_link
     
     # TMA Customization fields
     instagram_link = models.URLField(blank=True, null=True, help_text="Link to Instagram profile")

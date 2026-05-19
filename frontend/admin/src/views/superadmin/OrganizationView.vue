@@ -86,15 +86,28 @@
                 </div>
               </div>
 
-              <div v-if="org.bot_username && org.tma_name" class="mb-5.5 p-4 bg-primary/5 border border-primary/20 rounded-md">
+              <div class="mb-5.5">
+                <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  Прямая ссылка Mini App (Telegram Link)
+                </label>
+                <input
+                  v-model="org.tma_link"
+                  class="w-full rounded border border-stroke bg-gray-50 py-3 px-4.5 text-black focus:border-primary focus-visible:outline-none dark:border-strokedark dark:bg-bg-dark dark:text-white dark:focus:border-primary"
+                  type="url"
+                  placeholder="https://t.me/my_bot/app"
+                />
+                <span class="text-xs text-gray-500 mt-1 block">Укажите ссылку на Mini App (например, https://t.me/my_bot/app). Если поле заполнено, оно будет приоритетным для формирования прямых ссылок.</span>
+              </div>
+
+              <div v-if="org.tma_link || (org.bot_username && org.tma_name)" class="mb-5.5 p-4 bg-primary/5 border border-primary/20 rounded-md">
                 <label class="mb-2 block text-xs font-bold text-primary uppercase">
                   Ваша ссылка на Mini App
                 </label>
                 <div class="flex items-center justify-between gap-2 overflow-hidden">
                   <code class="text-sm text-primary font-mono truncate">
-                    https://t.me/{{ org.bot_username }}/{{ org.tma_name }}?startapp={{ org.id }}
+                    {{ org.tma_link ? `${org.tma_link}?startapp=${org.id}` : `https://t.me/${org.bot_username}/${org.tma_name}?startapp=${org.id}` }}
                   </code>
-                  <a :href="`https://t.me/${org.bot_username}/${org.tma_name}?startapp=${org.id}`" target="_blank" class="text-xs text-white bg-primary px-3 py-1 rounded hover:bg-opacity-90">
+                  <a :href="org.tma_link ? `${org.tma_link}?startapp=${org.id}` : `https://t.me/${org.bot_username}/${org.tma_name}?startapp=${org.id}`" target="_blank" class="text-xs text-white bg-primary px-3 py-1 rounded hover:bg-opacity-90">
                     Открыть
                   </a>
                 </div>
@@ -534,13 +547,13 @@ const loading = ref(true)
 const saving = ref(false)
 const successMsg = ref('')
 const errorMsg = ref('')
-
 const org = ref({
   name: '',
   address: '',
   bot_token: '',
   bot_username: '',
   tma_name: '',
+  tma_link: '',
   work_start: '09:00',
   work_end: '20:00',
   lunch_start: '13:00',
